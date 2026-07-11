@@ -1,5 +1,5 @@
 YT-DLP 四平台下载工具 常见问题答疑合集
-适配版本：v1.9.3 WebUI (p4) | 覆盖平台：YouTube / Twitch / Niconico / Fantia
+适配版本：v1.9.4 WebUI | 覆盖平台：YouTube / Twitch / Niconico / Fantia
 界面方式：浏览器WebUI
 =====================================
 一、启动与运行类
@@ -14,7 +14,7 @@ YT-DLP 四平台下载工具 常见问题答疑合集
 问题2：提示缺少 yt-dlp.exe/ffmpeg.exe/ffprobe.exe
 原因：核心依赖文件缺失，未与主程序放在同一目录
 解决：
-1、将对应exe文件放到与主程序（视频下载工具v1.9.3-GUI.exe）同一文件夹
+1、将对应exe文件放到与主程序（视频下载工具v1.9.4.exe）同一文件夹
 2、缺失时程序会在「关于」页面显示依赖状态和官方下载地址
 3、Fantia功能还需额外放置fantiadl.exe（可选）
 
