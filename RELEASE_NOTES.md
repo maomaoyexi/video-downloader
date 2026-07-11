@@ -1,34 +1,15 @@
-# v1.9.3 WebUI (p4)
+# v1.9.4 WebUI
 
 ## 🎉 发布说明
 
-四平台极致音画下载工具 v1.9.3 WebUI 版正式发布！全面升级为浏览器界面，彻底解决tkinter缺失问题，双击即用。
+四平台极致音画下载工具 v1.9.4 WebUI 版发布！本次更新对自动更新功能进行了优化，统一使用 GitHub Releases 作为唯一更新源，版本检测更加稳定可靠。此版本为维护更新，无功能性新增，原有设置、预设、下载记录全部兼容，直接替换 exe 即可升级。
 
 ## ✨ 主要更新
 
-- 🌐 **全新WebUI界面** - 内置HTTP服务器，自动打开浏览器，深色主题
-- 🎬 **四大平台支持** - YouTube / Twitch / Niconico / Fantia
-- 🎮 **直播录制** - Twitch/Niconico直播自动从开头录制
-- 💾 **配置预设** - 保存常用设置，一键切换
-- 📜 **下载历史** - 自动记录每次下载
-- 🔄 **断点续传** - 默认启用，网络中断自动续传
-- 🧰 **8个工具箱工具** - 批量下载、WAV转MP3、更新yt-dlp等
-- 🛡️ **进程管理** - 关闭网页30秒自动退出，无残留进程
-
-## 🔧 p4补丁修复（累计14个问题）
-
-- ✅ 修复日文/中文标题显示乱码问题
-- ✅ 修复Niconico直播下载无进度显示
-- ✅ 修复下载进度卡在0%不动的问题
-- ✅ 修复停止按钮点击无效问题（三级终止策略）
-- ✅ 修复启动下载后弹出CMD黑窗口问题
-- ✅ 修复孤儿进程残留问题
-- ✅ 修复VOD视频被误判为直播问题
-- ✅ 修复录制时长重复显示问题
-- ✅ 修复Niconico下载超时问题
-- ✅ 添加关闭网页自动退出机制
-- ✅ 添加退出按钮，支持彻底关闭工具
-- ✅ 下载中关闭页面弹出确认提示
+- 🔧 **自动更新功能优化** - 统一使用 GitHub Releases 作为唯一更新源，精简更新检查逻辑，减少不必要的网络请求
+- 🔗 **更新源地址统一** - 自动更新 API 地址为 `https://api.github.com/repos/maomaoyexi/video-downloader/releases/latest`
+- ⬇️ **直连下载** - 下载链接统一使用 `browser_download_url` 直连地址，一键下载替换更新
+- 📝 **文件名适配** - 自动检测新版本 exe 文件名，适配新的命名规范（去掉 -GUI 后缀）
 
 ## 📦 下载说明
 
@@ -36,31 +17,34 @@
 
 | 文件 | 说明 | 必须 |
 |------|------|------|
-| `视频下载工具v1.9.3-GUI.exe` | 主程序 | ✅ |
-| `yt-dlp.exe` | 下载核心 | ✅ |
-| `ffmpeg.exe` | 音视频处理 | ✅ |
-| `ffprobe.exe` | 媒体信息探测 | ✅ |
-| `fantiadl.exe` | Fantia下载器 | ⭕ 可选 |
+| `视频下载工具v1.9.4.exe` | 主程序，单文件绿色版 | ✅ |
+| `视频下载工具v1.9.4-依赖包.zip` | 完整依赖包（包含所有依赖 exe + 帮助文档） | ✅ |
 
-### 依赖下载地址
-
-- **yt-dlp.exe**: https://github.com/yt-dlp/yt-dlp/releases
-- **ffmpeg.exe + ffprobe.exe**: https://www.gyan.dev/ffmpeg/builds/ （下载 `ffmpeg-release-full.7z`，解压后从bin目录取出）
+> 💡 **依赖包已包含**：yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe（可选）+ docs 帮助文档 + changelog.html，解压后无需再下载任何文件。
 
 ## 🚀 快速开始
 
-1. 下载所有必需文件放到同一文件夹
-2. 双击 `视频下载工具v1.9.3-GUI.exe`
-3. 程序自动启动并打开浏览器界面
-4. （可选）配置Cookie以支持会员/高画质内容
+### 新用户安装
+1. 下载 `视频下载工具v1.9.4.exe` 和 `视频下载工具v1.9.4-依赖包.zip`
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v1.9.4.exe` 放入其中
+3. 解压依赖包，将里面的**全部内容**解压到 exe 同一目录
+4. 双击 `视频下载工具v1.9.4.exe` 运行，自动打开浏览器界面
+5. （可选）配置 Cookie 以支持会员/高画质内容
+
+### 老用户升级
+1. 关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮）
+2. 只需下载新版 `视频下载工具v1.9.4.exe`，替换旧版 exe 即可
+3. 原有 `settings.ini`、`presets.json`、`cookies.txt`、`download_history.json` 全部兼容
+4. 原有依赖文件（yt-dlp.exe、ffmpeg.exe 等）无需重新下载，继续使用即可
+5. 双击运行新版 exe 即可
 
 ## 📖 文档
 
-- [使用教程](https://github.com/3121673169/video-downloader/blob/main/docs/%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B.txt)
-- [Cookie配置指南](https://github.com/3121673169/video-downloader/blob/main/docs/cookies%E9%97%AE%E9%A2%98%E7%AD%94%E7%96%91.txt)
-- [常见问题](https://github.com/3121673169/video-downloader/blob/main/docs/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E7%AD%94%E7%96%91.txt)
-- [错误码说明](https://github.com/3121673169/video-downloader/blob/main/docs/%E9%94%99%E8%AF%AF%E7%A0%81.txt)
-- [更新日志](https://github.com/3121673169/video-downloader/blob/main/changelog.html)
+- [使用教程](https://github.com/maomaoyexi/video-downloader/blob/main/docs/%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B.txt)
+- [Cookie配置指南](https://github.com/maomaoyexi/video-downloader/blob/main/docs/cookies%E9%97%AE%E9%A2%98%E7%AD%94%E7%96%91.txt)
+- [常见问题](https://github.com/maomaoyexi/video-downloader/blob/main/docs/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E7%AD%94%E7%96%91.txt)
+- [错误码说明](https://github.com/maomaoyexi/video-downloader/blob/main/docs/%E9%94%99%E8%AF%AF%E7%A0%81.txt)
+- [更新日志](https://github.com/maomaoyexi/video-downloader/blob/main/changelog.html)
 
 ## ⚠️ 注意事项
 
