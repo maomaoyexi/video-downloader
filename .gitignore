@@ -1,0 +1,41 @@
+# 配置文件（包含用户隐私数据）
+settings.ini
+presets.json
+cookies.txt
+urls.txt
+download_history.json
+
+# 日志
+logs/
+*.log
+
+# 下载目录
+YouTube/
+Twitch/
+Niconico/
+Fantia/
+
+# 临时文件
+*.part
+*.ytdl
+*.temp
+*.tmp
+*.part-Frag*
+
+# 依赖工具（从官方下载，不放入仓库）
+yt-dlp.exe
+ffmpeg.exe
+ffprobe.exe
+fantiadl.exe
+
+# 主程序exe（通过Release发布，不放入源码仓库）
+*.exe
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+.directory
+
+# 归档文件
+*_archive.txt
