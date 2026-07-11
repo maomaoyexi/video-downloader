@@ -1,8 +1,7 @@
-# 四平台极致音画下载工具 v1.9.3 WebUI
-
+# 四平台极致音画下载工具 v1.9.4 WebUI
 支持 YouTube / Twitch / Niconico / Fantia 四大平台的视频/直播下载工具，采用浏览器界面，无需安装Python或任何依赖，双击即用。
 
-![Version](https://img.shields.io/badge/version-v1.9.3%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v1.9.4%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -17,46 +16,45 @@
 - 📊 **批量下载** - 支持从TXT文件批量导入链接
 - 🍪 **Cookie支持** - 支持cookies.txt文件模式
 - ⚡ **硬件加速** - 支持NVIDIA NVENC、Intel QSV、AMD AMF
+- 🔄 **自动更新** - 启动自动检查新版本，一键下载更新替换，统一使用GitHub Releases
 - 🧰 **工具箱** - 内置WAV转MP3、yt-dlp更新、临时文件清理等8个工具
 - 🛡️ **进程管理** - 关闭网页30秒后自动退出，无残留进程
 
 ## 🚀 快速开始
 
-1. 从 [Releases](https://github.com/3121673169/video-downloader/releases) 下载最新发布包
-2. 解压到任意文件夹，确保包含以下文件：
-   - `视频下载工具v1.9.3-GUI.exe` - 主程序
-   - `yt-dlp.exe` - 下载核心（[官方下载](https://github.com/yt-dlp/yt-dlp/releases)）
-   - `ffmpeg.exe` 和 `ffprobe.exe` - 音视频处理（[官方下载](https://www.gyan.dev/ffmpeg/builds/)，下载full_build版本）
-   - `fantiadl.exe`（可选，用于Fantia下载）
-3. 双击 `视频下载工具v1.9.3-GUI.exe` 运行，自动打开浏览器界面
+1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
+   - `视频下载工具v1.9.4.exe` - 主程序
+   - `视频下载工具v1.9.4-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v1.9.4.exe` 放入其中
+3. 解压依赖包，将里面的**全部内容**（所有exe文件、docs文件夹、changelog.html等）解压到主程序同一目录
+4. 双击 `视频下载工具v1.9.4.exe` 运行，自动打开浏览器界面
 
-> 💡 **提示**：首次运行会自动生成配置文件、下载目录等。所有文件都保存在exe同目录下，绿色软件无需安装。
+> 💡 **提示**：依赖包已包含所有必需文件（yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe），解压后无需再下载任何东西。首次运行会自动生成配置文件、下载目录等。所有文件都保存在exe同目录下，绿色软件无需安装。
 
 ## 📖 使用说明
 
 ### 单视频下载
-
 1. 在「下载」页面粘贴视频链接
 2. 点击「开始下载」
 3. 实时查看进度、速度、剩余时间
 
 ### 批量下载
-
 1. 进入「工具箱」页面
 2. 点击「生成链接模板」创建 `urls.txt`
 3. 编辑 `urls.txt`，每行一个链接（支持混合平台）
 4. 点击「TXT批量下载」开始批量下载
 
 ### Twitch直播录制
-
 直接粘贴主播频道URL（如 `https://www.twitch.tv/xqc`）即可从直播开头录制，停止则结束录制。文件自动保存到 `Twitch/主播名/直播/` 目录。
 
 ### 配置预设
-
 1. 在「设置」页面调整好各项参数
 2. 在「配置预设」区域输入预设名称
 3. 点击「保存」按钮
 4. 之后可随时从下拉框选择预设一键加载
+
+### 自动更新
+程序启动后3秒自动静默检查更新，检测到新版本时右上角显示「⬆ 有更新」徽标，点击后可一键下载并自动替换重启，所有配置和下载记录保留。
 
 ## ⚙️ 配置选项
 
@@ -88,27 +86,34 @@
 
 ```
 工具目录/
-├── 视频下载工具v1.9.3-GUI.exe  # 主程序
-├── yt-dlp.exe                  # 下载核心
-├── ffmpeg.exe                  # 音视频处理
-├── ffprobe.exe                 # 媒体信息探测
-├── fantiadl.exe                # Fantia下载器（可选）
-├── settings.ini                # 配置文件（自动生成）
-├── presets.json                # 预设配置（自动生成）
-├── cookies.txt                 # Cookie文件（自行放置）
-├── urls.txt                    # 批量下载链接（自行编辑）
-├── download_history.json       # 下载历史（自动生成）
-├── logs/                       # 日志目录
-├── YouTube/                    # YouTube下载目录
+├── 视频下载工具v1.9.4.exe   # 主程序
+├── yt-dlp.exe               # 下载核心
+├── ffmpeg.exe               # 音视频处理
+├── ffprobe.exe              # 媒体信息探测
+├── deno.exe                 # JavaScript运行时
+├── fantiadl.exe             # Fantia下载器（可选）
+├── settings.ini             # 配置文件（自动生成）
+├── presets.json             # 预设配置（自动生成）
+├── cookies.txt              # Cookie文件（自行放置）
+├── urls.txt                 # 批量下载链接（自行编辑）
+├── download_history.json    # 下载历史（自动生成）
+├── changelog.html           # 更新日志
+├── docs/                    # 帮助文档
+│   ├── 使用教程.txt
+│   ├── 常见问题答疑.txt
+│   ├── 错误码.txt
+│   └── cookies问题答疑.txt
+├── logs/                    # 日志目录
+├── YouTube/                 # YouTube下载目录
 │   └── 上传者名/
 │       └── 视频标题 [id].mp4
-├── Twitch/                     # Twitch下载目录
+├── Twitch/                  # Twitch下载目录
 │   ├── 主播名/
 │   │   └── 视频标题 [id].mp4
 │   └── 主播名/直播/
 │       └── 直播标题 - 日期 id.mp4
-├── Niconico/                   # Niconico下载目录
-└── Fantia/                     # Fantia下载目录
+├── Niconico/                # Niconico下载目录
+└── Fantia/                  # Fantia下载目录
 ```
 
 ## 🔧 工具箱功能
@@ -145,13 +150,16 @@
 **Q: 双击exe后浏览器没自动打开？**
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
+**Q: 老用户如何升级？**
+> A: 只需下载新版 `视频下载工具v1.9.4.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
+
 ## 📚 详细文档
 
 更多详细说明请查看 `docs/` 目录下的文档：
 
 - [📖 完整使用教程](docs/使用教程.txt) - 从安装到高级功能的完整指南
 - [🍪 Cookie配置指南](docs/cookies问题答疑.txt) - Cookie配置详细说明和常见问题
-- [❓ 常见问题答疑](docs/常见问题答疑.txt) - 34个常见问题的解决方案
+- [❓ 常见问题答疑](docs/常见问题答疑.txt) - 常见问题的解决方案
 - [⚠️ 错误码说明手册](docs/错误码.txt) - 下载错误码详解和排查流程
 - [📋 更新日志](changelog.html) - 版本更新历史
 
@@ -159,16 +167,12 @@
 
 完整更新日志请查看 [changelog.html](changelog.html)
 
-### v1.9.3 WebUI (p4) 最新更新
+### v1.9.4 WebUI 最新更新
 
-- 🔧 修复日文/中文标题显示乱码问题
-- 🔧 修复Niconico直播下载无进度显示
-- 🔧 修复下载进度卡在0%不动的问题
-- 🔧 修复停止按钮点击无效问题
-- 🔧 修复启动下载后弹出CMD黑窗口问题
-- 🔧 修复孤儿进程残留问题
-- ✨ 添加关闭网页自动退出机制
-- ✨ 添加退出按钮，支持彻底关闭工具
+- 🔧 优化自动更新功能，统一使用 GitHub Releases 作为唯一更新源
+- 🔧 精简更新检查逻辑，减少不必要的网络请求
+- 🔧 自动检测新版本exe文件名，适配新的命名规范
+- 🔧 下载链接统一使用 browser_download_url 直连地址，一键下载替换更新
 
 ## ⚠️ 免责声明
 
