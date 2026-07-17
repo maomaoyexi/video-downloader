@@ -289,23 +289,23 @@ ul.compact li::before {
 <body>
 <div class="container">
 
-  <!-- v1.9.4 WebUI 更新 -->
+  <!-- v1.9.5 WebUI 更新 -->
   <div class="hero">
-    <div class="version-badge">v1.9.4 WebUI</div>
+    <div class="version-badge">v1.9.5 WebUI</div>
     <h1>四平台极致音画下载工具</h1>
-    <div class="subtitle">自动更新功能优化 · 统一使用 GitHub Releases 检查更新</div>
-    <div class="date">发布日期：2026-07-12 · 原版作者：B站_猫猫葉汐A_spy</div>
+    <div class="subtitle">更新安全加固 · 本地接口鉴权 · 统一 -GUI 文件名</div>
+    <div class="date">发布日期：2026-07-16 · 原版作者：B站_猫猫葉汐A_spy</div>
   </div>
 
   <div class="notice-box info">
     <div class="notice-title">ℹ️ 更新说明</div>
-    <p>v1.9.4 对自动更新功能进行了优化，程序现在统一通过 <strong>GitHub Releases</strong> 检查和下载新版本，更新源地址为 <code>https://api.github.com/repos/maomaoyexi/video-downloader/releases/latest</code>。此版本为维护更新，无功能性新增，原有设置、预设、下载记录全部兼容。</p>
+    <p>v1.9.5 重点加固自动更新与本地 WebUI 的安全性：更新包必须通过 <strong>SHA-256</strong> 完整性校验，下载地址仅允许受信任的 HTTPS 主机，本地 API 使用会话令牌鉴权。同时统一发布附件的 <code>-GUI</code> 文件名，确保自动更新准确选择图形界面版本。</p>
   </div>
 
   <div class="summary-grid">
     <div class="stat-card">
-      <div class="number">1</div>
-      <div class="label">优化项</div>
+      <div class="number">4</div>
+      <div class="label">安全与更新改进</div>
     </div>
     <div class="stat-card">
       <div class="number">100%</div>
@@ -315,7 +315,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v1.9.4 完全向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需任何迁移操作。直接替换 exe 文件即可完成升级。</p>
+    <p>v1.9.5 完全向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。升级时使用带 <code>-GUI</code> 后缀的新版 exe 替换旧主程序即可。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -325,18 +325,60 @@ ul.compact li::before {
       <span>变更内容</span>
     </div>
 
+    <div class="bug-card fix">
+      <div class="header">
+        <span class="tag critical">安全</span>
+        <span class="title">自动更新增加 SHA-256 完整性校验</span>
+        <span class="severity">更新安全</span>
+      </div>
+      <div class="desc">
+        下载新版主程序时同步计算 SHA-256；发布信息缺少有效校验值或下载结果不一致时，程序会终止替换，避免损坏或被篡改的更新文件进入运行目录。
+      </div>
+    </div>
+
+    <div class="bug-card fix">
+      <div class="header">
+        <span class="tag critical">安全</span>
+        <span class="title">限制更新下载来源</span>
+        <span class="severity">网络安全</span>
+      </div>
+      <div class="desc">
+        更新链接仅接受 HTTPS，并校验目标主机是否属于 GitHub 或其官方发布资源域名，阻止跳转到未受信任地址。
+      </div>
+    </div>
+
+    <div class="bug-card fix">
+      <div class="header">
+        <span class="tag major">加固</span>
+        <span class="title">本地 WebUI API 增加会话鉴权</span>
+        <span class="severity">本地服务</span>
+      </div>
+      <div class="desc">
+        本地接口要求有效会话令牌，并校验 Host 与 Origin；非本机来源或未授权请求将被拒绝，降低本地服务被其他网页误调用的风险。
+      </div>
+    </div>
+
     <div class="bug-card improve">
       <div class="header">
         <span class="tag minor">优化</span>
-        <span class="title">优化自动更新功能，统一使用 GitHub Releases</span>
-        <span class="severity">更新功能</span>
+        <span class="title">统一 -GUI 发布文件名</span>
+        <span class="severity">发布规范</span>
       </div>
       <div class="desc">
-        自动更新功能统一使用 <strong>GitHub Releases</strong> 作为唯一更新源，简化更新检查流程，减少不必要的网络请求，确保版本检测更加稳定可靠。程序内「检查更新」按钮和自动更新检测均通过 GitHub API 获取最新版本信息。
+        主程序与完整依赖包统一采用 <code>-GUI</code> 后缀；自动更新优先匹配 GUI 版 exe，避免在多个 Release 附件中选错程序。
       </div>
-      <div class="solution">
-        精简更新检查逻辑，统一使用 GitHub Releases API 获取版本号、更新日志和下载链接；下载链接统一使用 <code>browser_download_url</code> 直连地址；自动检测到新版本后一键下载并完成替换更新。
-      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <span class="icon">📜</span>
+      <span>历史版本</span>
+    </div>
+
+    <div class="notice-box info">
+      <div class="notice-title">v1.9.4 WebUI · 2026-07-12</div>
+      <p>统一通过 GitHub Releases 检查和下载新版本，精简版本检测与直连下载流程；原有设置、预设、Cookie 和下载记录保持兼容。</p>
     </div>
   </div>
 
@@ -351,8 +393,8 @@ ul.compact li::before {
       <div class="notice-title">📦 Release 附件说明</div>
       <p>本次发布分为两个附件：</p>
       <ul class="compact" style="margin-top: 0.8rem;">
-        <li><strong>主程序</strong>：<code>视频下载工具v1.9.4.exe</code> - 单文件绿色版，双击即可运行</li>
-        <li><strong>完整依赖包</strong>：<code>视频下载工具v1.9.4-依赖包.zip</code> - 包含全部依赖 exe（yt-dlp/ffmpeg/ffprobe/deno/fantiadl）+ 帮助文档，解压即用</li>
+        <li><strong>主程序</strong>：<code>视频下载工具v1.9.5-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
+        <li><strong>完整依赖包</strong>：<code>视频下载工具v1.9.5-依赖包.zip</code> - 包含全部依赖 exe（yt-dlp/ffmpeg/ffprobe/deno/fantiadl）+ 帮助文档，解压即用</li>
       </ul>
     </div>
   </div>
@@ -365,12 +407,12 @@ ul.compact li::before {
     </div>
 
     <div class="notice-box success">
-      <div class="notice-title">✅ 安装步骤（超简单，3步搞定）</div>
+      <div class="notice-title">✅ 安装步骤（超简单，4步搞定）</div>
       <ul class="compact">
-        <li>下载 <code>视频下载工具v1.9.4.exe</code> 和 <code>视频下载工具v1.9.4-依赖包.zip</code> 两个文件</li>
-        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v1.9.4.exe</code> 放入其中</li>
+        <li>下载 <code>视频下载工具v1.9.5-GUI.exe</code> 和 <code>视频下载工具v1.9.5-依赖包.zip</code> 两个文件</li>
+        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v1.9.5-GUI.exe</code> 放入其中</li>
         <li>解压依赖包，将里面的<strong>全部内容</strong>（所有 exe 文件 + <code>docs</code> 文件夹 + <code>changelog.html</code> 等）解压到 exe 同一目录</li>
-        <li>双击 <code>视频下载工具v1.9.4.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
+        <li>双击 <code>视频下载工具v1.9.5-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
       <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：依赖包已包含所有必需 exe（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code>、<code>ffprobe.exe</code>、<code>deno.exe</code>、<code>fantiadl.exe</code>），解压后无需再下载任何文件。</p>
     </div>
@@ -387,7 +429,7 @@ ul.compact li::before {
       <div class="notice-title">✅ 升级步骤（超简单）</div>
       <ul class="compact">
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
-        <li>只需下载新版 <code>视频下载工具v1.9.4.exe</code>，替换旧版 exe 即可</li>
+        <li>只需下载新版 <code>视频下载工具v1.9.5-GUI.exe</code>，替换旧版 exe 即可</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
         <li>原有依赖文件（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code> 等）<strong>无需重新下载</strong>，继续使用即可</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
@@ -396,8 +438,8 @@ ul.compact li::before {
   </div>
 
   <div class="footer">
-    四平台极致音画下载工具 v1.9.4 WebUI <br>
-    2026-07-12 · 支持 YouTube / Twitch / Niconico / Fantia · 自动更新：GitHub Releases
+    四平台极致音画下载工具 v1.9.5 WebUI <br>
+    2026-07-16 · 支持 YouTube / Twitch / Niconico / Fantia · 安全更新：GitHub Releases
   </div>
 
 </div>

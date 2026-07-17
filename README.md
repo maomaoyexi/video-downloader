@@ -1,7 +1,7 @@
-# 四平台极致音画下载工具 v1.9.4 WebUI
-支持 YouTube / Twitch / Niconico / Fantia 四大平台的视频/直播下载工具，采用浏览器界面，无需安装Python或任何依赖，双击即用。
+# 四平台极致音画下载工具 v1.9.5 WebUI
+支持 YouTube / Twitch / Niconico / Fantia 四大平台的视频/直播下载工具，采用浏览器界面。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
-![Version](https://img.shields.io/badge/version-v1.9.4%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v1.9.5%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -9,27 +9,38 @@
 
 - 🌐 **全新WebUI界面** - 内置HTTP服务器，自动打开浏览器，深色主题，响应式设计
 - 🎬 **四大平台支持** - YouTube、Twitch、Niconico、Fantia，自动识别平台
-- 🎮 **直播录制** - 支持Twitch/Niconico直播录制，自动从开头录制
+- 🎮 **直播录制** - 支持 YouTube、Twitch、Niconico 直播识别、从头录制和实时状态
 - 💾 **配置预设** - 保存常用设置组合，一键切换
 - 📜 **下载历史** - 自动记录每次下载，最多500条
 - 🔄 **断点续传** - 默认启用，网络中断后自动续传
 - 📊 **批量下载** - 支持从TXT文件批量导入链接
+- 🖼️ **封面处理** - 下载独立 JPG 封面，并在兼容格式中自动嵌入
 - 🍪 **Cookie支持** - 支持cookies.txt文件模式
 - ⚡ **硬件加速** - 支持NVIDIA NVENC、Intel QSV、AMD AMF
-- 🔄 **自动更新** - 启动自动检查新版本，一键下载更新替换，统一使用GitHub Releases
+- 🔄 **自动更新** - 启动后通过 GitHub Releases 检查新版本，校验通过后自动更新替换
 - 🧰 **工具箱** - 内置WAV转MP3、yt-dlp更新、临时文件清理等8个工具
 - 🛡️ **进程管理** - 关闭网页30秒后自动退出，无残留进程
 
 ## 🚀 快速开始
 
 1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
-   - `视频下载工具v1.9.4.exe` - 主程序
-   - `视频下载工具v1.9.4-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v1.9.4.exe` 放入其中
+   - `视频下载工具v1.9.5-GUI.exe` - 主程序
+   - `视频下载工具v1.9.5-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v1.9.5-GUI.exe` 放入其中
 3. 解压依赖包，将里面的**全部内容**（所有exe文件、docs文件夹、changelog.html等）解压到主程序同一目录
-4. 双击 `视频下载工具v1.9.4.exe` 运行，自动打开浏览器界面
+4. 双击 `视频下载工具v1.9.5-GUI.exe` 运行，自动打开浏览器界面
 
 > 💡 **提示**：依赖包已包含所有必需文件（yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe），解压后无需再下载任何东西。首次运行会自动生成配置文件、下载目录等。所有文件都保存在exe同目录下，绿色软件无需安装。
+
+### 源码运行版
+
+保持 `视频下载工具v1.9.5-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
+
+```powershell
+python ".\视频下载工具v1.9.5-GUI.py"
+```
+
+源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本与 `video_downloader/` 目录。
 
 ## 📖 使用说明
 
@@ -47,6 +58,9 @@
 ### Twitch直播录制
 直接粘贴主播频道URL（如 `https://www.twitch.tv/xqc`）即可从直播开头录制，停止则结束录制。文件自动保存到 `Twitch/主播名/直播/` 目录。
 
+### YouTube / Niconico 直播录制
+YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp` 或 `live2.nicovideo.jp` 链接。程序会自动进入直播模式，并实时显示录制时长、大小、速度和分片状态。
+
 ### 配置预设
 1. 在「设置」页面调整好各项参数
 2. 在「配置预设」区域输入预设名称
@@ -54,7 +68,7 @@
 4. 之后可随时从下拉框选择预设一键加载
 
 ### 自动更新
-程序启动后3秒自动静默检查更新，检测到新版本时右上角显示「⬆ 有更新」徽标，点击后可一键下载并自动替换重启，所有配置和下载记录保留。
+程序启动后3秒自动通过 GitHub Releases 静默检查更新。检测到新版本时右上角显示「⬆ 有更新」徽标，点击后可一键下载；程序会校验可信下载来源、文件大小、Windows EXE 格式及 SHA-256，校验通过后自动替换重启，所有配置和下载记录保留。
 
 ## ⚙️ 配置选项
 
@@ -86,7 +100,7 @@
 
 ```
 工具目录/
-├── 视频下载工具v1.9.4.exe   # 主程序
+├── 视频下载工具v1.9.5-GUI.exe # 主程序
 ├── yt-dlp.exe               # 下载核心
 ├── ffmpeg.exe               # 音视频处理
 ├── ffprobe.exe              # 媒体信息探测
@@ -151,7 +165,7 @@
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
 **Q: 老用户如何升级？**
-> A: 只需下载新版 `视频下载工具v1.9.4.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
+> A: 只需下载新版 `视频下载工具v1.9.5-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
 
 ## 📚 详细文档
 
@@ -167,12 +181,18 @@
 
 完整更新日志请查看 [changelog.html](changelog.html)
 
-### v1.9.4 WebUI 最新更新
+### v1.9.5 WebUI 最新更新（2026-07-16）
 
-- 🔧 优化自动更新功能，统一使用 GitHub Releases 作为唯一更新源
-- 🔧 精简更新检查逻辑，减少不必要的网络请求
-- 🔧 自动检测新版本exe文件名，适配新的命名规范
-- 🔧 下载链接统一使用 browser_download_url 直连地址，一键下载替换更新
+- 🔄 自动更新统一通过 GitHub Releases 检查和分发
+- 🎮 新增 YouTube 直播识别，统一单任务与批量任务的直播处理
+- 🖼️ 完善独立 JPG 封面下载及兼容容器嵌入
+- 🧩 完成核心功能模块化，提升下载、HTTP/SSE、配置及更新流程的可维护性
+- 🛑 强化停止与任务代际保护，避免旧任务污染新任务状态
+- 💾 配置、预设和历史采用线程安全及原子写入，降低并发损坏风险
+- 🛡️ 更新下载仅允许可信来源，并限制更新文件最大为 512 MB
+- 🔐 支持从发布资产或发布说明读取 SHA-256，缺少有效校验值时禁止自动更新
+- ✅ 下载完成后校验文件大小、SHA-256 与 Windows EXE 格式，再执行替换重启
+- 📝 主程序文件名统一为 `视频下载工具v1.9.5-GUI.exe`
 
 ## ⚠️ 免责声明
 
