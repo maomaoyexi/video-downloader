@@ -28,6 +28,7 @@ __pycache__/
 htmlcov/
 build/
 dist/
+release-output/
 *.spec
 
 # 依赖工具（从官方下载，不放入仓库）
