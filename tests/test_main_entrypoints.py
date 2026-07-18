@@ -1,3 +1,4 @@
+"""测试入口文件使用 AppContainer 结构。"""
 import ast
 import unittest
 from pathlib import Path
@@ -11,53 +12,51 @@ class MainEntrypointTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tree = ast.parse(MAIN_SCRIPT.read_text(encoding="utf-8"))
 
-    def function(self, name):
-        matches = [node for node in self.tree.body if isinstance(node, ast.FunctionDef) and node.name == name]
-        return matches[-1]
+    def test_entry_point_uses_app_container(self):
+        """验证入口文件使用 AppContainer 进行依赖注入。"""
+        imports = [node for node in ast.walk(self.tree) if isinstance(node, ast.ImportFrom)]
+        import_modules = []
+        for node in imports:
+            if node.module:
+                import_modules.append(node.module)
+        self.assertIn("video_downloader.container", import_modules,
+                      "入口文件应导入 AppContainer")
 
-    def test_start_download_is_thin_executor_wrapper(self):
-        function = self.function("start_download")
-        self.assertEqual(len(function.body), 1)
-        call = function.body[0].value
-        self.assertEqual(ast.unparse(call.func), "download_executor.start_download")
+    def test_main_function_is_simple(self):
+        """验证 main() 函数结构简洁（委托给 container）。"""
+        main_funcs = [node for node in self.tree.body
+                      if isinstance(node, ast.FunctionDef) and node.name == "main"]
+        self.assertEqual(len(main_funcs), 1, "应有一个 main() 函数")
+        body = main_funcs[0].body
+        # main() 应该调用 app.main()
+        calls = [ast.unparse(node.func) for node in ast.walk(main_funcs[0])
+                 if isinstance(node, ast.Call)]
+        self.assertIn("app.main", calls, "main() 应委托给 app.main()")
 
-    def test_stop_download_is_thin_executor_wrapper(self):
-        function = self.function("stop_download")
-        self.assertEqual(len(function.body), 1)
-        call = function.body[0].value
-        self.assertEqual(ast.unparse(call.func), "download_executor.stop_download")
+    def test_container_is_constructed(self):
+        """验证 AppContainer 在模块级别被构造。"""
+        calls = [ast.unparse(node.func) for node in ast.walk(self.tree)
+                 if isinstance(node, ast.Call)]
+        self.assertIn("AppContainer", calls, "应构造 AppContainer")
+        self.assertIn("container.wire", calls, "应调用 container.wire()")
 
-    def test_batch_entrypoint_keeps_read_and_save_then_delegates(self):
-        function = self.function("batch_txt_download")
-        calls = [ast.unparse(node.func) for node in ast.walk(function) if isinstance(node, ast.Call)]
-        self.assertIn("read_urls_file", calls)
-        self.assertIn("save_config", calls)
-        self.assertIn("download_executor.batch_download", calls)
+    def test_entry_point_imports_core_constants(self):
+        """验证入口文件从 core.constants 导入（而非旧路径）。"""
+        imports = [node for node in ast.walk(self.tree) if isinstance(node, ast.ImportFrom)]
+        found = False
+        for node in imports:
+            if node.module and "core.constants" in node.module:
+                found = True
+                break
+        self.assertTrue(found, "应从 video_downloader.core.constants 导入")
 
-    def test_request_exit_uses_shared_event(self):
-        function = self.function("request_exit")
-        calls = [ast.unparse(node.func) for node in ast.walk(function) if isinstance(node, ast.Call)]
-        self.assertIn("exit_event.set", calls)
-
-    def test_http_service_is_composed_with_port_zero(self):
-        function = self.function("create_http_service")
-        returns = [node for node in ast.walk(function) if isinstance(node, ast.Return)]
-        expression = ast.unparse(returns[-1].value)
-        self.assertIn("HttpService", expression)
-        self.assertIn("port=0", expression)
-
-    def test_broadcast_paths_use_shared_bounded_publish(self):
-        for name in ("add_log", "emit_event", "update_progress", "broadcast_download_state", "request_exit"):
-            function = self.function(name)
-            calls = [ast.unparse(node.func) for node in ast.walk(function) if isinstance(node, ast.Call)]
-            self.assertIn("app_state.publish", calls)
-
-    def test_main_starts_initial_idle_timer(self):
-        function = self.function("main")
-        statements = [ast.unparse(node) for node in function.body]
-        server_start = next(index for index, statement in enumerate(statements) if "server_instance.start()" in statement)
-        idle_start = next(index for index, statement in enumerate(statements) if statement == "start_idle_timer()")
-        self.assertGreater(idle_start, server_start)
+    def test_sys_frozen_path_logic_present(self):
+        """验证 PyInstaller 兼容路径逻辑存在。"""
+        source = MAIN_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("getattr(sys, 'frozen'", source,
+                      "应包含 PyInstaller frozen 检测")
+        self.assertIn("sys.executable", source,
+                      "应使用 sys.executable 获取路径")
 
 
 if __name__ == "__main__":

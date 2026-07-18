@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from video_downloader.app_state import AppState
-from video_downloader.config_validation import validate_config
-from video_downloader.constants import DEFAULT_CONFIG
-from video_downloader.storage import StorageService
+from video_downloader.state.app_state import AppState
+from video_downloader.core.validation import validate_config
+from video_downloader.core.constants import DEFAULT_CONFIG
+from video_downloader.services.storage import StorageService
 
 
 class StorageServiceTests(unittest.TestCase):
@@ -49,7 +49,7 @@ class StorageServiceTests(unittest.TestCase):
         config_file = Path(self.temp_dir.name) / "settings.ini"
         original = config_file.read_bytes()
         self.state.update_config({"THREADS": 8})
-        with patch("video_downloader.storage.os.replace", side_effect=OSError("replace failed")):
+        with patch("video_downloader.services.storage.os.replace", side_effect=OSError("replace failed")):
             with self.assertRaises(OSError):
                 self.storage.save_config()
         self.assertEqual(config_file.read_bytes(), original)
@@ -105,7 +105,7 @@ class StorageServiceTests(unittest.TestCase):
         self.assertTrue(self.storage.save_preset("原预设")["ok"])
         preset_file = Path(self.temp_dir.name) / "presets.json"
         original = preset_file.read_bytes()
-        with patch("video_downloader.storage.os.replace", side_effect=OSError("replace failed")):
+        with patch("video_downloader.services.storage.os.replace", side_effect=OSError("replace failed")):
             result = self.storage.save_preset("新预设")
         self.assertIn("error", result)
         self.assertEqual(preset_file.read_bytes(), original)

@@ -1,26 +1,30 @@
 from .constants import AUDIO_SEP_OPTIONS
 
 
-def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None):
+def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None):
     cfg = config
     ytdlp = str(tool_dir / f"yt-dlp{exe_suffix}")
     cmd = [ytdlp, "--newline", "--continue", "--encoding", "utf-8"]
     platform_name = platform_override if platform_override else cfg["PLATFORM"]
     is_nico_live = "live.nicovideo.jp" in url.lower() or "live2.nicovideo.jp" in url.lower()
 
+    # VOD 模板：开启嵌入元数据时，在文件名前追加 [YYYYMMDD] 发布日期，便于按时间排序
+    vod_date_prefix = "[%(upload_date)s] " if cfg["EMBED_META"] else ""
+
     # Twitch 直播与录像共用入口，显式直播优先走从头抓取模板。
     if is_live or platform_name == "Twitch":
         is_live_url = is_live or "twitch.tv/" in url.lower() and "/videos/" not in url.lower() and "/clip/" not in url.lower()
         if is_live_url:
-            out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
+            out_tmpl = str(
+                tool_dir / platform_name / "%(uploader)s" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
             cmd += ["--live-from-start"]
         else:
-            out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / "%(title)s [%(id)s].%(ext)s")
+            out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / f"{vod_date_prefix}%(title)s [%(id)s].%(ext)s")
     elif is_nico_live:
         # Niconico 直播按 URL 识别，并固定归入直播目录。
         out_tmpl = str(tool_dir / "Niconico" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
     else:
-        out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / "%(title)s [%(id)s].%(ext)s")
+        out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / f"{vod_date_prefix}%(title)s [%(id)s].%(ext)s")
 
     cmd += ["-o", out_tmpl]
     archive = tool_dir / f"{platform_name.lower()}_archive.txt"
@@ -59,6 +63,9 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         separate_vfmt = f"bestvideo{vcodec_part}/bestvideo"
         cmd += ["-f", f"{separate_vfmt},{aformat_base}"]
 
+    # 同时下载音频（独立 MP3 文件），Fantia 除外
+    if cfg.get("AUDIO_DOWNLOAD") and platform_name != "Fantia":
+        cmd += ["-x", "--audio-format", "mp3", "--keep-video"]
     cmd += ["-N", str(cfg["THREADS"])]
     if cfg["SPEED_LIMIT"] > 0:
         cmd += ["-r", f"{cfg['SPEED_LIMIT']}M"]
@@ -90,5 +97,8 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         cmd += ["--write-comments"]
     if platform_name == "Niconico" and cfg["NICO_RECODE"]:
         cmd += ["--recode-video", fmt]
+    # Bilibili 多P选择：通过 -I 指定下载哪些分P
+    if bili_parts and bili_parts != "all":
+        cmd += ["-I", bili_parts]
     cmd.append(url)
     return cmd

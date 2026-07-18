@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_downloader.constants import DEFAULT_CONFIG
-from video_downloader.ytdlp_command import build_ytdlp_cmd
+from video_downloader.core.constants import DEFAULT_CONFIG
+from video_downloader.core.command import build_ytdlp_cmd
 
 
 class YtdlpCommandTests(unittest.TestCase):

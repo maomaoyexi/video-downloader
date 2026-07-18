@@ -5,7 +5,7 @@ import tempfile
 import threading
 from datetime import datetime
 
-from .constants import DEFAULT_CONFIG
+from video_downloader.core.constants import DEFAULT_CONFIG
 
 
 class StorageService:

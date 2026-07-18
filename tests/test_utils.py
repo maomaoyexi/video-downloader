@@ -1,6 +1,6 @@
 import unittest
 
-from video_downloader.utils import detect_platform, is_live_url
+from video_downloader.core.utils import detect_platform, is_live_url
 
 
 class UtilsTests(unittest.TestCase):

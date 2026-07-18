@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-from video_downloader import updater as updater_module
-from video_downloader.updater import UpdaterService
+from video_downloader.services import updater as updater_module
+from video_downloader.services.updater import UpdaterService
 
 
 class FakeDownloadManager:

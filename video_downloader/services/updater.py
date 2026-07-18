@@ -11,7 +11,7 @@ import threading
 import time
 from urllib import request as urllib_request
 
-from .constants import (
+from video_downloader.core.constants import (
     EXE_NAME,
     GITHUB_OWNER,
     GITHUB_REPO,
@@ -19,7 +19,7 @@ from .constants import (
     VERSION,
     VERSION_NUM,
 )
-from .utils import asset_digest, is_allowed_update_url, parse_version_tag, version_num_to_str
+from video_downloader.core.platform import asset_digest, is_allowed_update_url, parse_version_tag, version_num_to_str
 
 
 class UpdaterService:

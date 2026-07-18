@@ -1,4 +1,4 @@
-YT-DLP 四平台极致音画下载工具 完整使用教程
+YT-DLP 多平台视频下载工具 完整使用教程
 适配版本：v1.9.5 WebUI 源码运行版
 支持平台：YouTube / Twitch / Niconico / Fantia
 界面方式：浏览器WebUI（运行Python主程序后自动打开浏览器）

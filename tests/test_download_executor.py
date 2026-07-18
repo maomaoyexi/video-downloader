@@ -5,8 +5,8 @@ from queue import Queue
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from video_downloader.download_executor import DownloadExecutor
-from video_downloader.download_manager import DownloadManager
+from video_downloader.services.download_executor import DownloadExecutor
+from video_downloader.services.download_manager import DownloadManager
 
 
 class FakeAppState:
@@ -108,7 +108,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 (tool_dir / name).touch()
             manager = DownloadManager()
             executor, callbacks = create_executor(tool_dir, manager)
-            with patch("video_downloader.download_executor.threading.Thread", ImmediateThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", ImmediateThread):
                 result = executor.start_download("https://youtube.com/watch?v=abc")
             self.assertEqual(result, {"ok": True})
             self.assertEqual(manager.snapshot()["kind"], "single")
@@ -121,7 +121,7 @@ class DownloadExecutorTests(unittest.TestCase):
             for name in ["yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"]:
                 (tool_dir / name).touch()
             executor, callbacks = create_executor(tool_dir)
-            with patch("video_downloader.download_executor.threading.Thread", ImmediateThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", ImmediateThread):
                 result = executor.start_download("https://youtube.com/live/abc")
             self.assertEqual(result, {"ok": True})
             callbacks["build_command"].assert_called_once_with(
@@ -129,6 +129,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 is_live=True,
                 platform_override="YouTube",
                 config_override={"PLATFORM": "YouTube"},
+                bili_parts=None,
             )
 
     def test_non_live_url_text_does_not_enable_live_mode(self):
@@ -137,7 +138,7 @@ class DownloadExecutorTests(unittest.TestCase):
             for name in ["yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"]:
                 (tool_dir / name).touch()
             executor, callbacks = create_executor(tool_dir)
-            with patch("video_downloader.download_executor.threading.Thread", ImmediateThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", ImmediateThread):
                 result = executor.start_download("https://youtube.com/watch?v=live-recording")
             self.assertEqual(result, {"ok": True})
             self.assertFalse(callbacks["build_command"].call_args.kwargs["is_live"])
@@ -149,7 +150,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 (tool_dir / name).touch()
             manager = DownloadManager()
             executor, callbacks = create_executor(tool_dir, manager)
-            with patch("video_downloader.download_executor.threading.Thread", FailingThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", FailingThread):
                 result = executor.start_download("https://youtube.com/watch?v=abc")
             self.assertEqual(result, {"error": "下载线程启动失败: thread unavailable"})
             self.assertFalse(manager.snapshot()["running"])
@@ -162,7 +163,7 @@ class DownloadExecutorTests(unittest.TestCase):
             for name in ["yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"]:
                 (tool_dir / name).touch()
             executor, callbacks = create_executor(tool_dir)
-            with patch("video_downloader.download_executor.threading.Thread", ImmediateThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", ImmediateThread):
                 result = executor.batch_download(["one", "two"])
             self.assertEqual(result, {"ok": True, "total": 2})
             self.assertEqual(executor._app_state.batch_stats, {"ok": 0, "fail": 0, "total": 2, "current": 0})
@@ -174,7 +175,7 @@ class DownloadExecutorTests(unittest.TestCase):
             for name in ["yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"]:
                 (tool_dir / name).touch()
             executor, _ = create_executor(tool_dir)
-            with patch("video_downloader.download_executor.threading.Thread") as thread:
+            with patch("video_downloader.services.download_executor.threading.Thread") as thread:
                 result = executor.batch_download(["  `https://youtube.com/live/abc`  ", "", "  "])
             self.assertEqual(result, {"ok": True, "total": 1})
             self.assertEqual(executor._app_state.batch_stats, {"ok": 0, "fail": 0, "total": 1, "current": 0})
@@ -190,7 +191,7 @@ class DownloadExecutorTests(unittest.TestCase):
             done = threading.Event()
             done.set()
             executor._start_reader = Mock(side_effect=[(Queue(), done), (Queue(), done)])
-            with patch("video_downloader.download_executor.threading.Thread", DirectThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", DirectThread):
                 result = executor.batch_download([
                     " https://youtube.com/live/abc ",
                     " ",
@@ -220,7 +221,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 (tool_dir / name).touch()
             manager = DownloadManager()
             executor, callbacks = create_executor(tool_dir, manager)
-            with patch("video_downloader.download_executor.threading.Thread", FailingThread):
+            with patch("video_downloader.services.download_executor.threading.Thread", FailingThread):
                 result = executor.batch_download(["one"])
             self.assertEqual(result, {"error": "下载线程启动失败: thread unavailable"})
             self.assertFalse(manager.snapshot()["running"])
@@ -250,7 +251,7 @@ class DownloadExecutorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             executor, _ = create_executor(Path(directory))
             process = FakeProcess()
-            with patch("video_downloader.download_executor.os.name", "posix"):
+            with patch("video_downloader.services.download_executor.os.name", "posix"):
                 executor.kill_process_tree(process)
             process.kill.assert_called_once_with()
             process.stdout.close.assert_called_once_with()
