@@ -1,6 +1,6 @@
 import unittest
 
-from video_downloader.config_validation import validate_config
+from video_downloader.core.validation import validate_config
 
 
 class ConfigValidationTests(unittest.TestCase):

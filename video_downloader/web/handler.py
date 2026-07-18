@@ -18,6 +18,7 @@ class HttpHandlerDependencies:
     download_manager: object
     updater: object
     render_html_page: object
+    serve_static_file: object
     check_deps: object
     load_presets: object
     load_history: object
@@ -26,6 +27,7 @@ class HttpHandlerDependencies:
     start_download: object
     batch_txt_download: object
     stop_download: object
+    fetch_bili_playlist: object
     save_preset: object
     load_preset: object
     delete_preset: object
@@ -94,6 +96,20 @@ def create_handler(dependencies):
                 self._json({"checking": True})
             elif path == "/api/update-status":
                 self._json(dependencies.updater.snapshot())
+            elif path.startswith("/static/"):
+                if not self._is_local_request():
+                    self._forbidden()
+                    return
+                content, content_type = dependencies.serve_static_file(path)
+                if content is None:
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                # 静态资源缓存1小时（版本号变更时URL可加?v=参数强制刷新）
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self.end_headers()
+                self.wfile.write(content)
             else:
                 self.send_error(404)
 
@@ -173,9 +189,16 @@ def create_handler(dependencies):
                 url = self._field(data, "url", str, "")
                 if url is None:
                     return
-                self._json(dependencies.start_download(url))
+                bili_parts = data.get("bili_parts") or None
+                self._json(dependencies.start_download(url, bili_parts=bili_parts))
             elif path == "/api/batch-txt":
-                self._json(dependencies.batch_txt_download())
+                bili_parts_map = data.get("bili_parts_map") or None
+                self._json(dependencies.batch_txt_download(bili_parts_map=bili_parts_map))
+            elif path == "/api/bili-playlist":
+                url = self._field(data, "url", str, "")
+                if url is None:
+                    return
+                self._json(dependencies.fetch_bili_playlist(url))
             elif path == "/api/stop":
                 self._json(dependencies.stop_download())
             elif path == "/api/save-preset":

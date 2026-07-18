@@ -1,3 +1,4 @@
+import json
 import os
 import queue
 import re
@@ -5,7 +6,7 @@ import subprocess
 import threading
 import time
 
-from .utils import clean_url, detect_platform, is_live_url, safe_decode
+from video_downloader.core.platform import clean_url, detect_platform, is_live_url, safe_decode
 
 
 class DownloadExecutor:
@@ -35,7 +36,7 @@ class DownloadExecutor:
         self._cancel_idle_timer = cancel_idle_timer
         self._start_idle_timer = start_idle_timer
 
-    def start_download(self, url):
+    def start_download(self, url, bili_parts=None):
         url = clean_url(url)
         if not url:
             return {"error": "请输入有效的视频链接"}
@@ -59,6 +60,7 @@ class DownloadExecutor:
                 is_live=is_live_download,
                 platform_override=effective_platform,
                 config_override=config_snapshot,
+                bili_parts=bili_parts,
             )
         except Exception as exc:
             return {"error": f"下载配置无效: {exc}"}
@@ -82,6 +84,64 @@ class DownloadExecutor:
             self._start_idle_timer()
             return {"error": f"下载线程启动失败: {exc}"}
         return {"ok": True}
+
+    def fetch_bili_playlist(self, url):
+        """获取 Bilibili 视频的分P列表。返回 {parts: [...], total: N} 或 {error: ...}。"""
+        url = clean_url(url)
+        if not url:
+            return {"error": "无效链接"}
+        config_snapshot = self._app_state.config_snapshot()
+        # 构建轻量命令：仅提取播放列表元数据，不实际下载
+        ytdlp = str(self._tool_dir / f"yt-dlp{self._exe_suffix}")
+        cmd = [ytdlp, "--flat-playlist", "--dump-json", "--encoding", "utf-8"]
+        if config_snapshot["USE_COOKIES"]:
+            if config_snapshot["COOKIE_MODE"] == 1:
+                cookie_file = self._tool_dir / "cookies.txt"
+                if cookie_file.exists():
+                    cmd += ["--cookies", str(cookie_file)]
+            else:
+                cmd += ["--cookies-from-browser", f"{config_snapshot['BROWSER_NAME']}:{config_snapshot['BROWSER_PROFILE']}"]
+        if config_snapshot["PROXY_ENABLED"]:
+            cmd += ["--proxy", f"{config_snapshot['PROXY_TYPE']}://{config_snapshot['PROXY_ADDR']}:{config_snapshot['PROXY_PORT']}"]
+        cmd.append(url)
+        startupinfo = None
+        creationflags = 0
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+            creationflags = subprocess.CREATE_NO_WINDOW
+        try:
+            proc = subprocess.Popen(
+                cmd, cwd=self._tool_dir,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace",
+                startupinfo=startupinfo, creationflags=creationflags,
+            )
+            parts = []
+            for line in proc.stdout:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    parts.append({
+                        "index": entry.get("playlist_index", len(parts) + 1),
+                        "title": entry.get("title", f"P{len(parts) + 1}"),
+                        "id": entry.get("id", ""),
+                        "duration": entry.get("duration") or 0,
+                    })
+                except json.JSONDecodeError:
+                    continue
+            proc.wait(timeout=30)
+            if proc.returncode != 0:
+                stderr_output = proc.stderr.read().strip() if proc.stderr else ""
+                return {"error": f"yt-dlp 进程退出码 {proc.returncode}" + (f": {stderr_output[:300]}" if stderr_output else "")}
+            if not parts:
+                return {"parts": [], "total": 0, "note": "未检测到分P列表，可能是单P视频"}
+            return {"parts": parts, "total": len(parts)}
+        except Exception as exc:
+            return {"error": f"获取分P列表失败: {exc}"}
 
     def _run_single(self, handle, cmd, url, effective_platform, is_live_download):
         # 线程局部代际会随进度回调传递，旧工作线程无法覆盖新任务界面状态。
@@ -226,7 +286,7 @@ class DownloadExecutor:
         finally:
             self._finish(handle, proc)
 
-    def batch_download(self, urls):
+    def batch_download(self, urls, bili_parts_map=None):
         urls = [url for raw_url in urls if (url := clean_url(raw_url))]
         if not urls:
             return {"error": "没有有效的视频链接"}
@@ -243,7 +303,7 @@ class DownloadExecutor:
         stats.clear()
         stats.update({"ok": 0, "fail": 0, "total": len(urls), "current": 0})
         try:
-            threading.Thread(target=self._run_batch, args=(handle, urls, config_snapshot, stats), daemon=True).start()
+            threading.Thread(target=self._run_batch, args=(handle, urls, config_snapshot, stats, bili_parts_map or {}), daemon=True).start()
         except Exception as exc:
             self._download_manager.finish(handle)
             self._broadcast_download_state()
@@ -251,7 +311,7 @@ class DownloadExecutor:
             return {"error": f"下载线程启动失败: {exc}"}
         return {"ok": True, "total": len(urls)}
 
-    def _run_batch(self, handle, urls, config_snapshot, stats):
+    def _run_batch(self, handle, urls, config_snapshot, stats, bili_parts_map=None):
         # 批量统计与进度共用任务代际，避免停止后迟到事件污染下一任务。
         self._app_state.download_thread_context.task_id = handle.generation
         stopped = False
@@ -281,11 +341,13 @@ class DownloadExecutor:
                 self._update_progress(0, f"批量下载 {index}/{len(urls)}")
                 proc = None
                 try:
+                    bili_parts_for_url = (bili_parts_map or {}).get(url)
                     cmd = self._build_command(
                         url,
                         is_live=is_live_url(url, detected),
                         platform_override=effective_platform,
                         config_override=config_snapshot,
+                        bili_parts=bili_parts_for_url,
                     )
                     proc = self._spawn(cmd)
                     if not self._download_manager.publish_process(handle, proc):

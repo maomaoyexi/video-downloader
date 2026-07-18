@@ -1,4 +1,4 @@
-# 四平台极致音画下载工具 v1.9.5 WebUI
+# 多平台视频下载工具 v1.9.5 WebUI
 支持 YouTube / Twitch / Niconico / Fantia 四大平台的视频/直播下载工具，采用浏览器界面。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
 ![Version](https://img.shields.io/badge/version-v1.9.5%20WebUI-purple)
@@ -175,11 +175,11 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 - [🍪 Cookie配置指南](docs/cookies问题答疑.txt) - Cookie配置详细说明和常见问题
 - [❓ 常见问题答疑](docs/常见问题答疑.txt) - 常见问题的解决方案
 - [⚠️ 错误码说明手册](docs/错误码.txt) - 下载错误码详解和排查流程
-- [📋 更新日志](changelog.html) - 版本更新历史
+- [📋 更新日志](resource/templates/changelog.html) - 版本更新历史
 
 ## 📋 更新日志
 
-完整更新日志请查看 [changelog.html](changelog.html)
+完整更新日志请查看 [changelog.html](resource/templates/changelog.html)
 
 ### v1.9.5 WebUI 最新更新（2026-07-16）
 

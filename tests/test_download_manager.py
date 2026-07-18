@@ -1,7 +1,7 @@
 import threading
 import unittest
 
-from video_downloader.download_manager import DownloadManager
+from video_downloader.services.download_manager import DownloadManager
 
 
 class FakeProcess:

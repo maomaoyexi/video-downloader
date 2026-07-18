@@ -1,6 +1,7 @@
 from .constants import (
     AUDIO_OPTIONS,
     AUDIO_SEP_OPTIONS,
+    BILI_POLICY_OPTIONS,
     BROWSER_OPTIONS,
     CODEC_OPTIONS,
     DEFAULT_CONFIG,
@@ -30,6 +31,7 @@ def validate_config(values, base=None):
         "PROXY_TYPE": PROXY_TYPE_OPTIONS,
         "BROWSER_NAME": BROWSER_OPTIONS,
         "HWACCEL": HWACCEL_OPTIONS,
+        "BILI_MULTIP_POLICY": BILI_POLICY_OPTIONS,
     }
     integer_ranges = {
         "AUDIO_SEP_MODE": (0, len(AUDIO_SEP_OPTIONS)),
@@ -40,8 +42,8 @@ def validate_config(values, base=None):
     }
     booleans = {
         "MERGE_MODE", "PROXY_ENABLED", "USE_COOKIES", "EMBED_META",
-        "DOWNLOAD_THUMB", "WIN_FILENAMES", "STRICT_FILENAME", "NICO_COMMENTS",
-        "NICO_RECODE", "ENABLE_LOG", "DEL_WAV_AFTER_CONVERT",
+        "DOWNLOAD_THUMB", "AUDIO_DOWNLOAD", "WIN_FILENAMES", "STRICT_FILENAME",
+        "NICO_COMMENTS", "NICO_RECODE", "ENABLE_LOG", "DEL_WAV_AFTER_CONVERT",
     }
     for key, value in values.items():
         if key not in DEFAULT_CONFIG:

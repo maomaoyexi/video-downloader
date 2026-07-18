@@ -34,6 +34,7 @@ DEFAULT_CONFIG = {
     "HWACCEL": "cpu",
     "EMBED_META": 1,
     "DOWNLOAD_THUMB": 1,
+    "AUDIO_DOWNLOAD": 0,
     "WIN_FILENAMES": 1,
     "STRICT_FILENAME": 0,
     "NICO_COMMENTS": 0,
@@ -41,6 +42,7 @@ DEFAULT_CONFIG = {
     "ENABLE_LOG": 1,
     "MP3_BITRATE": 320,
     "DEL_WAV_AFTER_CONVERT": 0,
+    "BILI_MULTIP_POLICY": "all",
 }
 
 RESOLUTION_OPTIONS = ["best", "2160", "1440", "1080", "720", "480", "360"]
@@ -57,9 +59,11 @@ HWACCEL_LABELS = ["CPU软编码", "N卡 NVENC", "Intel QSV", "AMD AMF"]
 BROWSER_OPTIONS = ["chrome", "edge", "firefox", "brave", "opera"]
 PROXY_TYPE_OPTIONS = ["http", "socks5"]
 MP3_BITRATE_OPTIONS = [128, 192, 256, 320]
+BILI_POLICY_OPTIONS = ["all", "select"]
 
 PLATFORM_INFO = [
     {"name": "YouTube", "color": "#FF0000", "domains": ["youtube.com", "youtu.be"]},
+    {"name": "Bilibili", "color": "#FB7299", "domains": ["bilibili.com", "b23.tv"]},
     {"name": "Twitch", "color": "#9146FF", "domains": ["twitch.tv"]},
     {"name": "Niconico", "color": "#00A0D1", "domains": ["nicovideo.jp", "nico.ms"]},
     {"name": "Fantia", "color": "#E6399B", "domains": ["fantia.jp"]},

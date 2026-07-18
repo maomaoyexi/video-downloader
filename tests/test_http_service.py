@@ -8,8 +8,8 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import Mock
 
-from video_downloader.app_state import AppState
-from video_downloader.http_service import HttpHandlerDependencies, HttpService, create_handler
+from video_downloader.state.app_state import AppState
+from video_downloader.web.handler import HttpHandlerDependencies, HttpService, create_handler
 
 
 class FakeDownloadManager:
@@ -44,14 +44,16 @@ def make_dependencies(exit_event):
         download_manager=FakeDownloadManager(),
         updater=FakeUpdater(),
         render_html_page=lambda token: f"token={token}".encode(),
+        serve_static_file=lambda path: (None, None),
         check_deps=lambda: {"yt-dlp": True},
         load_presets=lambda: {"default": {}},
         load_history=lambda: [{"url": "example"}],
         cancel_idle_timer=lambda: None,
         start_idle_timer=lambda: None,
-        start_download=lambda url: {"url": url},
+        start_download=lambda url, bili_parts=None: {"url": url},
         batch_txt_download=value,
         stop_download=value,
+        fetch_bili_playlist=lambda url: {"parts": [], "total": 0},
         save_preset=named_value,
         load_preset=named_value,
         delete_preset=named_value,
