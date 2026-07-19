@@ -36,6 +36,9 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("page-tools", html)
         self.assertIn("page-help", html)
         self.assertIn("page-about", html)
+        self.assertIn("ErgouTree", html)
+        self.assertIn("@ergou10086", html)
+        self.assertIn("https://github.com/ergou10086", html)
         # 引用了外部 CSS/JS
         self.assertIn("/static/css/style.css", html)
         self.assertIn("/static/js/app.js", html)
@@ -61,6 +64,16 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("/api/events?token=", js)
         self.assertIn("/api/start", js)
         self.assertIn("/api/do-update", js)
+
+    def test_bilibili_part_title_uses_safe_dom_properties(self):
+        _skip_if_frozen()
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        js_path = os.path.join(base, "resource", "static", "js", "app.js")
+        with open(js_path, "r", encoding="utf-8") as f:
+            js = f.read()
+        self.assertIn("title.title = String(p.title ?? '');", js)
+        self.assertIn("title.textContent = String(p.title ?? '');", js)
+        self.assertNotIn("list.innerHTML = parts.map", js)
 
     def test_serve_static_file_css(self):
         content, mime = serve_static_file("/static/css/style.css")

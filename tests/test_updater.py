@@ -71,7 +71,7 @@ class UpdaterServiceTests(unittest.TestCase):
 
         def fetch_url(url, timeout=10):
             urls.append(url)
-            return '{"tag_name":"v1.9.5","assets":[]}'
+            return '{"tag_name":"v2.0.0","assets":[]}'
 
         updater._fetch_url = fetch_url
         result = updater.check_update()
@@ -178,7 +178,7 @@ class UpdaterServiceTests(unittest.TestCase):
             with mock.patch.object(updater_module.tempfile, "mkdtemp", return_value=temp_dir), mock.patch.object(
                 updater_module.threading, "Thread", ControlledThread
             ), mock.patch.object(updater_module.sys, "frozen", True, create=True), mock.patch.object(
-                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v1.9.5-GUI.exe")
+                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.0.0-GUI.exe")
             ), mock.patch.object(updater_module.os, "name", "nt"):
                 result = updater.do_update()
             self.assertTrue(result["ok"])
@@ -226,7 +226,7 @@ class UpdaterServiceTests(unittest.TestCase):
             with mock.patch.object(updater_module.tempfile, "mkdtemp", return_value=temp_dir), mock.patch.object(
                 updater_module.threading, "Thread", FailingHandoffThread
             ), mock.patch.object(updater_module.sys, "frozen", True, create=True), mock.patch.object(
-                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v1.9.5-GUI.exe")
+                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.0.0-GUI.exe")
             ), mock.patch.object(updater_module.os, "name", "nt"):
                 result = updater.do_update()
             self.assertTrue(result["ok"])

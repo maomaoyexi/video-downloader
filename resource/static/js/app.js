@@ -627,7 +627,7 @@ function escHtml(s) {
   return d.innerHTML;
 }
 function escAttr(s) {
-  return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return escHtml(String(s)).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 }
 
 // ========== 自动更新功能 ==========
@@ -708,14 +708,27 @@ async function fetchBiliPlaylist(url) {
 
 function showPartSelector(parts) {
   const list = document.getElementById('partList');
-  list.innerHTML = parts.map(p => `
-    <label class="part-item">
-      <input type="checkbox" value="${p.index}" checked onchange="updatePartCount()">
-      <span class="part-index">P${p.index}</span>
-      <span class="part-title" title="${escHtml(p.title)}">${escHtml(p.title)}</span>
-      <span class="part-duration">${fmtDuration(p.duration)}</span>
-    </label>
-  `).join('');
+  list.replaceChildren(...parts.map(p => {
+    const label = document.createElement('label');
+    label.className = 'part-item';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = String(p.index ?? '');
+    checkbox.checked = true;
+    checkbox.addEventListener('change', updatePartCount);
+    const index = document.createElement('span');
+    index.className = 'part-index';
+    index.textContent = `P${p.index ?? ''}`;
+    const title = document.createElement('span');
+    title.className = 'part-title';
+    title.title = String(p.title ?? '');
+    title.textContent = String(p.title ?? '');
+    const duration = document.createElement('span');
+    duration.className = 'part-duration';
+    duration.textContent = fmtDuration(p.duration);
+    label.append(checkbox, index, title, duration);
+    return label;
+  }));
   updatePartCount();
   document.getElementById('partSelectorOverlay').style.display = 'flex';
 }

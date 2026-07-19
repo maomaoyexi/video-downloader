@@ -111,6 +111,7 @@ class DownloadExecutor:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
             creationflags = subprocess.CREATE_NO_WINDOW
+        proc = None
         try:
             proc = subprocess.Popen(
                 cmd, cwd=self._tool_dir,
@@ -118,8 +119,17 @@ class DownloadExecutor:
                 text=True, encoding="utf-8", errors="replace",
                 startupinfo=startupinfo, creationflags=creationflags,
             )
+            try:
+                stdout_output, stderr_output = proc.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.kill_process_tree(proc)
+                try:
+                    proc.communicate(timeout=5)
+                except (subprocess.TimeoutExpired, OSError):
+                    pass
+                return {"error": "获取分P列表超时，已终止 yt-dlp 进程"}
             parts = []
-            for line in proc.stdout:
+            for line in stdout_output.splitlines()[:1000]:
                 line = line.strip()
                 if not line:
                     continue
@@ -127,20 +137,21 @@ class DownloadExecutor:
                     entry = json.loads(line)
                     parts.append({
                         "index": entry.get("playlist_index", len(parts) + 1),
-                        "title": entry.get("title", f"P{len(parts) + 1}"),
+                        "title": entry.get("title") or f"P{len(parts) + 1}",
                         "id": entry.get("id", ""),
                         "duration": entry.get("duration") or 0,
                     })
                 except json.JSONDecodeError:
                     continue
-            proc.wait(timeout=30)
             if proc.returncode != 0:
-                stderr_output = proc.stderr.read().strip() if proc.stderr else ""
+                stderr_output = stderr_output.strip()
                 return {"error": f"yt-dlp 进程退出码 {proc.returncode}" + (f": {stderr_output[:300]}" if stderr_output else "")}
             if not parts:
                 return {"parts": [], "total": 0, "note": "未检测到分P列表，可能是单P视频"}
             return {"parts": parts, "total": len(parts)}
         except Exception as exc:
+            if proc is not None and proc.poll() is None:
+                self.kill_process_tree(proc)
             return {"error": f"获取分P列表失败: {exc}"}
 
     def _run_single(self, handle, cmd, url, effective_platform, is_live_download):

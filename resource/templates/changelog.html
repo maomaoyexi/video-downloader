@@ -289,23 +289,24 @@ ul.compact li::before {
 <body>
 <div class="container">
 
-  <!-- v1.9.5 WebUI 更新 -->
+  <!-- v2.0.0 WebUI 更新 -->
   <div class="hero">
-    <div class="version-badge">v1.9.5 WebUI</div>
+    <div class="version-badge">v2.0.0 WebUI</div>
     <h1>多平台视频下载工具</h1>
-    <div class="subtitle">更新安全加固 · 本地接口鉴权 · 统一 -GUI 文件名</div>
-    <div class="date">发布日期：2026-07-16 · 原版作者：B站_猫猫葉汐A_spy</div>
+    <div class="subtitle">Bilibili 支持 · 模块化架构 · 风险修复</div>
+    <div class="date">发布日期：2026-07-19 · 原版作者：B站_猫猫葉汐A_spy · 本次贡献：ErgouTree (@ergou10086)</div>
   </div>
 
   <div class="notice-box info">
     <div class="notice-title">ℹ️ 更新说明</div>
-    <p>v1.9.5 重点加固自动更新与本地 WebUI 的安全性：更新包必须通过 <strong>SHA-256</strong> 完整性校验，下载地址仅允许受信任的 HTTPS 主机，本地 API 使用会话令牌鉴权。同时统一发布附件的 <code>-GUI</code> 文件名，确保自动更新准确选择图形界面版本。</p>
+    <p>v2.0.0 新增 <strong>Bilibili</strong> 普通视频、直播和多 P 选择，完成模块化源码与外置 WebUI 的发布链路，并修复分 P 标题属性注入和探测进程永久挂起两项风险。</p>
+    <p><strong>本次贡献者：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>，贡献模块化重构、Bilibili 平台支持、多 P 选择和 WebUI 资源拆分。</p>
   </div>
 
   <div class="summary-grid">
     <div class="stat-card">
-      <div class="number">4</div>
-      <div class="label">安全与更新改进</div>
+      <div class="number">5</div>
+      <div class="label">支持平台</div>
     </div>
     <div class="stat-card">
       <div class="number">100%</div>
@@ -315,7 +316,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v1.9.5 完全向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。升级时使用带 <code>-GUI</code> 后缀的新版 exe 替换旧主程序即可。</p>
+    <p>v2.0.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -328,44 +329,44 @@ ul.compact li::before {
     <div class="bug-card fix">
       <div class="header">
         <span class="tag critical">安全</span>
-        <span class="title">自动更新增加 SHA-256 完整性校验</span>
-        <span class="severity">更新安全</span>
+        <span class="title">分 P 标题属性安全编码</span>
+        <span class="severity">WebUI 安全</span>
       </div>
       <div class="desc">
-        下载新版主程序时同步计算 SHA-256；发布信息缺少有效校验值或下载结果不一致时，程序会终止替换，避免损坏或被篡改的更新文件进入运行目录。
+        远端分 P 标题在 HTML 属性和值上下文分别编码，避免特殊标题突破 <code>title</code> 属性边界。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag critical">安全</span>
-        <span class="title">限制更新下载来源</span>
-        <span class="severity">网络安全</span>
+        <span class="title">分 P 探测超时与进程清理</span>
+        <span class="severity">进程可靠性</span>
       </div>
       <div class="desc">
-        更新链接仅接受 HTTPS，并校验目标主机是否属于 GitHub 或其官方发布资源域名，阻止跳转到未受信任地址。
+        同时收集 yt-dlp 标准输出和错误输出；超过 30 秒后主动终止并回收进程树，避免请求线程永久挂起。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag major">加固</span>
-        <span class="title">本地 WebUI API 增加会话鉴权</span>
-        <span class="severity">本地服务</span>
+        <span class="title">新增 Bilibili 平台能力</span>
+        <span class="severity">五平台支持</span>
       </div>
       <div class="desc">
-        本地接口要求有效会话令牌，并校验 Host 与 Origin；非本机来源或未授权请求将被拒绝，降低本地服务被其他网页误调用的风险。
+        支持 Bilibili 普通视频、直播、多 P 元数据探测和分集选择，并提供 1080P Cookie 配置指南。
       </div>
     </div>
 
     <div class="bug-card improve">
       <div class="header">
         <span class="tag minor">优化</span>
-        <span class="title">统一 -GUI 发布文件名</span>
+        <span class="title">完善可复现发布配置</span>
         <span class="severity">发布规范</span>
       </div>
       <div class="desc">
-        主程序与完整依赖包统一采用 <code>-GUI</code> 后缀；自动更新优先匹配 GUI 版 exe，避免在多个 Release 附件中选错程序。
+        PyInstaller spec 显式收集模板与静态资源，确保冻结版 EXE 提供完整 WebUI。
       </div>
     </div>
   </div>
@@ -374,6 +375,11 @@ ul.compact li::before {
     <div class="section-title">
       <span class="icon">📜</span>
       <span>历史版本</span>
+    </div>
+
+    <div class="notice-box info">
+      <div class="notice-title">v1.9.5 WebUI · 2026-07-16</div>
+      <p>强化可信更新、SHA-256 校验、本地接口鉴权、停止可靠性与配置存储。</p>
     </div>
 
     <div class="notice-box info">
@@ -393,8 +399,8 @@ ul.compact li::before {
       <div class="notice-title">📦 Release 附件说明</div>
       <p>本次发布分为两个附件：</p>
       <ul class="compact" style="margin-top: 0.8rem;">
-        <li><strong>主程序</strong>：<code>视频下载工具v1.9.5-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
-        <li><strong>完整依赖包</strong>：<code>视频下载工具v1.9.5-依赖包.zip</code> - 包含全部依赖 exe（yt-dlp/ffmpeg/ffprobe/deno/fantiadl）+ 帮助文档，解压即用</li>
+        <li><strong>主程序</strong>：<code>视频下载工具v2.0.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
+        <li><strong>完整依赖包</strong>：<code>视频下载工具v2.0.0-依赖包.zip</code> - 包含全部依赖 exe（yt-dlp/ffmpeg/ffprobe/deno/fantiadl）+ 帮助文档，解压即用</li>
       </ul>
     </div>
   </div>
@@ -409,10 +415,10 @@ ul.compact li::before {
     <div class="notice-box success">
       <div class="notice-title">✅ 安装步骤（超简单，4步搞定）</div>
       <ul class="compact">
-        <li>下载 <code>视频下载工具v1.9.5-GUI.exe</code> 和 <code>视频下载工具v1.9.5-依赖包.zip</code> 两个文件</li>
-        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v1.9.5-GUI.exe</code> 放入其中</li>
+        <li>下载 <code>视频下载工具v2.0.0-GUI.exe</code> 和 <code>视频下载工具v2.0.0-依赖包.zip</code> 两个文件</li>
+        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.0.0-GUI.exe</code> 放入其中</li>
         <li>解压依赖包，将里面的<strong>全部内容</strong>（所有 exe 文件 + <code>docs</code> 文件夹 + <code>changelog.html</code> 等）解压到 exe 同一目录</li>
-        <li>双击 <code>视频下载工具v1.9.5-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
+        <li>双击 <code>视频下载工具v2.0.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
       <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：依赖包已包含所有必需 exe（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code>、<code>ffprobe.exe</code>、<code>deno.exe</code>、<code>fantiadl.exe</code>），解压后无需再下载任何文件。</p>
     </div>
@@ -429,7 +435,7 @@ ul.compact li::before {
       <div class="notice-title">✅ 升级步骤（超简单）</div>
       <ul class="compact">
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
-        <li>只需下载新版 <code>视频下载工具v1.9.5-GUI.exe</code>，替换旧版 exe 即可</li>
+        <li>只需下载新版 <code>视频下载工具v2.0.0-GUI.exe</code>，替换旧版 exe 即可</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
         <li>原有依赖文件（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code> 等）<strong>无需重新下载</strong>，继续使用即可</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
@@ -438,8 +444,8 @@ ul.compact li::before {
   </div>
 
   <div class="footer">
-    多平台视频下载工具 v1.9.5 WebUI <br>
-    2026-07-16 · 支持 YouTube / Twitch / Niconico / Fantia · 安全更新：GitHub Releases
+    多平台视频下载工具 v2.0.0 WebUI <br>
+    2026-07-19 · 支持 YouTube / Bilibili / Twitch / Niconico / Fantia
   </div>
 
 </div>

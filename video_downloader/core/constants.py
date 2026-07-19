@@ -1,9 +1,9 @@
-VERSION = "v1.9.5 WebUI"
-VERSION_NUM = 10905
+VERSION = "v2.0.0 WebUI"
+VERSION_NUM = 20000
 
 GITHUB_OWNER = "maomaoyexi"
 GITHUB_REPO = "video-downloader"
-EXE_NAME = "视频下载工具v1.9.5-GUI.exe"
+EXE_NAME = "视频下载工具v2.0.0-GUI.exe"
 UPDATE_HOSTS = {
     "github.com",
     "api.github.com",

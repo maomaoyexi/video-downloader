@@ -16,7 +16,17 @@ class FakeAppState:
         self.batch_stats = {}
 
     def config_snapshot(self):
-        return {"PLATFORM": "YouTube"}
+        return {
+            "PLATFORM": "YouTube",
+            "USE_COOKIES": 0,
+            "COOKIE_MODE": 1,
+            "BROWSER_NAME": "chrome",
+            "BROWSER_PROFILE": "Default",
+            "PROXY_ENABLED": 0,
+            "PROXY_TYPE": "http",
+            "PROXY_ADDR": "127.0.0.1",
+            "PROXY_PORT": "7890",
+        }
 
     def publish(self, event):
         for client in self.sse_clients:
@@ -93,7 +103,49 @@ class CompletedProcess:
         return self.returncode
 
 
+class PlaylistProcess:
+    def __init__(self, stdout="", stderr="", returncode=0, timeout=False):
+        self.stdout_output = stdout
+        self.stderr_output = stderr
+        self.returncode = returncode
+        self.timeout = timeout
+
+    def communicate(self, timeout=None):
+        if self.timeout:
+            raise __import__("subprocess").TimeoutExpired("yt-dlp", timeout)
+        return self.stdout_output, self.stderr_output
+
+
 class DownloadExecutorTests(unittest.TestCase):
+    def test_fetch_bili_playlist_uses_bounded_communicate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executor, _ = create_executor(Path(directory))
+            process = PlaylistProcess(
+                stdout='{"playlist_index": 1, "title": "第一集", "id": "BV1", "duration": 12}\n'
+            )
+            with patch("video_downloader.services.download_executor.subprocess.Popen", return_value=process):
+                result = executor.fetch_bili_playlist("https://www.bilibili.com/video/BV1")
+            self.assertEqual(result["total"], 1)
+            self.assertEqual(result["parts"][0]["title"], "第一集")
+
+    def test_fetch_bili_playlist_timeout_kills_process(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executor, _ = create_executor(Path(directory))
+            process = PlaylistProcess(timeout=True)
+            executor.kill_process_tree = Mock(side_effect=lambda proc: setattr(proc, "timeout", False))
+            with patch("video_downloader.services.download_executor.subprocess.Popen", return_value=process):
+                result = executor.fetch_bili_playlist("https://www.bilibili.com/video/BV1")
+            self.assertIn("超时", result["error"])
+            executor.kill_process_tree.assert_called_once_with(process)
+
+    def test_fetch_bili_playlist_empty_title_uses_fallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executor, _ = create_executor(Path(directory))
+            process = PlaylistProcess(stdout='{"playlist_index": 1, "title": null, "id": "BV1"}\n')
+            with patch("video_downloader.services.download_executor.subprocess.Popen", return_value=process):
+                result = executor.fetch_bili_playlist("https://www.bilibili.com/video/BV1")
+            self.assertEqual(result["parts"][0]["title"], "P1")
+
     def test_start_download_rejects_missing_dependency(self):
         with tempfile.TemporaryDirectory() as directory:
             executor, callbacks = create_executor(Path(directory))
@@ -128,7 +180,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 "https://youtube.com/live/abc",
                 is_live=True,
                 platform_override="YouTube",
-                config_override={"PLATFORM": "YouTube"},
+                config_override=executor._app_state.config_snapshot(),
                 bili_parts=None,
             )
 
