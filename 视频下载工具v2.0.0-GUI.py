@@ -31,4 +31,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        from video_downloader.cli import run_cli
+        sys.exit(run_cli(sys.argv[1:]))
+    else:
+        main()
