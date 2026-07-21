@@ -63,7 +63,7 @@ class ExecutorCallbacks:
     log: Callable[[str, str], None]
     update_progress: Callable[..., None]   # (percent, status="", speed="", eta="")
     broadcast_state: Callable[[], None]
-    add_history: Callable[[str, str, str, str], None]  # (url, title, platform, status)
+    add_history: Callable[..., None]  # (url, title, platform, status, filepath=None)
     cancel_idle_timer: Callable[[], None]
     start_idle_timer: Callable[[], None]
 

@@ -70,6 +70,11 @@ class DownloadExecutor:
             return {"error": "已有下载任务在运行"}
         self._cancel_idle_timer()
         self._broadcast_download_state()
+        # 单链接下载也维护统计，让 成功/失败/总计 计数器实时更新。
+        stats = self._app_state.batch_stats
+        stats.clear()
+        stats.update({"ok": 0, "fail": 0, "total": 1, "current": 1})
+        self._app_state.publish({"type": "stats", "data": dict(stats)})
         self._update_progress(0, "正在连接直播..." if is_live_download else "正在下载...")
         self._log(f"[下载] {url}", "info")
         try:
@@ -157,7 +162,15 @@ class DownloadExecutor:
     def _run_single(self, handle, cmd, url, effective_platform, is_live_download):
         # 线程局部代际会随进度回调传递，旧工作线程无法覆盖新任务界面状态。
         self._app_state.download_thread_context.task_id = handle.generation
+        stats = self._app_state.batch_stats
+
+        def update_stats():
+            if getattr(self._app_state.download_thread_context, "task_id", handle.generation) != self._download_manager.snapshot()["generation"]:
+                return
+            self._app_state.publish({"type": "stats", "data": dict(stats)})
+
         video_title = ""
+        output_path = ""
         proc = None
         try:
             proc = self._spawn(cmd)
@@ -228,7 +241,10 @@ class DownloadExecutor:
                 if not title_match:
                     title_match = re.search(r'\[Merger\] Merging formats into "(.+)"', line)
                 if title_match:
-                    video_title = os.path.basename(title_match.group(1).replace('"', "").replace("'", ""))
+                    raw_path = title_match.group(1).replace('"', "").replace("'", "").strip()
+                    # 合并输出行给出最终文件名，优先于分离流的中间文件，用于定位同名封面。
+                    output_path = raw_path
+                    video_title = os.path.basename(raw_path)
                     video_title = re.sub(r"\s*\[[a-zA-Z0-9_-]{6,}\]\.\w+$", "", video_title)
 
                 progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
@@ -279,20 +295,26 @@ class DownloadExecutor:
                 self._log("[停止] 下载已取消", "warn")
                 self._update_progress(0, "已停止", "", "")
             elif rc == 0:
+                stats["ok"] = 1
                 self._log("[完成] 下载成功！", "success")
                 self._update_progress(1, "下载完成", "", "")
-                self._add_history(url, video_title, effective_platform, "success")
+                self._add_history(url, video_title, effective_platform, "success", output_path)
+                update_stats()
             else:
+                stats["fail"] = 1
                 self._log(f"[错误] 下载结束，退出码: {rc}", "error")
                 self._update_progress(0, f"失败 (退出码 {rc})", "", "")
                 self._add_history(url, video_title, effective_platform, "fail")
+                update_stats()
         except Exception as exc:
+            stats["fail"] = 1
             self._log(f"[异常] {exc}", "error")
             self._update_progress(0, "异常终止", "", "")
             try:
                 self._add_history(url, video_title, effective_platform, "fail")
             except Exception:
                 pass
+            update_stats()
             self.kill_process_tree(proc)
         finally:
             self._finish(handle, proc)
@@ -351,6 +373,7 @@ class DownloadExecutor:
                 self._log(f"[{index}/{len(urls)}] 下载: {url}", "info")
                 self._update_progress(0, f"批量下载 {index}/{len(urls)}")
                 proc = None
+                output_path = ""
                 try:
                     bili_parts_for_url = (bili_parts_map or {}).get(url)
                     cmd = self._build_command(
@@ -379,6 +402,10 @@ class DownloadExecutor:
                             self._log(f"  {line}", "error")
                         elif "WARNING" in line:
                             self._log(f"  {line}", "warn")
+                        path_match = re.search(r"\[download\] Destination: (.+)", line) \
+                            or re.search(r'\[Merger\] Merging formats into "(.+)"', line)
+                        if path_match:
+                            output_path = path_match.group(1).replace('"', "").replace("'", "").strip()
                         progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
                         if progress_match:
                             overall = ((index - 1) + float(progress_match.group(1)) / 100) / len(urls)
@@ -394,7 +421,7 @@ class DownloadExecutor:
                     if rc == 0:
                         stats["ok"] += 1
                         self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
-                        self._add_history(url, "", effective_platform, "success")
+                        self._add_history(url, "", effective_platform, "success", output_path)
                     else:
                         stats["fail"] += 1
                         self._log(f"[{index}/{len(urls)}] ✗ 失败 (退出码 {rc})", "error")

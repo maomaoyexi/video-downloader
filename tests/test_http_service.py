@@ -52,12 +52,14 @@ def make_dependencies(exit_event):
         start_idle_timer=lambda: None,
         start_download=lambda url, bili_parts=None: {"url": url},
         batch_txt_download=value,
+        start_urls_download=lambda urls: {"urls": urls},
         stop_download=value,
         fetch_bili_playlist=lambda url: {"parts": [], "total": 0},
         save_preset=named_value,
         load_preset=named_value,
         delete_preset=named_value,
         clear_history=value,
+        find_cover=lambda path: (b"JPEGDATA", "image/jpeg") if path == "known" else (None, None),
         validate_config=lambda data, current: (data, []),
         save_config=lambda: None,
         handle_tool_action=named_value,
@@ -112,6 +114,17 @@ class HttpServiceTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as raised:
             self.request("/api/config", token=False)
         self.assertEqual(raised.exception.code, 403)
+
+    def test_cover_route_serves_found_image(self):
+        status, body, headers = self.request("/api/cover?path=known")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, b"JPEGDATA")
+        self.assertEqual(headers["Content-Type"], "image/jpeg")
+
+    def test_cover_route_returns_404_when_missing(self):
+        with self.assertRaises(HTTPError) as raised:
+            self.request("/api/cover?path=missing")
+        self.assertEqual(raised.exception.code, 404)
 
     def test_post_route_and_exit_event(self):
         status, body, _ = self.request("/api/start", method="POST", payload={"url": "https://example.com"})

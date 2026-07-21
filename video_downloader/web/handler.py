@@ -26,12 +26,14 @@ class HttpHandlerDependencies:
     start_idle_timer: object
     start_download: object
     batch_txt_download: object
+    start_urls_download: object
     stop_download: object
     fetch_bili_playlist: object
     save_preset: object
     load_preset: object
     delete_preset: object
     clear_history: object
+    find_cover: object
     validate_config: object
     save_config: object
     handle_tool_action: object
@@ -88,6 +90,17 @@ def create_handler(dependencies):
                 self._json({"presets": list(dependencies.load_presets().keys())})
             elif path == "/api/history":
                 self._json({"history": dependencies.load_history()[:100]})
+            elif path == "/api/cover":
+                filepath = parse_qs(parsed.query).get("path", [""])[0]
+                content, content_type = dependencies.find_cover(filepath)
+                if content is None:
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(content)
             elif path == "/api/events":
                 self._serve_events()
             elif path == "/api/check-update":
@@ -191,6 +204,14 @@ def create_handler(dependencies):
                     return
                 bili_parts = data.get("bili_parts") or None
                 self._json(dependencies.start_download(url, bili_parts=bili_parts))
+            elif path == "/api/start-urls":
+                urls = self._field(data, "urls", list, [])
+                if urls is None:
+                    return
+                if not all(isinstance(u, str) for u in urls):
+                    self._json({"error": "字段 urls 必须是字符串数组"}, status=400)
+                    return
+                self._json(dependencies.start_urls_download(urls))
             elif path == "/api/batch-txt":
                 bili_parts_map = data.get("bili_parts_map") or None
                 self._json(dependencies.batch_txt_download(bili_parts_map=bili_parts_map))

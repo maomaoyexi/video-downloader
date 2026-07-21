@@ -159,6 +159,33 @@ class StorageServiceTests(unittest.TestCase):
         self.assertEqual(self.storage.load_history(), [])
         self.assertEqual(self.events[-1], ("history", []))
 
+    def test_add_history_records_filepath(self):
+        self.storage.add_history("url", "title", "YouTube", "success", "C:/vids/a.mp4")
+        self.assertEqual(self.storage.load_history()[0]["filepath"], "C:/vids/a.mp4")
+        self.storage.add_history("url2", "t2", "YouTube")
+        self.assertNotIn("filepath", self.storage.load_history()[0])
+
+    def test_find_cover_returns_sibling_image(self):
+        video = Path(self.temp_dir.name) / "YouTube" / "clip [abcdef].mp4"
+        video.parent.mkdir(parents=True)
+        video.with_suffix(".jpg").write_bytes(b"JPEG")
+        data, mime = self.storage.find_cover(str(video))
+        self.assertEqual(data, b"JPEG")
+        self.assertEqual(mime, "image/jpeg")
+
+    def test_find_cover_missing_returns_none(self):
+        video = Path(self.temp_dir.name) / "no-thumb.mp4"
+        self.assertEqual(self.storage.find_cover(str(video)), (None, None))
+        self.assertEqual(self.storage.find_cover(""), (None, None))
+
+    def test_find_cover_rejects_path_outside_tool_dir(self):
+        outside = Path(self.temp_dir.name).parent / "evil.mp4"
+        outside.with_suffix(".jpg").write_bytes(b"SECRET")
+        try:
+            self.assertEqual(self.storage.find_cover(str(outside)), (None, None))
+        finally:
+            outside.with_suffix(".jpg").unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
