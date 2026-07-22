@@ -1,11 +1,11 @@
-# 多平台视频下载工具 v2.0.0 WebUI
+# 多平台视频下载工具 v2.1.0 WebUI
 支持 YouTube / Bilibili / Twitch / Niconico / Fantia 五个平台的视频/直播下载工具，采用浏览器界面。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
-![Version](https://img.shields.io/badge/version-v2.0.0%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v2.1.0%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> v2.0.0 模块化重构与 Bilibili 功能由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 贡献。
+> v2.1.0 WebUI 由 [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) 重构；MP3 音频单独下载由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 贡献。
 
 ## ✨ 功能特性
 
@@ -17,7 +17,10 @@
 - 📜 **下载历史** - 自动记录每次下载，最多500条
 - 🔄 **断点续传** - 默认启用，网络中断后自动续传
 - 📊 **批量下载** - 支持从TXT文件批量导入链接
+- ⌨️ **命令行模式** - 支持直接传入 URL 或通过 `--batch` 批量下载
+- 🧾 **多行链接** - 下载页可直接粘贴多行 URL，按顺序加入批量队列
 - 🖼️ **封面处理** - 下载独立 JPG 封面，并在兼容格式中自动嵌入
+- 🎵 **MP3 音频下载** - 支持在下载视频时单独保存 MP3 音频
 - 🍪 **Cookie支持** - 支持cookies.txt文件模式
 - ⚡ **硬件加速** - 支持NVIDIA NVENC、Intel QSV、AMD AMF
 - 🔄 **自动更新** - 启动后通过 GitHub Releases 检查新版本，校验通过后自动更新替换
@@ -27,20 +30,20 @@
 ## 🚀 快速开始
 
 1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
-   - `视频下载工具v2.0.0-GUI.exe` - 主程序
-   - `视频下载工具v2.0.0-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.0.0-GUI.exe` 放入其中
+   - `视频下载工具v2.1.0-GUI.exe` - 主程序
+   - `视频下载工具v2.1.0-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.1.0-GUI.exe` 放入其中
 3. 解压依赖包，将里面的**全部内容**（所有exe文件、docs文件夹、changelog.html等）解压到主程序同一目录
-4. 双击 `视频下载工具v2.0.0-GUI.exe` 运行，自动打开浏览器界面
+4. 双击 `视频下载工具v2.1.0-GUI.exe` 运行，自动打开浏览器界面
 
 > 💡 **提示**：依赖包已包含所有必需文件（yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe），解压后无需再下载任何东西。首次运行会自动生成配置文件、下载目录等。所有文件都保存在exe同目录下，绿色软件无需安装。
 
 ### 源码运行版
 
-保持 `视频下载工具v2.0.0-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
+保持 `视频下载工具v2.1.0-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
 
 ```powershell
-python ".\视频下载工具v2.0.0-GUI.py"
+python ".\视频下载工具v2.1.0-GUI.py"
 ```
 
 源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本与 `video_downloader/` 目录。
@@ -106,7 +109,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ```
 工具目录/
-├── 视频下载工具v2.0.0-GUI.exe # 主程序
+├── 视频下载工具v2.1.0-GUI.exe # 主程序
 ├── yt-dlp.exe               # 下载核心
 ├── ffmpeg.exe               # 音视频处理
 ├── ffprobe.exe              # 媒体信息探测
@@ -173,7 +176,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
 **Q: 老用户如何升级？**
-> A: 只需下载新版 `视频下载工具v2.0.0-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
+> A: 只需下载新版 `视频下载工具v2.1.0-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
 
 ## 📚 详细文档
 
@@ -185,19 +188,12 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 - [⚠️ 错误码说明手册](docs/错误码.txt) - 下载错误码详解和排查流程
 - [📋 更新日志](resource/templates/changelog.html) - 版本更新历史
 
-## 📋 更新日志
+## 📋 版本更新
 
-完整更新日志请查看 [changelog.html](resource/templates/changelog.html)
+v2.1.0 的完整更新内容、贡献者和升级说明请查看：
 
-### v2.0.0 WebUI 最新更新（2026-07-19）
-
-- 📺 新增 Bilibili 普通视频、直播、多 P 探测与分集选择
-- 🧩 完成入口、服务、状态、WebUI 和核心逻辑的模块化
-- 🛡️ 分 P 标题在 HTML 属性上下文中安全编码，避免远端元数据突破属性边界
-- ⏱️ 分 P 探测改用 30 秒有界通信，超时主动清理 yt-dlp 进程树
-- 📦 PyInstaller spec 显式打包 HTML、CSS 和 JavaScript 资源
-- ✅ 新增风险回归测试，并保持原有配置、预设、历史和下载目录兼容
-- 📝 主程序文件名升级为 `视频下载工具v2.0.0-GUI.exe`
+- [发布说明](RELEASE_NOTES.md)
+- [内置更新日志](resource/templates/changelog.html)
 
 ## ⚠️ 免责声明
 
@@ -212,8 +208,9 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ## 作者与贡献者
 
-- 项目原版作者：B站_猫猫葉汐A_spy
-- v2.0.0 主要贡献者：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086) - 模块化重构、Bilibili 平台支持、多 P 选择与 WebUI 资源拆分
+- 项目原版作者：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
+- v2.1.0 WebUI 重构：[DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster)
+- MP3 音频单独下载：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
 
 ## 致谢
 

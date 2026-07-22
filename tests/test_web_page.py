@@ -43,6 +43,10 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("ErgouTree", html)
         self.assertIn("@ergou10086", html)
         self.assertIn("https://github.com/ergou10086", html)
+        self.assertIn("DarkKandaoMaster", html)
+        self.assertIn("强壮的砍刀", html)
+        self.assertIn("https://github.com/DarkKandaoMaster", html)
+        self.assertIn("https://github.com/maomaoyexi", html)
         # 引用了外部 CSS/JS（重构为自建深色设计系统，不再依赖 Tabler）
         self.assertIn("/static/css/style.css", html)
         self.assertIn("/static/js/app.js", html)

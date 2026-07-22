@@ -1,17 +1,18 @@
 多平台视频下载工具 - 作者与贡献者
 
 项目原版作者
-B站_猫猫葉汐A_spy
+猫猫葉汐A_spy（GitHub：@maomaoyexi）
+https://github.com/maomaoyexi
 
-v2.0.0 主要贡献者
+v2.1.0 主要贡献者
+DarkKandaoMaster（强壮的砍刀，GitHub：@DarkKandaoMaster）
+https://github.com/DarkKandaoMaster
 ErgouTree（GitHub：@ergou10086）
 https://github.com/ergou10086
 
 主要贡献
-- 模块化重构
-- Bilibili 普通视频与直播支持
-- Bilibili 多 P 探测与分集选择
-- WebUI 模板、样式和脚本资源拆分
+- DarkKandaoMaster：WebUI 界面与交互重构
+- ErgouTree：MP3 音频单独下载
 
 项目仓库
 https://github.com/maomaoyexi/video-downloader

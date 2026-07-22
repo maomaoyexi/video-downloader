@@ -178,7 +178,7 @@ class UpdaterServiceTests(unittest.TestCase):
             with mock.patch.object(updater_module.tempfile, "mkdtemp", return_value=temp_dir), mock.patch.object(
                 updater_module.threading, "Thread", ControlledThread
             ), mock.patch.object(updater_module.sys, "frozen", True, create=True), mock.patch.object(
-                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.0.0-GUI.exe")
+                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.1.0-GUI.exe")
             ), mock.patch.object(updater_module.os, "name", "nt"):
                 result = updater.do_update()
             self.assertTrue(result["ok"])
@@ -226,7 +226,7 @@ class UpdaterServiceTests(unittest.TestCase):
             with mock.patch.object(updater_module.tempfile, "mkdtemp", return_value=temp_dir), mock.patch.object(
                 updater_module.threading, "Thread", FailingHandoffThread
             ), mock.patch.object(updater_module.sys, "frozen", True, create=True), mock.patch.object(
-                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.0.0-GUI.exe")
+                updater_module.sys, "executable", os.path.join(temp_root, "视频下载工具v2.1.0-GUI.exe")
             ), mock.patch.object(updater_module.os, "name", "nt"):
                 result = updater.do_update()
             self.assertTrue(result["ok"])

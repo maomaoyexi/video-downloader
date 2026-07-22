@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 project_root = Path(SPECPATH)
-entry_script = project_root / "视频下载工具v2.0.0-GUI.py"
+entry_script = project_root / "视频下载工具v2.1.0-GUI.py"
 resource_root = project_root / "resource"
 
 datas = [
@@ -31,7 +31,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="视频下载工具v2.0.0-GUI",
+    name="视频下载工具v2.1.0-GUI",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

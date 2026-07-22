@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 
-MAIN_SCRIPT = Path(__file__).parents[1] / "视频下载工具v2.0.0-GUI.py"
+MAIN_SCRIPT = Path(__file__).parents[1] / "视频下载工具v2.1.0-GUI.py"
 
 
 class MainEntrypointTests(unittest.TestCase):
