@@ -118,6 +118,7 @@ class AppContainer:
         load_history = storage.load_history
         add_history = storage.add_history
         clear_history = storage.clear_history
+        find_cover = storage.find_cover
 
         # ---- 进度回调 ----
         def update_progress(percent: float, status: str | None = None,
@@ -220,6 +221,11 @@ class AppContainer:
             save_config()
             return download_executor.batch_download(urls, bili_parts_map=bili_parts_map)
 
+        def start_urls_download(urls: list) -> dict:
+            """从输入框的多行文本批量下载（每行一个链接）。"""
+            save_config()
+            return download_executor.batch_download(urls)
+
         def request_exit() -> None:
             ticket = download_manager.request_stop()
             _kill_proc_tree(ticket.process)
@@ -244,12 +250,14 @@ class AppContainer:
                 start_idle_timer=start_idle_timer,
                 start_download=start_download,
                 batch_txt_download=batch_txt_download,
+                start_urls_download=start_urls_download,
                 stop_download=stop_download,
                 fetch_bili_playlist=fetch_bili_playlist,
                 save_preset=save_preset,
                 load_preset=load_preset,
                 delete_preset=delete_preset,
                 clear_history=clear_history,
+                find_cover=find_cover,
                 validate_config=validate_config,
                 save_config=save_config,
                 handle_tool_action=handle_tool_action,
