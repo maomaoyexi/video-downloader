@@ -10,6 +10,7 @@ from video_downloader.core.constants import DEFAULT_CONFIG
 
 class StorageService:
     def __init__(self, tool_dir, app_state, validate_config, log, emit_event):
+        self._tool_dir = tool_dir
         self._config_file = tool_dir / "settings.ini"
         self._preset_file = tool_dir / "presets.json"
         self._history_file = tool_dir / "download_history.json"
@@ -169,16 +170,20 @@ class StorageService:
                     pass
             return []
 
-    def add_history(self, url, title, platform, status="success"):
+    def add_history(self, url, title, platform, status="success", filepath=None):
         with self._history_lock:
             history = self.load_history()
-            history.insert(0, {
+            entry = {
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "url": url,
                 "title": title or "未知标题",
                 "platform": platform,
                 "status": status,
-            })
+            }
+            # 记录下载文件的绝对路径，供历史界面按需查找同名封面图。
+            if filepath:
+                entry["filepath"] = filepath
+            history.insert(0, entry)
             history = history[:500]
             try:
                 with open(self._history_file, "w", encoding="utf-8") as file:
@@ -198,3 +203,29 @@ class StorageService:
                 return {"ok": True}
             except Exception as exc:
                 return {"error": str(exc)}
+
+    # yt-dlp 将封面写在视频同目录、同基名的图片文件（--convert-thumbnails jpg）。
+    _COVER_EXTS = ((".jpg", "image/jpeg"), (".jpeg", "image/jpeg"),
+                   (".png", "image/png"), (".webp", "image/webp"))
+
+    def find_cover(self, filepath):
+        """给定历史记录里的视频路径，返回同基名封面图 (bytes, mime)，找不到返回 (None, None)。
+
+        仅接受工具目录内的路径，防止请求方通过构造路径读取任意文件。
+        """
+        if not filepath or not isinstance(filepath, str):
+            return None, None
+        base = os.path.splitext(filepath)[0]
+        root = os.path.realpath(self._tool_dir)
+        for ext, mime in self._COVER_EXTS:
+            candidate = os.path.realpath(base + ext)
+            if candidate != root and not candidate.startswith(root + os.sep):
+                continue
+            if not os.path.isfile(candidate):
+                continue
+            try:
+                with open(candidate, "rb") as file:
+                    return file.read(), mime
+            except OSError:
+                continue
+        return None, None

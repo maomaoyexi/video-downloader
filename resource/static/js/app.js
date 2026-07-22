@@ -16,18 +16,106 @@ const PLATFORMS = [
   {name:"Niconico",color:"#00A0D1"},
   {name:"Fantia",color:"#E6399B"}
 ];
+const PAGE_TITLES = {
+  download: '下载任务', logs: '运行日志', settings: '下载设置', history: '下载历史',
+  tools: '实用工具', help: '使用帮助', about: '关于软件'
+};
 
 function $(id){return document.getElementById(id);}
 
+// ========== 图标系统（lucide，内联 SVG） ==========
+const ICONS = {
+  'download':'<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+  'history':'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  'wrench':'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  'settings':'<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+  'help':'<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  'info':'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  'power':'<path d="M12 2v10"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>',
+  'refresh':'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  'list':'<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+  'link':'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  'plus':'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  'square':'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  'check':'<path d="M20 6 9 17l-5-5"/>',
+  'x':'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+  'layers':'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  'trash':'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+  'bookmark':'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  'film':'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>',
+  'globe':'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  'cookie':'<path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 15.5v.01"/><path d="M12 12v.01"/><path d="M11 17v.01"/><path d="M7 14v.01"/>',
+  'cpu':'<rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>',
+  'rotate':'<path d="M3 2v6h6"/><path d="M21 12A9 9 0 1 1 6.5 4.7L3 8"/>',
+  'save':'<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+  'music':'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  'folder-open':'<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+  'folder':'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  'file-text':'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  'play':'<path d="M6 3 20 12 6 21Z"/>',
+  'rocket':'<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+  'tv':'<rect width="20" height="15" x="2" y="7" rx="2"/><path d="M17 2l-5 5-5-5"/>',
+  'arrow-up':'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+  'inbox':'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  'terminal':'<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+};
+
+function svgIcon(name){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;
+}
+
+// 把 [data-ico] 占位替换为对应 SVG（幂等）
+function hydrateIcons(root){
+  (root || document).querySelectorAll('[data-ico]:not([data-ico-done])').forEach(el => {
+    el.innerHTML = svgIcon(el.dataset.ico);
+    el.setAttribute('data-ico-done', '1');
+  });
+}
+
+// 品牌连接状态点
+function setConn(online){
+  const m = $('brandMark');
+  if(m){ m.classList.toggle('online', !!online); m.classList.toggle('offline', !online); }
+}
+
+// 按时间问候
+function updateGreeting(){
+  const el = $('greeting');
+  if(!el) return;
+  const h = new Date().getHours();
+  const g = h < 5 ? '夜深了' : h < 11 ? '早上好' : h < 13 ? '中午好' : h < 18 ? '下午好' : '晚上好';
+  el.textContent = `${g}，想下载点什么？`;
+}
+
+function setActivePage(page) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.page === page));
+  document.querySelectorAll('.page').forEach(section => section.classList.toggle('active', section.id === 'page-' + page));
+  const pageTitle = $('pageTitle');
+  if(pageTitle) pageTitle.textContent = PAGE_TITLES[page] || '视频下载工具';
+  // 进入下载历史页时清除“新增记录”提示绿点
+  if(page === 'history') setHistoryDot(false);
+}
+
+// 下载历史新记录提示绿点
+function setHistoryDot(show) {
+  const dot = $('historyDot');
+  if(dot) dot.classList.toggle('show', show);
+}
+
 function init() {
-  // 平台按钮
+  hydrateIcons();
+  updateGreeting();
+
+  // 平台选择（芯片）
   const pc = $('platforms');
   PLATFORMS.forEach((p,i) => {
     const b = document.createElement('button');
     b.className = 'plat-btn' + (i===0?' active':'');
-    b.style.background = p.color;
-    b.textContent = p.name;
     b.dataset.name = p.name;
+    const dot = document.createElement('span');
+    dot.className = 'plat-dot';
+    dot.style.setProperty('--dot', p.color);
+    b.append(dot, document.createTextNode(p.name));
     b.onclick = () => selectPlatform(p.name);
     pc.appendChild(b);
   });
@@ -44,15 +132,20 @@ function init() {
   // 标签页切换
   document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      $('page-'+t.dataset.page).classList.add('active');
+      setActivePage(t.dataset.page);
     };
   });
 
-  // 回车下载
-  $('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') startDl(); });
+  // 回车下载；Shift/Ctrl+回车换行；输入法组词时的回车不触发
+  const urlInput = $('urlInput');
+  urlInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && !e.isComposing) {
+      e.preventDefault();
+      startDl();
+    }
+  });
+  // 随内容增高（粘贴多行也会触发 input 事件）
+  urlInput.addEventListener('input', autoGrowUrlInput);
 
   // 加载配置
   loadConfig();
@@ -104,7 +197,7 @@ async function api(path, opts={}) {
 async function toolAction(name) {
   const r = await api('/api/tool', {method:'POST', body:JSON.stringify({action:name})});
   if(r.error) { alert(r.error); return; }
-  if(r.message) { addLog('toolLog', {time:new Date().toTimeString().slice(0,8), msg:r.message, level:'success'}); }
+  if(r.message) { addLog('logBox', {time:new Date().toTimeString().slice(0,8), msg:r.message, level:'success'}); }
 }
 
 // 浏览文件夹
@@ -250,22 +343,50 @@ async function loadDeps() {
   for(const [k,v] of Object.entries(d)) {
     const el = document.createElement('span');
     el.className = 'dep-item ' + (v?'dep-ok':'dep-miss');
-    el.textContent = (v?'✓ ':'✗ ') + names[k];
+    const ico = document.createElement('span');
+    ico.className = 'icon';
+    ico.dataset.ico = v ? 'check' : 'x';
+    el.append(ico, document.createTextNode(names[k]));
     box.appendChild(el);
   }
+  hydrateIcons(box);
 }
 
-async function startDl() {
-  let url = $('urlInput').value;
-  // 清理URL：去除前后空白、反引号、引号
+// 清理单个链接：去除前后空白、反引号、引号
+function cleanOneUrl(url) {
   for(let i=0;i<3;i++) {
     const old = url;
     url = url.trim().replace(/^[`'"]+|[`'"]+$/g, '');
     if(url === old) break;
   }
-  url = url.trim();
+  return url.trim();
+}
+
+// 链接输入框随内容增高（CSS 限制最多 3 行，超出后固定滚动）
+function autoGrowUrlInput() {
+  const el = $('urlInput');
+  if(!el) return;
+  el.style.height = 'auto';
+  const border = el.offsetHeight - el.clientHeight;
+  el.style.height = (el.scrollHeight + border) + 'px';
+}
+
+async function startDl() {
+  // 按行拆分，每行一个链接，清理后过滤空行
+  const urls = $('urlInput').value.split(/\r?\n/).map(cleanOneUrl).filter(Boolean);
+  if(urls.length === 0) { alert('请输入链接'); return; }
+
+  // 多链接：走批量下载（每行一个），不做单条的 Bilibili 分P 选择
+  if(urls.length > 1) {
+    try { await saveSettingsNoAlert(); } catch(e) { alert('设置保存失败: ' + e.message); return; }
+    doStartUrls(urls);
+    return;
+  }
+
+  // 单链接：沿用原有单任务流程（含 Bilibili 分P 选择）
+  const url = urls[0];
   $('urlInput').value = url;
-  if(!url) { alert('请输入链接'); return; }
+  autoGrowUrlInput();
   // 自动识别 Bilibili 链接（无需手动切换平台按钮）
   const isBiliUrl = isBilibiliUrl(url);
   if(isBiliUrl && currentPlatform !== 'Bilibili') {
@@ -318,7 +439,20 @@ async function doStartDl(url, biliParts) {
   $('btnStop').disabled = false;
   $('statOk').textContent = '0';
   $('statFail').textContent = '0';
-  $('statTotal').textContent = '0';
+  $('statTotal').textContent = '1';
+  setHistoryDot(true);
+}
+
+async function doStartUrls(urls) {
+  const r = await api('/api/start-urls', {method:'POST', body:JSON.stringify({urls})});
+  if(r.error) { alert(r.error); return; }
+  download_running = true;
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+  $('statOk').textContent = '0';
+  $('statFail').textContent = '0';
+  $('statTotal').textContent = r.total || String(urls.length);
+  setHistoryDot(true);
 }
 
 async function startBatch() {
@@ -338,6 +472,7 @@ async function doStartBatch(biliPartsMap) {
   $('statOk').textContent = '0';
   $('statFail').textContent = '0';
   $('statTotal').textContent = r.total || '0';
+  setHistoryDot(true);
 }
 
 async function stopDl() {
@@ -405,8 +540,6 @@ async function doWavConvert() {
 function clearConsole() {
   const logBox = $('logBox');
   if(logBox) logBox.innerHTML = '';
-  const toolLog = $('toolLog');
-  if(toolLog) toolLog.innerHTML = '';
 }
 
 function addLog(container, entry) {
@@ -426,11 +559,11 @@ function addLog(container, entry) {
 function connectSSE() {
   if(evtSource) evtSource.close();
   evtSource = new EventSource('/api/events?token=' + encodeURIComponent(SESSION_TOKEN));
+  evtSource.onopen = () => setConn(true);
   evtSource.onmessage = (e) => {
     const evt = JSON.parse(e.data);
     if(evt.type === 'log') {
       addLog('logBox', evt.data);
-      addLog('toolLog', evt.data);
     } else if(evt.type === 'progress') {
       const d = evt.data;
       const fill = $('progressFill');
@@ -459,9 +592,6 @@ function connectSSE() {
       if(d.ok !== undefined) $('statOk').textContent = d.ok;
       if(d.fail !== undefined) $('statFail').textContent = d.fail;
       if(d.total !== undefined) $('statTotal').textContent = d.total;
-      if(d.current !== undefined && d.total > 0) {
-        $('statusText').textContent = `批量下载 ${d.current}/${d.total}`;
-      }
     } else if(evt.type === 'history') {
       renderHistory(evt.data);
     } else if(evt.type === 'ready') {
@@ -512,6 +642,7 @@ function connectSSE() {
     }
   };
   evtSource.onerror = () => {
+    setConn(false);
     evtSource.close();
     setTimeout(connectSSE, 3000);
   };
@@ -599,19 +730,44 @@ function renderHistory(history) {
   const count = $('historyCount');
   if(count) count.textContent = `共 ${history.length} 条记录`;
   if(!history.length) {
-    list.innerHTML = '<div style="color:#888;text-align:center;padding:60px">暂无下载记录</div>';
+    list.innerHTML = '<div class="empty-state"><span class="icon" data-ico="inbox"></span><span class="empty-title">暂无下载记录</span><span>完成的下载会出现在这里。</span></div>';
+    hydrateIcons(list);
     return;
   }
-  list.innerHTML = history.map(h => `
+  list.innerHTML = history.map(h => {
+    const statusCls = h.status === 'success' ? 'success' : 'fail';
+    const statusText = h.status === 'success' ? '成功' : '失败';
+    // 有封面时显示封面图；封面缺失或加载失败时，露出下方的成功/失败标记
+    const cover = h.filepath
+      ? `<img class="history-cover" loading="lazy" alt="封面"
+             src="/api/cover?path=${encodeURIComponent(h.filepath)}&token=${encodeURIComponent(SESSION_TOKEN)}"
+             onload="this.classList.add('show')" onerror="this.remove()"
+             onclick="openCover(this.src)">`
+      : '';
+    return `
     <div class="history-item">
-      <span class="history-platform ${h.platform}">${h.platform}</span>
+      <div class="history-cover-wrap">
+        ${cover}
+        <span class="cover-status ${statusCls}">${statusText}</span>
+      </div>
       <div class="history-info">
         <div class="history-title" title="${escAttr(h.title)}">${escHtml(h.title)}</div>
-        <div class="history-meta">${h.time} · <span style="color:#666">${escHtml(h.url)}</span></div>
+        <div class="history-meta">${h.time} · <span class="history-platform ${h.platform}">${escHtml(h.platform)}</span> · <span class="url">${escHtml(h.url)}</span></div>
       </div>
-      <span class="history-status ${h.status}">${h.status === 'success' ? '成功' : '失败'}</span>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+}
+
+// 点击历史封面在遮罩层放大查看
+function openCover(src) {
+  const overlay = document.createElement('div');
+  overlay.className = 'cover-overlay';
+  overlay.onclick = () => overlay.remove();
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '封面预览';
+  overlay.appendChild(img);
+  document.body.appendChild(overlay);
 }
 
 async function clearHistoryUI() {
