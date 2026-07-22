@@ -36,12 +36,18 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("page-tools", html)
         self.assertIn("page-help", html)
         self.assertIn("page-about", html)
+        self.assertIn('class="app-shell"', html)
+        self.assertIn('class="app-sidebar"', html)
+        self.assertIn('class="app-content"', html)
+        self.assertIn('aria-label="主导航"', html)
         self.assertIn("ErgouTree", html)
         self.assertIn("@ergou10086", html)
         self.assertIn("https://github.com/ergou10086", html)
-        # 引用了外部 CSS/JS
+        # 引用了外部 CSS/JS（重构为自建深色设计系统，不再依赖 Tabler）
         self.assertIn("/static/css/style.css", html)
         self.assertIn("/static/js/app.js", html)
+        self.assertNotIn("tabler.min.css", html)
+        self.assertNotIn("tabler.min.js", html)
         # Token 占位符
         self.assertIn("__SESSION_TOKEN__", html)
 
