@@ -8,7 +8,6 @@ UPDATE_HOSTS = {
     "github.com",
     "api.github.com",
     "objects.githubusercontent.com",
-    "release-assets.githubusercontent.com",
 }
 MAX_UPDATE_SIZE = 512 * 1024 * 1024
 IDLE_TIMEOUT = 30
@@ -20,7 +19,8 @@ DEFAULT_CONFIG = {
     "AUDIO_QUALITY": "best",
     "OUTPUT_FORMAT": "mp4",
     "MERGE_MODE": 1,
-    "AUDIO_SEP_MODE": 0,
+    "AUDIO_MODE": "0",
+    "AUDIO_FORMAT": "mp3",
     "THREADS": 4,
     "SPEED_LIMIT": 0,
     "PROXY_ENABLED": 0,
@@ -34,7 +34,6 @@ DEFAULT_CONFIG = {
     "HWACCEL": "cpu",
     "EMBED_META": 1,
     "DOWNLOAD_THUMB": 1,
-    "AUDIO_DOWNLOAD": 0,
     "WIN_FILENAMES": 1,
     "STRICT_FILENAME": 0,
     "NICO_COMMENTS": 0,
@@ -52,8 +51,9 @@ CODEC_LABELS = ["极致画质", "兼容优先(H.264)", "AV1优先", "VP9优先"]
 AUDIO_OPTIONS = ["best", "192", "128"]
 AUDIO_LABELS = ["最高音质", "均衡(192k)", "最小体积(128k)"]
 FORMAT_OPTIONS = ["mp4", "mkv", "webm"]
-AUDIO_SEP_OPTIONS = ["m4a", "mp3", "flac", "wav"]
-AUDIO_SEP_LABELS = ["m4a(原生)", "MP3", "FLAC", "WAV"]
+AUDIO_MODE_OPTIONS = ["0", "1", "2", "3"]
+AUDIO_MODE_LABELS = ["不单独处理音频", "分离音画输出", "同时输出音频", "只输出音频"]
+AUDIO_FORMAT_OPTIONS = ["m4a", "mp3", "wav"]
 HWACCEL_OPTIONS = ["cpu", "h264_nvenc", "h264_qsv", "h264_amf"]
 HWACCEL_LABELS = ["CPU软编码", "N卡 NVENC", "Intel QSV", "AMD AMF"]
 BROWSER_OPTIONS = ["chrome", "edge", "firefox", "brave", "opera"]

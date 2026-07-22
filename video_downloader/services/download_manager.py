@@ -61,8 +61,8 @@ class DownloadManager:
 
     def publish_process(self, handle, process):
         with self._lock:
-            # 覆盖“进程刚创建、停止请求已到达”的竞态，拒绝接管后由调用方立即清理。
-            if not self.is_current(handle) or handle.cancel_event.is_set() or self._phase == "stopping":
+            # 覆盖"进程刚创建、停止请求已到达"的竞态，拒绝接管后由调用方立即清理。
+            if self.is_cancelled(handle) or self._phase == "stopping":
                 return False
             self._process = process
             self._phase = "running"
