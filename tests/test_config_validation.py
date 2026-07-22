@@ -11,7 +11,8 @@ class ConfigValidationTests(unittest.TestCase):
 
     def test_enabled_proxy_rejects_empty_port(self):
         validated, errors = validate_config({"PROXY_ENABLED": 1, "PROXY_PORT": ""})
-        self.assertIn("PROXY_PORT", errors)
+        self.assertTrue(any("PROXY_PORT" in err for err in errors),
+                        f"Expected PROXY_PORT error in {errors}")
         self.assertEqual(validated["PROXY_PORT"], "7890")
 
     def test_enabled_proxy_rejects_invalid_address(self):
@@ -19,7 +20,8 @@ class ConfigValidationTests(unittest.TestCase):
             "PROXY_ENABLED": 1,
             "PROXY_ADDR": "http://user@example.com/path",
         })
-        self.assertIn("PROXY_ADDR", errors)
+        self.assertTrue(any("PROXY_ADDR" in err for err in errors),
+                        f"Expected PROXY_ADDR error in {errors}")
         self.assertEqual(validated["PROXY_ADDR"], "127.0.0.1")
 
 

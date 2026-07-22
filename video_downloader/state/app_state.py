@@ -15,10 +15,13 @@ class AppState:
     batch_stats: dict = field(default_factory=lambda: {"ok": 0, "fail": 0, "total": 0, "current": 0})
 
     def replace_config(self, values):
+        """全量替换配置（清空后写入），用于加载配置 / 恢复默认。"""
         with self.config_lock:
+            self.config.clear()
             self.config.update(values)
 
     def update_config(self, values):
+        """增量合并配置（保留未提及的字段），用于 WAV→MP3 等单字段更新。"""
         with self.config_lock:
             self.config.update(values)
 

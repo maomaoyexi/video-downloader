@@ -97,6 +97,10 @@ class ToolService:
         if not target.exists():
             return {"error": "目录不存在"}
 
+        # 主线程扫描一次 WAV 文件列表，避免后台线程二次 glob 的 TOCTOU 问题
+        pattern = "**/*.wav" if recursive else "*.wav"
+        wav_files = sorted([file for file in target.glob(pattern) if file.is_file()])
+
         self._app_state.update_config({
             "MP3_BITRATE": bitrate,
             "DEL_WAV_AFTER_CONVERT": 1 if del_src else 0,
@@ -104,8 +108,6 @@ class ToolService:
         self._save_config()
 
         def run():
-            pattern = "**/*.wav" if recursive else "*.wav"
-            wav_files = sorted([file for file in target.glob(pattern) if file.is_file()])
             if not wav_files:
                 self._log("[WAV转MP3] 未找到WAV文件", "warn")
                 return
@@ -146,7 +148,7 @@ class ToolService:
                     fail += 1
             self._log(f"[WAV转MP3] 完成: 成功{success} 跳过{skip} 失败{fail}", "success")
         threading.Thread(target=run, daemon=True).start()
-        return {"ok": True, "total": len(list(target.glob("**/*.wav" if recursive else "*.wav")))}
+        return {"ok": True, "total": len(wav_files)}
 
     def browse_folder(self):
         folder = ""

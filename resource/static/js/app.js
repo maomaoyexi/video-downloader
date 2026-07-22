@@ -125,7 +125,8 @@ function init() {
   fillSelect('s_codec', [['best','极致画质'],['h264','兼容优先(H.264)'],['av1','AV1优先'],['vp9','VP9优先']]);
   fillSelect('s_audio', [['best','最高音质'],['192','均衡(192k)'],['128','最小体积(128k)']]);
   fillSelect('s_format', [['mp4','MP4'],['mkv','MKV'],['webm','WebM']]);
-  fillSelect('s_audiose', [['none','不分离'],['m4a','m4a(原生)'],['mp3','MP3'],['flac','FLAC'],['wav','WAV']]);
+  fillSelect('s_audiomode', [['0','不单独处理音频'],['1','分离音画输出'],['2','同时输出音频'],['3','只输出音频']]);
+  fillSelect('s_audiofmt', [['m4a','m4a(原生)'],['mp3','MP3'],['wav','WAV']]);
   fillSelect('s_hwaccel', [['cpu','CPU软编码'],['h264_nvenc','N卡 NVENC'],['h264_qsv','Intel QSV'],['h264_amf','AMD AMF']]);
   fillSelect('s_browser', [['chrome','Chrome'],['edge','Edge'],['firefox','Firefox'],['brave','Brave'],['opera','Opera']]);
 
@@ -223,8 +224,8 @@ function applyConfig(s) {
   $('s_codec').value = s.CODEC;
   $('s_audio').value = s.AUDIO_QUALITY;
   $('s_format').value = s.OUTPUT_FORMAT;
-  $('s_audiose').selectedIndex = s.AUDIO_SEP_MODE;
-  setSwitch('sw_merge', s.MERGE_MODE);
+  if(s.AUDIO_MODE !== undefined) { $('s_audiomode').value = s.AUDIO_MODE; onAudioModeChange(); }
+  if(s.AUDIO_FORMAT !== undefined) $('s_audiofmt').value = s.AUDIO_FORMAT;
   $('s_threads').value = s.THREADS; $('thr_val').textContent = s.THREADS;
   $('s_speed').value = s.SPEED_LIMIT; $('spd_val').textContent = s.SPEED_LIMIT===0?'不限':s.SPEED_LIMIT;
   setSwitch('sw_proxy', s.PROXY_ENABLED);
@@ -238,7 +239,6 @@ function applyConfig(s) {
   $('s_hwaccel').value = s.HWACCEL;
   setSwitch('sw_meta', s.EMBED_META);
   setSwitch('sw_thumb', s.DOWNLOAD_THUMB);
-  setSwitch('sw_audiodl', s.AUDIO_DOWNLOAD);
   setSwitch('sw_winfn', s.WIN_FILENAMES);
   setSwitch('sw_strict', s.STRICT_FILENAME);
   setSwitch('sw_nicocmt', s.NICO_COMMENTS);
@@ -254,21 +254,34 @@ function setSwitch(id, val) {
   if(val) $(id).classList.add('on'); else $(id).classList.remove('on');
 }
 
+function onAudioModeChange() {
+  const mode = $('s_audiomode').value;
+  const fmtEl = $('s_audiofmt');
+  // 模式 0（不处理）和模式 1（分离音画）不需要音频输出格式
+  if(mode === '0' || mode === '1') {
+    fmtEl.disabled = true;
+    fmtEl.style.opacity = '0.4';
+  } else {
+    fmtEl.disabled = false;
+    fmtEl.style.opacity = '1';
+  }
+}
+
 function toggleCookieMode() {
   const browserMode = $('s_cookiemode').value === '2';
   $('row_browser').style.display = browserMode ? 'flex' : 'none';
   $('row_profile').style.display = browserMode ? 'flex' : 'none';
 }
 
-async function saveSettings() {
-  const cfg = {
+function collectCfg() {
+  return {
     PLATFORM: currentPlatform,
     RESOLUTION: $('s_resolution').value,
     CODEC: $('s_codec').value,
     AUDIO_QUALITY: $('s_audio').value,
     OUTPUT_FORMAT: $('s_format').value,
-    MERGE_MODE: isOn('sw_merge')?1:0,
-    AUDIO_SEP_MODE: $('s_audiose').selectedIndex,
+    AUDIO_MODE: $('s_audiomode').value,
+    AUDIO_FORMAT: $('s_audiofmt').value,
     THREADS: parseInt($('s_threads').value),
     SPEED_LIMIT: parseInt($('s_speed').value),
     PROXY_ENABLED: isOn('sw_proxy')?1:0,
@@ -282,13 +295,17 @@ async function saveSettings() {
     HWACCEL: $('s_hwaccel').value,
     EMBED_META: isOn('sw_meta')?1:0,
     DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
-    AUDIO_DOWNLOAD: isOn('sw_audiodl')?1:0,
     WIN_FILENAMES: isOn('sw_winfn')?1:0,
     STRICT_FILENAME: isOn('sw_strict')?1:0,
     NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
     NICO_RECODE: isOn('sw_nicorec')?1:0,
     ENABLE_LOG: isOn('sw_log')?1:0,
+    BILI_MULTIP_POLICY: $('s_bili_policy').value,
   };
+}
+
+async function saveSettings() {
+  const cfg = collectCfg();
   try {
     await api('/api/save-config', {method:'POST', body:JSON.stringify(cfg)});
     alert('设置已保存！');
@@ -298,34 +315,7 @@ async function saveSettings() {
 }
 
 async function saveSettingsNoAlert() {
-  const cfg = {
-    PLATFORM: currentPlatform,
-    RESOLUTION: $('s_resolution').value,
-    CODEC: $('s_codec').value,
-    AUDIO_QUALITY: $('s_audio').value,
-    OUTPUT_FORMAT: $('s_format').value,
-    MERGE_MODE: isOn('sw_merge')?1:0,
-    AUDIO_SEP_MODE: $('s_audiose').selectedIndex,
-    THREADS: parseInt($('s_threads').value),
-    SPEED_LIMIT: parseInt($('s_speed').value),
-    PROXY_ENABLED: isOn('sw_proxy')?1:0,
-    PROXY_TYPE: $('s_proxytype').value,
-    PROXY_ADDR: $('s_proxyaddr').value,
-    PROXY_PORT: $('s_proxyport').value,
-    USE_COOKIES: isOn('sw_cookies')?1:0,
-    COOKIE_MODE: parseInt($('s_cookiemode').value),
-    BROWSER_NAME: $('s_browser').value,
-    BROWSER_PROFILE: $('s_profile').value,
-    HWACCEL: $('s_hwaccel').value,
-    EMBED_META: isOn('sw_meta')?1:0,
-    DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
-    AUDIO_DOWNLOAD: isOn('sw_audiodl')?1:0,
-    WIN_FILENAMES: isOn('sw_winfn')?1:0,
-    STRICT_FILENAME: isOn('sw_strict')?1:0,
-    NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
-    NICO_RECODE: isOn('sw_nicorec')?1:0,
-    ENABLE_LOG: isOn('sw_log')?1:0,
-  };
+  const cfg = collectCfg();
   return api('/api/save-config', {method:'POST', body:JSON.stringify(cfg)});
 }
 
@@ -486,43 +476,6 @@ async function stopDl() {
   }
 }
 
-async function saveSettingsNoAlert() {
-  const cfg = collectCfg();
-  return api('/api/save-config', {method:'POST', body:JSON.stringify(cfg)});
-}
-
-function collectCfg() {
-  return {
-    PLATFORM: currentPlatform,
-    RESOLUTION: $('s_resolution').value,
-    CODEC: $('s_codec').value,
-    AUDIO_QUALITY: $('s_audio').value,
-    OUTPUT_FORMAT: $('s_format').value,
-    MERGE_MODE: isOn('sw_merge')?1:0,
-    AUDIO_SEP_MODE: $('s_audiose').selectedIndex,
-    THREADS: parseInt($('s_threads').value),
-    SPEED_LIMIT: parseInt($('s_speed').value),
-    PROXY_ENABLED: isOn('sw_proxy')?1:0,
-    PROXY_TYPE: $('s_proxytype').value,
-    PROXY_ADDR: $('s_proxyaddr').value,
-    PROXY_PORT: $('s_proxyport').value,
-    USE_COOKIES: isOn('sw_cookies')?1:0,
-    COOKIE_MODE: parseInt($('s_cookiemode').value),
-    BROWSER_NAME: $('s_browser').value,
-    BROWSER_PROFILE: $('s_profile').value,
-    HWACCEL: $('s_hwaccel').value,
-    EMBED_META: isOn('sw_meta')?1:0,
-    DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
-    AUDIO_DOWNLOAD: isOn('sw_audiodl')?1:0,
-    WIN_FILENAMES: isOn('sw_winfn')?1:0,
-    STRICT_FILENAME: isOn('sw_strict')?1:0,
-    NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
-    NICO_RECODE: isOn('sw_nicorec')?1:0,
-    ENABLE_LOG: isOn('sw_log')?1:0,
-    BILI_MULTIP_POLICY: $('s_bili_policy').value,
-  };
-}
-
 async function doWavConvert() {
   const dir = $('wav_dir').value.trim();
   if(!dir) { alert('请输入目录路径'); return; }
@@ -535,6 +488,46 @@ async function doWavConvert() {
   } catch(e) {
     alert('转换启动失败: ' + e.message);
   }
+}
+
+function toggleTaskStats() {
+  const detail = $('taskStatsDetail');
+  const btn = $('btnStatsToggle');
+  if(!detail || !btn) return;
+  const collapsed = detail.style.display === 'none';
+  detail.style.display = collapsed ? '' : 'none';
+  btn.textContent = collapsed ? '▼' : '▶';
+  btn.style.color = collapsed ? 'var(--text-highlighted)' : 'var(--text-toned)';
+}
+
+function updateStatsVisibility() {
+  const wrap = $('taskStatsWrap');
+  const detail = $('taskStatsDetail');
+  const btn = $('btnStatsToggle');
+  const summary = $('statsSummary');
+  const ok = parseInt($('statOk').textContent) || 0;
+  const fail = parseInt($('statFail').textContent) || 0;
+  const total = parseInt($('statTotal').textContent) || 0;
+  if(!wrap) return;
+  if(total < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  if(summary) summary.textContent = `完成 ${ok + fail}/${total}` + (fail > 0 ? ` · 失败 ${fail}` : '');
+  // 自动展开：total >= 2 且存在失败时
+  const shouldExpand = total >= 2 && fail > 0;
+  if(shouldExpand) {
+    detail.style.display = '';
+    btn.textContent = '▼';
+    btn.style.color = 'var(--text-highlighted)';
+  }
+}
+
+function toggleLogBox() {
+  const wrap = $('logBoxWrap');
+  const btn = $('btnLogToggle');
+  if(!wrap || !btn) return;
+  const collapsed = wrap.style.display === 'none';
+  wrap.style.display = collapsed ? '' : 'none';
+  btn.innerHTML = collapsed ? '▲' : '▼';
 }
 
 function clearConsole() {
@@ -556,10 +549,16 @@ function addLog(container, entry) {
   while(box.children.length > 300) box.removeChild(box.firstChild);
 }
 
+let sseRetryDelay = 1000;      // 初始重连间隔 1 秒
+const SSE_MAX_RETRY = 16000;   // 最大重连间隔 16 秒
+
 function connectSSE() {
   if(evtSource) evtSource.close();
   evtSource = new EventSource('/api/events?token=' + encodeURIComponent(SESSION_TOKEN));
-  evtSource.onopen = () => setConn(true);
+  evtSource.onopen = () => {
+    setConn(true);
+    sseRetryDelay = 1000;     // 连接成功，重置退避时间
+  };
   evtSource.onmessage = (e) => {
     const evt = JSON.parse(e.data);
     if(evt.type === 'log') {
@@ -592,6 +591,7 @@ function connectSSE() {
       if(d.ok !== undefined) $('statOk').textContent = d.ok;
       if(d.fail !== undefined) $('statFail').textContent = d.fail;
       if(d.total !== undefined) $('statTotal').textContent = d.total;
+      updateStatsVisibility();
     } else if(evt.type === 'history') {
       renderHistory(evt.data);
     } else if(evt.type === 'ready') {
@@ -618,6 +618,7 @@ function connectSSE() {
         $('statOk').textContent = readyData.stats.ok || 0;
         $('statFail').textContent = readyData.stats.fail || 0;
         $('statTotal').textContent = readyData.stats.total || 0;
+        updateStatsVisibility();
       }
       if(readyData.update) {
         if(readyData.update.update_available) handleUpdateAvailable(readyData.update);
@@ -644,7 +645,9 @@ function connectSSE() {
   evtSource.onerror = () => {
     setConn(false);
     evtSource.close();
-    setTimeout(connectSSE, 3000);
+    // 指数退避：1s → 2s → 4s → 8s → 16s（上限）
+    setTimeout(connectSSE, sseRetryDelay);
+    sseRetryDelay = Math.min(sseRetryDelay * 2, SSE_MAX_RETRY);
   };
 }
 
