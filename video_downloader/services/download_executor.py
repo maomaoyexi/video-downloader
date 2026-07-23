@@ -9,6 +9,17 @@ import time
 from video_downloader.core.platform import clean_url, detect_platform, is_live_url, safe_decode
 
 
+def _win_startup_info():
+    """Windows 下隐藏子进程窗口（全局函数，避免在多处重复）。"""
+    if os.name != "nt":
+        return None, 0
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    creationflags = subprocess.CREATE_NO_WINDOW
+    return startupinfo, creationflags
+
+
 class DownloadExecutor:
     def __init__(
         self,
@@ -75,12 +86,14 @@ class DownloadExecutor:
         stats.clear()
         stats.update({"ok": 0, "fail": 0, "total": 1, "current": 1})
         self._app_state.publish({"type": "stats", "data": dict(stats)})
+        audio_mode = config_snapshot.get("AUDIO_MODE", "0")
+        audio_fmt = config_snapshot.get("AUDIO_FORMAT", "mp3")
         self._update_progress(0, "正在连接直播..." if is_live_download else "正在下载...")
         self._log(f"[下载] {url}", "info")
         try:
             threading.Thread(
                 target=self._run_single,
-                args=(handle, cmd, url, effective_platform, is_live_download),
+                args=(handle, cmd, url, effective_platform, is_live_download, audio_mode, audio_fmt),
                 daemon=True,
             ).start()
         except Exception as exc:
@@ -89,6 +102,50 @@ class DownloadExecutor:
             self._start_idle_timer()
             return {"error": f"下载线程启动失败: {exc}"}
         return {"ok": True}
+
+    def _extract_audio_from_video(self, video_path, audio_fmt):
+        """用 ffmpeg 从视频文件中提取指定格式的纯音频。"""
+        base, _ = os.path.splitext(video_path)
+        audio_ext = {"mp3": "mp3", "m4a": "m4a", "wav": "wav"}.get(audio_fmt, "mp3")
+        audio_path = base + "." + audio_ext
+        if os.path.isfile(audio_path):
+            # 避免覆盖已有文件
+            counter = 1
+            while os.path.isfile(f"{base}_{counter}.{audio_ext}"):
+                counter += 1
+            audio_path = f"{base}_{counter}.{audio_ext}"
+        ffmpeg = str(self._tool_dir / f"ffmpeg{self._exe_suffix}")
+        codec_map = {
+            "mp3": "libmp3lame",
+            "m4a": "aac",
+            "wav": "pcm_s16le",
+        }
+        codec = codec_map.get(audio_fmt, "libmp3lame")
+        extract_cmd = [ffmpeg, "-y", "-i", video_path, "-vn", "-c:a", codec]
+        if audio_fmt == "mp3":
+            extract_cmd += ["-q:a", "2"]
+        extract_cmd.append(audio_path)
+        try:
+            startupinfo, creationflags = _win_startup_info()
+            proc = subprocess.Popen(
+                extract_cmd, cwd=self._tool_dir,
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                startupinfo=startupinfo, creationflags=creationflags,
+            )
+            # 根据视频文件大小动态估算超时（每 GB 最多 120 秒，最少 120 秒，最多 1800 秒）
+            try:
+                file_size = os.path.getsize(video_path)
+            except OSError:
+                file_size = 0
+            dynamic_timeout = max(120, min(int(file_size / (1024 * 1024 * 1024) * 120), 1800)) if file_size > 0 else 300
+            _, stderr = proc.communicate(timeout=dynamic_timeout)
+            if proc.returncode == 0 and os.path.isfile(audio_path):
+                self._log(f"[音频提取] 已生成: {os.path.basename(audio_path)}", "success")
+            else:
+                err = stderr.decode("utf-8", errors="replace").strip()[-200:] if stderr else ""
+                self._log(f"[音频提取] 失败: {err}", "warn")
+        except Exception as exc:
+            self._log(f"[音频提取] 异常: {exc}", "warn")
 
     def fetch_bili_playlist(self, url):
         """获取 Bilibili 视频的分P列表。返回 {parts: [...], total: N} 或 {error: ...}。"""
@@ -109,14 +166,8 @@ class DownloadExecutor:
         if config_snapshot["PROXY_ENABLED"]:
             cmd += ["--proxy", f"{config_snapshot['PROXY_TYPE']}://{config_snapshot['PROXY_ADDR']}:{config_snapshot['PROXY_PORT']}"]
         cmd.append(url)
-        startupinfo = None
-        creationflags = 0
-        if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = subprocess.SW_HIDE
-            creationflags = subprocess.CREATE_NO_WINDOW
         proc = None
+        startupinfo, creationflags = _win_startup_info()
         try:
             proc = subprocess.Popen(
                 cmd, cwd=self._tool_dir,
@@ -159,7 +210,7 @@ class DownloadExecutor:
                 self.kill_process_tree(proc)
             return {"error": f"获取分P列表失败: {exc}"}
 
-    def _run_single(self, handle, cmd, url, effective_platform, is_live_download):
+    def _run_single(self, handle, cmd, url, effective_platform, is_live_download, audio_mode="0", audio_fmt="mp3"):
         # 线程局部代际会随进度回调传递，旧工作线程无法覆盖新任务界面状态。
         self._app_state.download_thread_context.task_id = handle.generation
         stats = self._app_state.batch_stats
@@ -295,6 +346,9 @@ class DownloadExecutor:
                 self._log("[停止] 下载已取消", "warn")
                 self._update_progress(0, "已停止", "", "")
             elif rc == 0:
+                # 模式 2（同时输出音频）：下载完成后用 ffmpeg 从合并文件提取音频
+                if audio_mode == "2" and output_path and os.path.isfile(output_path):
+                    self._extract_audio_from_video(output_path, audio_fmt)
                 stats["ok"] = 1
                 self._log("[完成] 下载成功！", "success")
                 self._update_progress(1, "下载完成", "", "")
@@ -334,9 +388,11 @@ class DownloadExecutor:
         self._broadcast_download_state()
         stats = self._app_state.batch_stats
         stats.clear()
+        audio_mode = config_snapshot.get("AUDIO_MODE", "0")
+        audio_fmt = config_snapshot.get("AUDIO_FORMAT", "mp3")
         stats.update({"ok": 0, "fail": 0, "total": len(urls), "current": 0})
         try:
-            threading.Thread(target=self._run_batch, args=(handle, urls, config_snapshot, stats, bili_parts_map or {}), daemon=True).start()
+            threading.Thread(target=self._run_batch, args=(handle, urls, config_snapshot, stats, bili_parts_map or {}, audio_mode, audio_fmt), daemon=True).start()
         except Exception as exc:
             self._download_manager.finish(handle)
             self._broadcast_download_state()
@@ -344,7 +400,7 @@ class DownloadExecutor:
             return {"error": f"下载线程启动失败: {exc}"}
         return {"ok": True, "total": len(urls)}
 
-    def _run_batch(self, handle, urls, config_snapshot, stats, bili_parts_map=None):
+    def _run_batch(self, handle, urls, config_snapshot, stats, bili_parts_map=None, audio_mode="0", audio_fmt="mp3"):
         # 批量统计与进度共用任务代际，避免停止后迟到事件污染下一任务。
         self._app_state.download_thread_context.task_id = handle.generation
         stopped = False
@@ -419,6 +475,8 @@ class DownloadExecutor:
                         break
                     rc = proc.returncode if proc.returncode is not None else -1
                     if rc == 0:
+                        if audio_mode == "2" and output_path and os.path.isfile(output_path):
+                            self._extract_audio_from_video(output_path, audio_fmt)
                         stats["ok"] += 1
                         self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
                         self._add_history(url, "", effective_platform, "success", output_path)
@@ -470,10 +528,7 @@ class DownloadExecutor:
         try:
             if process.poll() is None:
                 if os.name == "nt":
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = subprocess.SW_HIDE
-                    creationflags = subprocess.CREATE_NO_WINDOW
+                    startupinfo, creationflags = _win_startup_info()
                     try:
                         subprocess.run(["taskkill", "/T", "/PID", str(process.pid)], capture_output=True, timeout=2, startupinfo=startupinfo, creationflags=creationflags)
                     except Exception:
@@ -515,13 +570,7 @@ class DownloadExecutor:
     def _spawn(self, cmd):
         env = os.environ.copy()
         env.update({"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"})
-        startupinfo = None
-        creationflags = 0
-        if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = subprocess.SW_HIDE
-            creationflags = subprocess.CREATE_NO_WINDOW
+        startupinfo, creationflags = _win_startup_info()
         return subprocess.Popen(
             cmd,
             cwd=self._tool_dir,
@@ -551,6 +600,7 @@ class DownloadExecutor:
 
         def read_output():
             buffer = bytearray()
+            pending_cr = False  # 上个字节是 \r，等下一个 \n 合并为 \r\n
             while True:
                 try:
                     chunk = os.read(process.stdout.fileno(), 4096)
@@ -563,15 +613,33 @@ class DownloadExecutor:
                         except Exception:
                             pass
                     break
-                for value in chunk:
-                    if value in (0x0D, 0x0A):
+                for i, value in enumerate(chunk):
+                    if value == 0x0A:          # LF
+                        if pending_cr:          # 前一个是 \r → \r\n 合并为一次 flush
+                            pending_cr = False
                         if buffer:
                             try:
                                 enqueue(safe_decode(buffer))
                             except Exception:
                                 pass
                             buffer = bytearray()
+                    elif value == 0x0D:         # CR — 等下一个字节判断
+                        pending_cr = True
+                        if i + 1 < len(chunk) and chunk[i + 1] == 0x0A:
+                            pass               # 下个字节是 LF，一起 flush
+                        else:
+                            # 孤立的 \r（老 Mac 格式），当作换行处理
+                            if buffer:
+                                try:
+                                    enqueue(safe_decode(buffer))
+                                except Exception:
+                                    pass
+                                buffer = bytearray()
+                            pending_cr = False
                     else:
+                        if pending_cr:
+                            # 前一个是 \r 但下一个不是 \n，先 flush 再追加
+                            pending_cr = False
                         buffer.append(value)
             read_done.set()
 
@@ -592,7 +660,7 @@ class DownloadExecutor:
 
     def _finish(self, handle, process):
         self._download_manager.clear_process(handle, process)
-        # 仅当前代际有权广播结束态，旧线程迟到收尾不会伪造“空闲”。
+        # 仅当前代际有权广播结束态，旧线程迟到收尾不会伪造"空闲"。
         if self._download_manager.finish(handle):
             self._broadcast_download_state()
         if not self._app_state.has_sse_clients():

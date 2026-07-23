@@ -77,9 +77,9 @@ def serve_static_file(request_path: str):
     # 安全：仅允许 /static/ 前缀，防止目录穿越
     # request_path 形如 /static/css/style.css
     normalized = os.path.normpath(request_path.lstrip("/"))
-    # 确保请求路径确实在 static 目录下
+    # 确保请求路径确实在 static 目录下（Windows 大小写不敏感加固）
     parts = normalized.replace("\\", "/").split("/")
-    if not parts or parts[0] != "static":
+    if not parts or parts[0].lower() != "static":
         return None, None
 
     # 获取相对路径（去掉 static/ 前缀）

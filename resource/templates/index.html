@@ -23,7 +23,6 @@
       <div class="nav-group">
         <span class="sidebar-label">工具</span>
         <button class="tab sidebar-link" data-page="tools"><span class="icon" data-ico="wrench"></span><span>实用工具</span></button>
-        <button class="tab sidebar-link" data-page="logs"><span class="icon" data-ico="terminal"></span><span>运行日志</span></button>
       </div>
       <div class="nav-group">
         <span class="sidebar-label">配置</span>
@@ -66,12 +65,6 @@
         </div>
 
         <section class="card download-card" aria-labelledby="downloadHeading">
-          <div class="greeting-row">
-            <div class="greeting">
-              <span class="page-icon"><span class="icon" data-ico="link"></span></span>
-              <div class="greeting-text"><b id="greeting" data-heading>想下载点什么？</b></div>
-            </div>
-          </div>
           <span id="downloadHeading" class="sr-only">新建下载任务</span>
 
           <div class="platforms" id="platforms"></div>
@@ -81,6 +74,7 @@
             请在浏览器中将视频画质切换到 <b>1080P 高清</b> 后再导出 Cookie，
             或直接使用「浏览器 Cookie 模式」自动提取。
             <a href="#" onclick="setActivePage('help');return false;">查看详细教程 →</a>
+            <button class="hint-close" onclick="document.getElementById('bilibiliHint').style.display='none'" title="关闭提示">&times;</button>
           </div>
 
           <div class="url-row">
@@ -95,43 +89,37 @@
             <div class="progress-info"><span id="speedText"></span><span id="etaText"></span></div>
           </div>
 
-          <div class="task-stats" aria-label="任务统计">
-            <div class="stat-card stat-success">
-              <div class="stat-label"><span class="icon" data-ico="check"></span>成功</div>
-              <div class="stat-value" id="statOk">0</div>
+          <div class="task-stats" id="taskStatsWrap" aria-label="任务统计" style="display:none">
+            <div style="display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--surface-elevated);border-radius:6px;border:1px solid var(--border);font-size:0.75rem;cursor:pointer" onclick="toggleTaskStats()" title="点击展开/折叠">
+              <span id="statsSummary" style="color:var(--text-toned)"></span>
+              <span id="btnStatsToggle" style="margin-left:auto;color:var(--text-toned);font-size:0.65rem">&#9654;</span>
             </div>
-            <div class="stat-card stat-fail">
-              <div class="stat-label"><span class="icon" data-ico="x"></span>失败</div>
-              <div class="stat-value" id="statFail">0</div>
-            </div>
-            <div class="stat-card stat-total">
-              <div class="stat-label"><span class="icon" data-ico="layers"></span>总计</div>
-              <div class="stat-value" id="statTotal">0</div>
+            <div id="taskStatsDetail" style="display:none;gap:8px;margin-top:6px">
+              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:rgb(34 197 94 / 0.08);border-radius:5px">
+                <span style="font-size:0.65rem;color:var(--success)">成功</span>
+                <span class="stat-value" id="statOk" style="display:block;font-size:0.9rem;font-weight:700;color:var(--success)">0</span>
+              </div>
+              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:rgb(239 68 68 / 0.08);border-radius:5px">
+                <span style="font-size:0.65rem;color:var(--red)">失败</span>
+                <span class="stat-value" id="statFail" style="display:block;font-size:0.9rem;font-weight:700;color:var(--red)">0</span>
+              </div>
+              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:rgb(79 195 247 / 0.08);border-radius:5px">
+                <span style="font-size:0.65rem;color:var(--accent)">总计</span>
+                <span class="stat-value" id="statTotal" style="display:block;font-size:0.9rem;font-weight:700;color:var(--accent)">0</span>
+              </div>
             </div>
           </div>
         </section>
-      </div>
 
-      <!-- 运行日志页 -->
-      <div class="page" id="page-logs">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="terminal"></span></span>
-            <div>
-              <p class="kicker">工作区 · 监控</p>
-              <h2>运行日志</h2>
-              <p class="page-desc">下载引擎的实时输出，用于排查失败原因与查看详细进度。</p>
-            </div>
+        <section class="card log-card" aria-labelledby="logHeading" style="margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span id="logHeading" style="color:var(--ink);font-weight:600;font-size:0.9rem;"><span class="icon" data-ico="terminal"></span> 运行日志</span>
+            <button class="btn btn-quiet" onclick="toggleLogBox()" id="btnLogToggle" title="折叠/展开" style="margin-left:auto">▲</button>
+            <button class="btn btn-quiet" onclick="clearConsole()"><span class="icon" data-ico="trash"></span>清空</button>
           </div>
-          <div class="page-header-actions">
-            <span class="hero-status"><span class="dot"></span> 实时输出</span>
-            <button class="btn btn-quiet" onclick="clearConsole()"><span class="icon" data-ico="trash"></span>清空日志</button>
+          <div id="logBoxWrap">
+            <div class="log-box" id="logBox" aria-live="polite" style="height:450px"></div>
           </div>
-        </div>
-
-        <section class="card" aria-labelledby="activityHeading">
-          <span id="activityHeading" class="sr-only">运行日志输出</span>
-          <div class="log-box log-box-full" id="logBox" aria-live="polite"></div>
         </section>
       </div>
 
@@ -175,9 +163,8 @@
           <div class="setting-row"><label>分辨率上限</label><select id="s_resolution"></select></div>
           <div class="setting-row"><label>编码模式</label><select id="s_codec"></select></div>
           <div class="setting-row"><label>音频质量</label><select id="s_audio"></select></div>
-          <div class="setting-row"><label>输出格式</label><select id="s_format"></select></div>
-          <div class="setting-row"><label>音视频合并输出</label><div class="switch" id="sw_merge" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>分离音频格式</label><select id="s_audiose"></select></div>
+          <div class="setting-row"><label>视频输出格式</label><select id="s_format"></select></div>
+          <div class="setting-row"><label>音频处理方案</label><select id="s_audiomode" onchange="onAudioModeChange()"></select></div>
         </section>
 
         <section class="card">
@@ -207,7 +194,7 @@
           <div class="setting-row"><label>硬件加速</label><select id="s_hwaccel"></select></div>
           <div class="setting-row"><label>嵌入元数据</label><div class="switch on" id="sw_meta" onclick="toggleSwitch(this)"></div></div>
           <div class="setting-row"><label>下载封面</label><div class="switch on" id="sw_thumb" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>同时下载音频 (MP3)</label><div class="switch" id="sw_audiodl" onclick="toggleSwitch(this)"></div></div>
+          <div class="setting-row"><label>音频输出格式</label><select id="s_audiofmt"></select></div>
           <div class="setting-row"><label>Win 文件名兼容</label><div class="switch on" id="sw_winfn" onclick="toggleSwitch(this)"></div></div>
           <div class="setting-row"><label>严格文件名</label><div class="switch" id="sw_strict" onclick="toggleSwitch(this)"></div></div>
           <div class="setting-row"><label>B站多P下载策略</label>
@@ -255,8 +242,8 @@
         </div>
 
         <div class="tools-grid">
-          <button class="tool-card" onclick="startBatch()"><span class="tool-ico"><span class="icon" data-ico="list"></span></span><span class="name">TXT 批量下载</span></button>
-          <button class="tool-card" onclick="toolAction('gen-template')"><span class="tool-ico"><span class="icon" data-ico="file-text"></span></span><span class="name">生成链接模板</span></button>
+          <button class="tool-card" onclick="startBatch()"><span class="tool-ico"><span class="icon" data-ico="list"></span></span><span class="name">TXT 混合批量下载</span></button>
+          <button class="tool-card" onclick="toolAction('gen-template')"><span class="tool-ico"><span class="icon" data-ico="file-text"></span></span><span class="name">生成批量下载模板</span></button>
           <button class="tool-card" onclick="toolAction('gen-cookie-template')"><span class="tool-ico"><span class="icon" data-ico="cookie"></span></span><span class="name">生成 Cookie 模板</span></button>
           <button class="tool-card" onclick="toolAction('update-ytdlp')"><span class="tool-ico"><span class="icon" data-ico="refresh"></span></span><span class="name">更新 yt-dlp</span></button>
           <button class="tool-card" onclick="toolAction('clean-temp')"><span class="tool-ico"><span class="icon" data-ico="trash"></span></span><span class="name">清理临时文件</span></button>

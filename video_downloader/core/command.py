@@ -1,6 +1,3 @@
-from .constants import AUDIO_SEP_OPTIONS
-
-
 def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None):
     cfg = config
     ytdlp = str(tool_dir / f"yt-dlp{exe_suffix}")
@@ -13,8 +10,8 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
 
     # Twitch 直播与录像共用入口，显式直播优先走从头抓取模板。
     if is_live or platform_name == "Twitch":
-        is_live_url = is_live or "twitch.tv/" in url.lower() and "/videos/" not in url.lower() and "/clip/" not in url.lower()
-        if is_live_url:
+        is_live_download = is_live or ("twitch.tv/" in url.lower() and "/videos/" not in url.lower() and "/clip/" not in url.lower())
+        if is_live_download:
             out_tmpl = str(
                 tool_dir / platform_name / "%(uploader)s" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
             cmd += ["--live-from-start"]
@@ -44,28 +41,35 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
 
     audio_q = cfg["AUDIO_QUALITY"]
     aformat_base = f"bestaudio[abr<={audio_q}]" if audio_q != "best" else "bestaudio"
-    merge = cfg["MERGE_MODE"]
-    sep_mode = cfg["AUDIO_SEP_MODE"]
     fmt = cfg["OUTPUT_FORMAT"]
     vcodec_part = res_str + vcodec
-    # 编码筛选失败时逐级回退，避免因站点流信息不完整而无格式可选。
     vfmt = f"bestvideo{vcodec_part}+{aformat_base}/best{vcodec_part}/best"
 
-    if merge == 1:
+    # === 音频处理方案 ===
+    audio_mode = cfg.get("AUDIO_MODE", "0")
+    audio_fmt = cfg.get("AUDIO_FORMAT", "mp3")
+
+    if audio_mode == "3":
+        # 只输出音频：bestaudio 优先（有独立音频流则直下），否则回退 best 再提取
+        # 不加 --keep-video，下载的中间视频文件自动丢弃
+        afilter = f"[abr<={audio_q}]" if audio_q != "best" else ""
+        cmd += ["-f", f"bestaudio{afilter}/best"]
+        cmd += ["-x", "--audio-format", audio_fmt]
+    elif audio_mode == "2":
+        # 同时输出音频：与模式 0 一样先合并下载，下载完成后由 download_executor
+        # 调 ffmpeg 从合并文件中提取指定格式音频，避免 --keep-video 导致中间裸流残留
         cmd += ["-f", vfmt, "--merge-output-format", fmt]
         if fmt != "webm":
             cmd += ["--remux-video", fmt]
-        if sep_mode > 0:
-            ext = AUDIO_SEP_OPTIONS[sep_mode - 1]
-            cmd += ["-x", "--audio-format", ext, "--keep-video"]
+    elif audio_mode == "1":
+        # 分离音画：视频和音频分开下载，不合并，各自保持原生格式
+        cmd += ["-f", f"bestvideo{vcodec_part},{aformat_base}"]
     else:
-        # 分离模式用逗号分别下载视频与音频，不触发合并后处理。
-        separate_vfmt = f"bestvideo{vcodec_part}/bestvideo"
-        cmd += ["-f", f"{separate_vfmt},{aformat_base}"]
+        # 模式 "0"（默认）：正常合并为单一视频文件
+        cmd += ["-f", vfmt, "--merge-output-format", fmt]
+        if fmt != "webm":
+            cmd += ["--remux-video", fmt]
 
-    # 同时下载音频（独立 MP3 文件），Fantia 除外
-    if cfg.get("AUDIO_DOWNLOAD") and platform_name != "Fantia":
-        cmd += ["-x", "--audio-format", "mp3", "--keep-video"]
     cmd += ["-N", str(cfg["THREADS"])]
     if cfg["SPEED_LIMIT"] > 0:
         cmd += ["-r", f"{cfg['SPEED_LIMIT']}M"]
@@ -73,7 +77,6 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         cmd += ["--proxy", f"{cfg['PROXY_TYPE']}://{cfg['PROXY_ADDR']}:{cfg['PROXY_PORT']}"]
     if cfg["USE_COOKIES"]:
         if cfg["COOKIE_MODE"] == 1:
-            # 手动 Cookie 仅在临时文件就绪时传入，避免空路径参数。
             if cookie_file is not None:
                 cmd += ["--cookies", str(cookie_file)]
         else:
@@ -82,8 +85,8 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         cmd += ["--embed-metadata"]
     if cfg["DOWNLOAD_THUMB"]:
         cmd += ["--write-thumbnail", "--convert-thumbnails", "jpg"]
-        # WebM、音频分离或独立下载时不嵌图，规避后处理冲突。
-        if merge == 1 and fmt != "webm" and sep_mode == 0:
+        # 正常合并模式（且非 WebM）才嵌图
+        if audio_mode == "0" and fmt != "webm":
             cmd += ["--embed-thumbnail"]
     if cfg["WIN_FILENAMES"]:
         cmd += ["--windows-filenames"]
