@@ -42,6 +42,7 @@ _ERROR_REASONS = {
     "STRICT_FILENAME": "严格文件名仅支持 0 或 1",
     "NICO_COMMENTS": "Niconico弹幕仅支持 0 或 1",
     "NICO_RECODE": "Niconico重编码仅支持 0 或 1",
+    "TC_PASSWORD": "TwitCasting密码长度不能超过 200 字符",
     "ENABLE_LOG": "日志开关仅支持 0 或 1",
     "DEL_WAV_AFTER_CONVERT": "删除WAV仅支持 0 或 1",
     "HWACCEL_WEBM": "WebM输出格式不支持硬件加速，已自动回退为CPU编码",

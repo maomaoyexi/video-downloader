@@ -48,7 +48,7 @@ def detect_platform(url):
 
 
 def is_live_url(url, platform=None):
-    """检测是否为直播链接（YouTube /live, Twitch 频道, Niconico 直播子域名）。"""
+    """检测是否为直播链接（YouTube /live, Twitch 频道, Niconico 直播子域名, TwitCasting 主播页）。"""
     try:
         parsed = urlparse(url)
         host = (parsed.hostname or "").lower()
@@ -69,6 +69,12 @@ def is_live_url(url, platform=None):
         return host in {"live.nicovideo.jp", "live2.nicovideo.jp"}
     if platform_name == "Bilibili":
         return host == "live.bilibili.com" or host.endswith(".live.bilibili.com")
+    if platform_name == "TwitCasting":
+        if host != "twitcasting.tv" and not host.endswith(".twitcasting.tv"):
+            return False
+        segments = [segment for segment in path.split("/") if segment]
+        # 单段路径（/主播名）为当前直播；含 movie/twplayer/show/archive 为录播或历史列表。
+        return len(segments) == 1 and segments[0] not in {"movie", "twplayer", "show", "archive"}
     return False
 
 
