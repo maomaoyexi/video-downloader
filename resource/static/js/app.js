@@ -14,7 +14,8 @@ const PLATFORMS = [
   {name:"Bilibili",color:"#FB7299"},
   {name:"Twitch",color:"#9146FF"},
   {name:"Niconico",color:"#00A0D1"},
-  {name:"Fantia",color:"#E6399B"}
+  {name:"Fantia",color:"#E6399B"},
+  {name:"TwitCasting",color:"#4B4B4D"}
 ];
 const PAGE_TITLES = {
   download: '下载任务', logs: '运行日志', settings: '下载设置', history: '下载历史',
@@ -419,9 +420,10 @@ function isBilibiliLive(url) {
   try { return new URL(url).hostname.includes('live.bilibili.com'); } catch(e) { return false; }
 }
 
-async function doStartDl(url, biliParts) {
+async function doStartDl(url, biliParts, tcPassword) {
   const body = {url};
   if(biliParts) body.bili_parts = biliParts;
+  if(tcPassword) body.tc_password = tcPassword;
   const r = await api('/api/start', {method:'POST', body:JSON.stringify(body)});
   if(r.error) { alert(r.error); return; }
   download_running = true;
@@ -592,6 +594,12 @@ function connectSSE() {
       if(d.fail !== undefined) $('statFail').textContent = d.fail;
       if(d.total !== undefined) $('statTotal').textContent = d.total;
       updateStatsVisibility();
+    } else if(evt.type === 'password_required') {
+      const d = evt.data;
+      // 仅 TwitCasting 平台显示密码弹窗，其他平台忽略
+      if(d.platform !== 'TwitCasting') return;
+      pendingTcUrl = d.url;
+      showTcPasswordPrompt(d.reason === 'retry');
     } else if(evt.type === 'history') {
       renderHistory(evt.data);
     } else if(evt.type === 'ready') {
@@ -860,6 +868,7 @@ async function doUpdateNow() {
 
 // ========== Bilibili 分P选择对话框 ==========
 let pendingPartCallback = null;
+let pendingTcUrl = null;
 
 async function fetchBiliPlaylist(url) {
   return await api('/api/bili-playlist', {method:'POST', body:JSON.stringify({url})});
@@ -918,6 +927,39 @@ function confirmPartSelection() {
   closePartSelector();             // closePartSelector 会清掉 pendingPartCallback
   if(cb) {                         // 使用之前保存的引用
     cb(indices);
+  }
+}
+
+// -- TwitCasting 密码弹窗 ---
+function showTcPasswordPrompt(isRetry) {
+  const input = document.getElementById('tcPasswordInput');
+  if(input) input.value = '';
+  const msg = document.getElementById('tcPasswordMsg');
+  if(msg) {
+    msg.textContent = isRetry
+      ? '下载失败，密码可能不正确，请重新输入密码后重试。'
+      : '该视频/直播受密码保护或为会员限定内容，请输入密码后下载。';
+  }
+  document.getElementById('tcPasswordOverlay').style.display = 'flex';
+  setTimeout(() => { if(document.getElementById('tcPasswordInput')) document.getElementById('tcPasswordInput').focus(); }, 100);
+}
+
+function closeTcPasswordPrompt() {
+  document.getElementById('tcPasswordOverlay').style.display = 'none';
+  pendingTcUrl = null;
+}
+
+function confirmTcPassword() {
+  const pw = document.getElementById('tcPasswordInput').value.trim();
+  if(!pw) { alert('请输入密码'); return; }
+  const url = pendingTcUrl;
+  closeTcPasswordPrompt();
+  if(!url) return;
+  // 批量下载运行中 → 提交密码到等待中的批量线程；否则启动新的单链接下载
+  if(download_running) {
+    api('/api/submit-password', {method:'POST', body:JSON.stringify({url: url, password: pw})});
+  } else {
+    doStartDl(url, null, pw);
   }
 }
 

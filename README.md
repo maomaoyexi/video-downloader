@@ -1,5 +1,5 @@
 # 多平台视频下载工具 v2.1.0 WebUI
-支持 YouTube / Bilibili / Twitch / Niconico / Fantia 五个平台的视频/直播下载工具，采用浏览器界面。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
+支持 YouTube / Bilibili / Twitch / Niconico / Fantia / TwitCasting 六个平台的视频/直播下载工具，采用浏览器界面。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
 ![Version](https://img.shields.io/badge/version-v2.1.0%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
@@ -10,9 +10,9 @@
 ## ✨ 功能特性
 
 - 🌐 **全新WebUI界面** - 内置HTTP服务器，自动打开浏览器，深色主题，响应式设计
-- 🎬 **五平台支持** - YouTube、Bilibili、Twitch、Niconico、Fantia，自动识别平台
+- 🎬 **六平台支持** - YouTube、Bilibili、Twitch、Niconico、Fantia、TwitCasting，自动识别平台
 - 📺 **Bilibili 支持** - 支持普通视频、直播和多 P 分集选择
-- 🎮 **直播录制** - 支持 YouTube、Twitch、Niconico 直播识别、从头录制和实时状态
+- 🎮 **直播录制** - 支持 YouTube、Twitch、Niconico、TwitCasting 直播识别、从头录制和实时状态
 - 💾 **配置预设** - 保存常用设置组合，一键切换
 - 📜 **下载历史** - 自动记录每次下载，最多500条
 - 🔄 **断点续传** - 默认启用，网络中断后自动续传
@@ -67,6 +67,9 @@ python ".\视频下载工具v2.1.0-GUI.py"
 ### YouTube / Niconico 直播录制
 YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp` 或 `live2.nicovideo.jp` 链接。程序会自动进入直播模式，并实时显示录制时长、大小、速度和分片状态。
 
+### TwitCasting 直播录制 / 录播下载
+粘贴主播页 URL（如 `https://twitcasting.tv/主播名`）即可从直播开头录制，文件保存到 `TwitCasting/主播名/直播/` 目录。单条录播使用 `/movie/数字ID` 链接，历史直播列表使用 `/show` 或 `/archive` 链接。密码保护或会员限定内容可在「设置」页填写「TwitCasting 密码」后下载。
+
 ### Bilibili 下载
 粘贴 Bilibili 视频或直播链接后程序会自动识别。多 P 视频可按设置下载全部分集或弹出分集选择器；1080P 及以上画质通常需要在程序目录配置 `cookies.txt`。
 
@@ -98,7 +101,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 对于需要登录才能观看的视频（如年龄限制、会员内容、Niconico高画质），需要配置Cookie：
 
 1. 安装浏览器扩展「Get cookies.txt LOCALLY」（Chrome/Edge/Firefox均支持，纯本地运行）
-2. 登录对应平台（YouTube/Twitch/Niconico/Fantia）
+2. 登录对应平台（YouTube/Twitch/Niconico/Fantia/TwitCasting）
 3. 在目标平台页面点击扩展图标，导出 **Netscape格式** Cookie
 4. 将导出的文件重命名为 `cookies.txt`，放到exe同目录
 5. 重启程序即可生效
@@ -138,7 +141,12 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 │       └── 直播标题 - 日期 id.mp4
 ├── Niconico/                # Niconico下载目录
 ├── Bilibili/                # Bilibili视频、直播及多P目录
-└── Fantia/                  # Fantia下载目录
+├── Fantia/                  # Fantia下载目录
+└── TwitCasting/             # TwitCasting下载目录
+    ├── 主播名/
+    │   └── 视频标题 [id].mp4
+    └── 主播名/直播/
+        └── 直播标题 - 日期 id.mp4
 ```
 
 ## 🔧 工具箱功能

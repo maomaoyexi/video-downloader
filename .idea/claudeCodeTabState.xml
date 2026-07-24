@@ -7,9 +7,8 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="00bb935d-8690-4656-865f-c82542ee5a6b" />
               <option name="cwd" value="D:\WorkSpace\github space\video-downloader" />
-              <option name="model" value="claude-sonnet-4-6[1m]" />
+              <option name="model" value="claude-opus-4-8[1m]" />
               <option name="permissionMode" value="acceptEdits" />
             </TabSessionState>
           </value>

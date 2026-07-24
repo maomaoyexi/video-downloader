@@ -348,6 +348,16 @@
         </div>
 
         <div class="help-section">
+          <h3><span class="icon" data-ico="tv"></span>TwitCasting 直播录制</h3>
+          <div class="help-content">
+            <p><b>录制直播：</b>粘贴主播页 URL（如 <code>https://twitcasting.tv/主播名</code>），会从直播开始处自动录制。</p>
+            <p><b>下载录播：</b>粘贴单条录播 URL（<code>/movie/数字ID</code>）即可下载。粘贴 <code>/show</code> 或 <code>/archive</code> 可获取该主播的历史直播列表。</p>
+            <p><b>密码保护：</b>密码保护或会员限定的直播/录播，在「设置」页填写「TwitCasting 密码」后再下载。</p>
+            <p><b>注意：</b>直播录制需要一直保持工具运行，停止则录制结束。录制文件会自动保存到 TwitCasting/主播名/直播/ 文件夹。</p>
+          </div>
+        </div>
+
+        <div class="help-section">
           <h3><span class="icon" data-ico="bookmark"></span>配置预设</h3>
           <div class="help-content">
             <p>在「设置」页面顶部的「配置预设」区域可以保存当前设置为命名预设，例如：</p>
@@ -384,6 +394,9 @@
 │   │   └── 直播/     # 直播录制<br>
 ├── Nico/             # Niconico下载<br>
 ├── Fantia/           # Fantia下载<br>
+├── TwitCasting/      # TwitCasting下载<br>
+│   ├── 主播名/<br>
+│   │   └── 直播/     # 直播录制<br>
 ├── urls.txt          # TXT批量链接文件<br>
 ├── cookies.txt       # Cookie文件<br>
 ├── presets.json      # 配置预设<br>
@@ -398,7 +411,7 @@
           <span class="about-mark"><span class="icon" data-ico="download"></span></span>
           <h2>多平台视频下载工具</h2>
           <p id="aboutVer"></p>
-          <p>支持平台：YouTube / Bilibili / Twitch / Niconico / Fantia</p>
+          <p>支持平台：YouTube / Bilibili / Twitch / Niconico / Fantia / TwitCasting</p>
           <p class="small">基于 yt-dlp + ffmpeg ｜ 原版作者：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy (@maomaoyexi)</a></p>
           <p class="small">v2.1.0 UI 重构：<a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">DarkKandaoMaster（强壮的砍刀）</a></p>
           <p class="small">MP3 音频单独下载：<a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">ErgouTree (@ergou10086)</a></p>
@@ -450,6 +463,25 @@
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closePartSelector()">取消</button>
       <button class="btn btn-primary" id="btnPartConfirm" onclick="confirmPartSelection()">确认下载选中分P</button>
+    </div>
+  </div>
+</div>
+
+<!-- TwitCasting 密码输入对话框 -->
+<div class="modal-overlay" id="tcPasswordOverlay" style="display:none">
+  <div class="modal-dialog" id="tcPasswordDialog">
+    <div class="modal-header">
+      <h3><span class="icon" data-ico="lock"></span>TwitCasting 密码输入</h3>
+      <button class="modal-close" onclick="closeTcPasswordPrompt()" aria-label="关闭">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="tcPasswordMsg" style="margin-bottom:12px;color:#aaa;font-size:.9rem">该视频/直播受密码保护或为会员限定内容，请输入密码后下载。</p>
+      <label style="display:block;margin-bottom:6px;font-weight:600">密码</label>
+      <input type="password" id="tcPasswordInput" placeholder="输入 TwitCasting 密码" style="width:100%;padding:10px 14px;background:#1a1a2e;color:#e0e0e0;border:1px solid #333;border-radius:6px;font-size:1rem">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeTcPasswordPrompt()">取消</button>
+      <button class="btn btn-primary" id="btnTcPasswordConfirm" onclick="confirmTcPassword()">确认下载</button>
     </div>
   </div>
 </div>

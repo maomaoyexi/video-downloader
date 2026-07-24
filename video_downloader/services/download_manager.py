@@ -1,7 +1,6 @@
 import threading
 from dataclasses import dataclass
 
-
 @dataclass(frozen=True)
 class TaskHandle:
     generation: int

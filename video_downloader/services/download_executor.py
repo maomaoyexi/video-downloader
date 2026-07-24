@@ -34,6 +34,7 @@ class DownloadExecutor:
         add_history,
         cancel_idle_timer,
         start_idle_timer,
+        emit_event,
     ):
         self._tool_dir = tool_dir
         self._exe_suffix = exe_suffix
@@ -46,13 +47,23 @@ class DownloadExecutor:
         self._add_history = add_history
         self._cancel_idle_timer = cancel_idle_timer
         self._start_idle_timer = start_idle_timer
+        self._emit_event = emit_event
+        # 批量下载密码阻塞等待机制
+        self._password_event = threading.Event()
+        self._password_value: str | None = None
+        self._password_lock = threading.Lock()
+        self._waiting_for_password = False
 
-    def start_download(self, url, bili_parts=None):
+    def start_download(self, url, bili_parts=None, tc_password=None):
         url = clean_url(url)
         if not url:
             return {"error": "请输入有效的视频链接"}
 
+        verbose = bool(tc_password)  # 弹窗密码重试时开启 yt-dlp 详细日志用于诊断
         config_snapshot = self._app_state.config_snapshot()
+        # 本次下载的临时密码覆盖（来自密码弹窗），不写入持久配置。
+        if tc_password:
+            config_snapshot = dict(config_snapshot, TC_PASSWORD=tc_password)
         detected = detect_platform(url)
         effective_platform = detected if detected else config_snapshot["PLATFORM"]
         if detected:
@@ -76,6 +87,10 @@ class DownloadExecutor:
         except Exception as exc:
             return {"error": f"下载配置无效: {exc}"}
 
+        # 弹窗重试时开启 yt-dlp --verbose 以便诊断格式/密码问题。
+        if verbose:
+            cmd += ["--verbose"]
+
         handle = self._download_manager.begin("single")
         if handle is None:
             return {"error": "已有下载任务在运行"}
@@ -93,7 +108,7 @@ class DownloadExecutor:
         try:
             threading.Thread(
                 target=self._run_single,
-                args=(handle, cmd, url, effective_platform, is_live_download, audio_mode, audio_fmt),
+                args=(handle, cmd, url, effective_platform, is_live_download, audio_mode, audio_fmt, verbose),
                 daemon=True,
             ).start()
         except Exception as exc:
@@ -102,6 +117,36 @@ class DownloadExecutor:
             self._start_idle_timer()
             return {"error": f"下载线程启动失败: {exc}"}
         return {"ok": True}
+
+    def submit_password(self, url: str, password: str) -> dict:
+        """处理密码提交：批量下载等待中则唤醒线程，否则启动新的单链接下载（密码重试）。"""
+        with self._password_lock:
+            if self._waiting_for_password:
+                self._password_value = password
+                self._password_event.set()
+                return {"ok": True, "mode": "batch_retry"}
+        # 无批量下载在等待 → 当作单链接密码重试，启动新下载任务
+        return self.start_download(url, tc_password=password)
+
+    def _wait_for_password(self, url: str, platform: str, timeout: float = 120.0) -> str | None:
+        """阻塞等待用户通过前端弹窗提供密码。返回密码或 None（超时/取消）。"""
+        with self._password_lock:
+            self._waiting_for_password = True
+            self._password_value = None
+            self._password_event.clear()
+        self._emit_event("password_required", {
+            "url": url,
+            "platform": platform,
+            "reason": "retry",
+        })
+        received = self._password_event.wait(timeout)
+        with self._password_lock:
+            self._waiting_for_password = False
+            pw = self._password_value
+            self._password_value = None
+        if not received:
+            self._log(f"[{platform}] 等待密码超时，跳过此链接", "warn")
+        return pw if received else None
 
     def _extract_audio_from_video(self, video_path, audio_fmt):
         """用 ffmpeg 从视频文件中提取指定格式的纯音频。"""
@@ -210,7 +255,7 @@ class DownloadExecutor:
                 self.kill_process_tree(proc)
             return {"error": f"获取分P列表失败: {exc}"}
 
-    def _run_single(self, handle, cmd, url, effective_platform, is_live_download, audio_mode="0", audio_fmt="mp3"):
+    def _run_single(self, handle, cmd, url, effective_platform, is_live_download, audio_mode="0", audio_fmt="mp3", verbose=False):
         # 线程局部代际会随进度回调传递，旧工作线程无法覆盖新任务界面状态。
         self._app_state.download_thread_context.task_id = handle.generation
         stats = self._app_state.batch_stats
@@ -224,6 +269,15 @@ class DownloadExecutor:
         output_path = ""
         proc = None
         try:
+            # 弹窗重试时记录完整命令，方便我debug。
+            if verbose:
+                masked = list(cmd)
+                try:
+                    idx = masked.index("--video-password")
+                    masked[idx + 1] = "***"
+                except (ValueError, IndexError):
+                    pass
+                self._log(f"[调试] yt-dlp 命令: {' '.join(masked)}", "info")
             proc = self._spawn(cmd)
             if not self._download_manager.publish_process(handle, proc):
                 self.kill_process_tree(proc)
@@ -234,6 +288,8 @@ class DownloadExecutor:
             live_size = ""
             live_speed = ""
             live_frag = ""
+            password_required = False
+            password_retry = False
 
             def fmt_live_status():
                 elapsed = int(time.time() - live_start_time)
@@ -264,6 +320,15 @@ class DownloadExecutor:
 
                 is_error = "ERROR" in line
                 is_warning = "WARNING" in line
+                # 密码保护期：yt-dlp 提示需要 --video-password 时，标记以便结束后弹窗索取密码。
+                # 仅 TwitCasting 使用 --video-password，限定平台避免其他平台的假阳性。
+                if is_error and "--video-password" in line and effective_platform == "TwitCasting":
+                    password_required = True
+                # TwitCasting 密码错误时 yt-dlp 不报密码错误，而是报格式不可用。
+                # 标记为 password_retry 以便显示不同的提示文案。
+                # 限定 TwitCasting 平台，避免其他平台因格式不匹配误触发密码弹窗。
+                if is_error and "format is not available" in line.lower() and effective_platform == "TwitCasting":
+                    password_retry = True
                 has_pct = bool(re.search(r"\d+(?:\.\d+)?%", line))
                 has_ffmpeg_progress = is_live_download and (
                     re.search(r"(?:size|Lsize)=\s*\S+", line)
@@ -276,6 +341,7 @@ class DownloadExecutor:
                     "Destination:", "Merging formats", "Deleting original", "Extracting URL",
                     "Downloading webpage", "Connecting to WebSocket", "has already been recorded",
                     "video only", "audio only", "Resuming",
+                    "Trying video password", "Downloading m3u8",
                 ])
 
                 if is_error:
@@ -360,6 +426,17 @@ class DownloadExecutor:
                 self._update_progress(0, f"失败 (退出码 {rc})", "", "")
                 self._add_history(url, video_title, effective_platform, "fail")
                 update_stats()
+                # 密码保护/会员限定内容：通知前端弹窗索取密码后重试本条下载。
+                if password_required or password_retry:
+                    if password_retry:
+                        self._log(f"[{effective_platform}] 下载失败，密码可能不正确，请重新输入密码", "warn")
+                    else:
+                        self._log(f"[{effective_platform}] 该内容受密码保护，请输入密码后重试", "warn")
+                    self._emit_event("password_required", {
+                        "url": url,
+                        "platform": effective_platform,
+                        "reason": "retry" if password_retry else "missing",
+                    })
         except Exception as exc:
             stats["fail"] = 1
             self._log(f"[异常] {exc}", "error")
@@ -428,74 +505,115 @@ class DownloadExecutor:
                     self._log(f"[{index}/{len(urls)}] 未识别平台，使用: {config_snapshot['PLATFORM']}", "warn")
                 self._log(f"[{index}/{len(urls)}] 下载: {url}", "info")
                 self._update_progress(0, f"批量下载 {index}/{len(urls)}")
-                proc = None
-                output_path = ""
-                try:
-                    bili_parts_for_url = (bili_parts_map or {}).get(url)
-                    cmd = self._build_command(
-                        url,
-                        is_live=is_live_url(url, detected),
-                        platform_override=effective_platform,
-                        config_override=config_snapshot,
-                        bili_parts=bili_parts_for_url,
-                    )
-                    proc = self._spawn(cmd)
-                    if not self._download_manager.publish_process(handle, proc):
-                        stopped = True
-                        self.kill_process_tree(proc)
-                        break
-                    line_q, read_done = self._start_reader(proc)
-                    while not read_done.is_set() or not line_q.empty():
-                        if handle.cancel_event.is_set():
-                            break
-                        try:
-                            line = line_q.get(timeout=0.5).strip()
-                        except queue.Empty:
-                            continue
-                        if not line:
-                            continue
-                        if "ERROR" in line:
-                            self._log(f"  {line}", "error")
-                        elif "WARNING" in line:
-                            self._log(f"  {line}", "warn")
-                        path_match = re.search(r"\[download\] Destination: (.+)", line) \
-                            or re.search(r'\[Merger\] Merging formats into "(.+)"', line)
-                        if path_match:
-                            output_path = path_match.group(1).replace('"', "").replace("'", "").strip()
-                        progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
-                        if progress_match:
-                            overall = ((index - 1) + float(progress_match.group(1)) / 100) / len(urls)
-                            self._update_progress(overall, f"批量下载 {index}/{len(urls)}")
-                    self._close_process(proc)
-                    self._download_manager.clear_process(handle, proc)
+                bili_parts_for_url = (bili_parts_map or {}).get(url)
+
+                # 密码重试循环（最多 2 次额外尝试）
+                tc_password = config_snapshot.get("TC_PASSWORD")
+                max_password_attempts = 3  # 初始 + 2 次重试
+                pw_attempt = 0
+                url_done = False
+
+                while pw_attempt < max_password_attempts and not url_done:
                     if handle.cancel_event.is_set():
                         stopped = True
-                        self._log(f"[{index}/{len(urls)}] ✗ 已取消", "warn")
-                        update_stats()
                         break
-                    rc = proc.returncode if proc.returncode is not None else -1
-                    if rc == 0:
-                        if audio_mode == "2" and output_path and os.path.isfile(output_path):
-                            self._extract_audio_from_video(output_path, audio_fmt)
-                        stats["ok"] += 1
-                        self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
-                        self._add_history(url, "", effective_platform, "success", output_path)
-                    else:
-                        stats["fail"] += 1
-                        self._log(f"[{index}/{len(urls)}] ✗ 失败 (退出码 {rc})", "error")
-                        self._add_history(url, "", effective_platform, "fail")
-                    update_stats()
-                except Exception as exc:
-                    stats["fail"] += 1
-                    self._log(f"[{index}/{len(urls)}] ✗ 异常: {exc}", "error")
+                    proc = None
+                    output_path = ""
+                    password_required = False
+                    password_retry = False
                     try:
-                        self._add_history(url, "", effective_platform, "fail")
-                    except Exception:
-                        pass
-                    update_stats()
-                    if proc is not None:
-                        self.kill_process_tree(proc)
-                    self._download_manager.clear_process(handle, proc)
+                        cmd_config = dict(config_snapshot)
+                        if pw_attempt > 0 and tc_password:
+                            cmd_config["TC_PASSWORD"] = tc_password
+                        cmd = self._build_command(
+                            url,
+                            is_live=is_live_url(url, detected),
+                            platform_override=effective_platform,
+                            config_override=cmd_config,
+                            bili_parts=bili_parts_for_url,
+                        )
+                        proc = self._spawn(cmd)
+                        if not self._download_manager.publish_process(handle, proc):
+                            stopped = True
+                            self.kill_process_tree(proc)
+                            break
+                        line_q, read_done = self._start_reader(proc)
+                        while not read_done.is_set() or not line_q.empty():
+                            if handle.cancel_event.is_set():
+                                break
+                            try:
+                                line = line_q.get(timeout=0.5).strip()
+                            except queue.Empty:
+                                continue
+                            if not line:
+                                continue
+                            is_error = "ERROR" in line
+                            if is_error:
+                                self._log(f"  {line}", "error")
+                                if "--video-password" in line and effective_platform == "TwitCasting":
+                                    password_required = True
+                                if "format is not available" in line.lower() and effective_platform == "TwitCasting":
+                                    password_retry = True
+                            elif "WARNING" in line:
+                                self._log(f"  {line}", "warn")
+                            path_match = re.search(r"\[download\] Destination: (.+)", line) \
+                                or re.search(r'\[Merger\] Merging formats into "(.+)"', line)
+                            if path_match:
+                                output_path = path_match.group(1).replace('"', "").replace("'", "").strip()
+                            progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
+                            if progress_match:
+                                overall = ((index - 1) + float(progress_match.group(1)) / 100) / len(urls)
+                                self._update_progress(overall, f"批量下载 {index}/{len(urls)}")
+                        self._close_process(proc)
+                        self._download_manager.clear_process(handle, proc)
+                        if handle.cancel_event.is_set():
+                            stopped = True
+                            self._log(f"[{index}/{len(urls)}] ✗ 已取消", "warn")
+                            update_stats()
+                            break
+                        rc = proc.returncode if proc.returncode is not None else -1
+                        if rc == 0:
+                            if audio_mode == "2" and output_path and os.path.isfile(output_path):
+                                self._extract_audio_from_video(output_path, audio_fmt)
+                            stats["ok"] += 1
+                            self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
+                            self._add_history(url, "", effective_platform, "success", output_path)
+                            url_done = True
+                        else:
+                            # TwitCasting 密码保护：阻塞等待密码后重试
+                            if (password_required or password_retry) and effective_platform == "TwitCasting":
+                                pw_attempt += 1
+                                if pw_attempt < max_password_attempts:
+                                    self._log(f"[{effective_platform}] 需要密码，等待用户输入... ({pw_attempt}/{max_password_attempts - 1})", "warn")
+                                    pw = self._wait_for_password(url, effective_platform)
+                                    if pw:
+                                        tc_password = pw
+                                        continue  # 用新密码重试
+                                # 超时或达到最大重试次数
+                                stats["fail"] += 1
+                                self._log(f"[{index}/{len(urls)}] ✗ 失败 (密码错误或超时)", "error")
+                                self._add_history(url, "", effective_platform, "fail")
+                                url_done = True
+                            else:
+                                stats["fail"] += 1
+                                self._log(f"[{index}/{len(urls)}] ✗ 失败 (退出码 {rc})", "error")
+                                self._add_history(url, "", effective_platform, "fail")
+                                url_done = True
+                        update_stats()
+                    except Exception as exc:
+                        stats["fail"] += 1
+                        self._log(f"[{index}/{len(urls)}] ✗ 异常: {exc}", "error")
+                        try:
+                            self._add_history(url, "", effective_platform, "fail")
+                        except Exception:
+                            pass
+                        update_stats()
+                        if proc is not None:
+                            self.kill_process_tree(proc)
+                        self._download_manager.clear_process(handle, proc)
+                        url_done = True
+                if stopped:
+                    break
             if stopped:
                 self._log("[批量下载] 已停止", "warn")
                 self._update_progress(0, "已停止")

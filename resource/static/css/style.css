@@ -624,6 +624,7 @@ textarea.url-input {
 .history-platform.Twitch { background: #9146ff; }
 .history-platform.Nico, .history-platform.Niconico { background: #00a0d1; }
 .history-platform.Fantia { background: #e6399b; }
+.history-platform.TwitCasting { background: #4b4b4d; }
 .history-platform.Bilibili { background: #fb7299; }
 .history-info { flex: 1; min-width: 0; }
 .history-title { overflow: hidden; color: var(--text-highlighted); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
