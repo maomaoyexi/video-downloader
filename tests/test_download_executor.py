@@ -45,6 +45,7 @@ def create_executor(tool_dir, manager=None):
         "add_history": Mock(),
         "cancel_idle_timer": Mock(),
         "start_idle_timer": Mock(),
+        "emit_event": Mock(),
     }
     executor = DownloadExecutor(
         tool_dir=tool_dir,

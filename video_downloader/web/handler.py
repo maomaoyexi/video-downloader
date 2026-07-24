@@ -28,6 +28,7 @@ class HttpHandlerDependencies:
     batch_txt_download: object
     start_urls_download: object
     stop_download: object
+    submit_password: object
     fetch_bili_playlist: object
     save_preset: object
     load_preset: object
@@ -203,7 +204,23 @@ def create_handler(dependencies):
                 if url is None:
                     return
                 bili_parts = data.get("bili_parts") or None
-                self._json(dependencies.start_download(url, bili_parts=bili_parts))
+                tc_password = data.get("tc_password")
+                if tc_password is not None and not isinstance(tc_password, str):
+                    self._json({"error": "字段 tc_password 类型错误"}, status=400)
+                    return
+                tc_password = tc_password or None
+                self._json(dependencies.start_download(url, bili_parts=bili_parts, tc_password=tc_password))
+            elif path == "/api/submit-password":
+                url = self._field(data, "url", str, "")
+                if url is None:
+                    return
+                password = self._field(data, "password", str, "")
+                if password is None:
+                    return
+                if not password.strip():
+                    self._json({"error": "密码不能为空"}, status=400)
+                    return
+                self._json(dependencies.submit_password(url, password))
             elif path == "/api/start-urls":
                 urls = self._field(data, "urls", list, [])
                 if urls is None:

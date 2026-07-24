@@ -8,15 +8,11 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     # VOD 模板：开启嵌入元数据时，在文件名前追加 [YYYYMMDD] 发布日期，便于按时间排序
     vod_date_prefix = "[%(upload_date)s] " if cfg["EMBED_META"] else ""
 
-    # Twitch 直播与录像共用入口，显式直播优先走从头抓取模板。
-    if is_live or platform_name == "Twitch":
-        is_live_download = is_live or ("twitch.tv/" in url.lower() and "/videos/" not in url.lower() and "/clip/" not in url.lower())
-        if is_live_download:
-            out_tmpl = str(
-                tool_dir / platform_name / "%(uploader)s" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
-            cmd += ["--live-from-start"]
-        else:
-            out_tmpl = str(tool_dir / platform_name / "%(uploader)s" / f"{vod_date_prefix}%(title)s [%(id)s].%(ext)s")
+    # 直播统一由调用方传入的 is_live 驱动（Twitch/TwitCasting 等），从头抓取并归入直播目录。
+    if is_live:
+        out_tmpl = str(
+            tool_dir / platform_name / "%(uploader)s" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
+        cmd += ["--live-from-start"]
     elif is_nico_live:
         # Niconico 直播按 URL 识别，并固定归入直播目录。
         out_tmpl = str(tool_dir / "Niconico" / "直播" / "%(title)s - %(upload_date)s %(id)s.%(ext)s")
@@ -63,7 +59,8 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
             cmd += ["--remux-video", fmt]
     elif audio_mode == "1":
         # 分离音画：视频和音频分开下载，不合并，各自保持原生格式
-        cmd += ["-f", f"bestvideo{vcodec_part},{aformat_base}"]
+        # 添加 /best 回退以兼容仅提供单一合并流的平台（如 TwitCasting）
+        cmd += ["-f", f"bestvideo{vcodec_part},{aformat_base}/best{vcodec_part}/best"]
     else:
         # 模式 "0"（默认）：正常合并为单一视频文件
         cmd += ["-f", vfmt, "--merge-output-format", fmt]
@@ -95,6 +92,9 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     if cfg["HWACCEL"] != "cpu":
         cmd += ["--postprocessor-args", f"Merger+ffmpeg_o:-c:v {cfg['HWACCEL']}"]
     cmd += ["--ffmpeg-location", str(tool_dir)]
+    # TwitCasting 密码保护/会员限定直播与录播需要通过 --video-password 解锁。
+    if platform_name == "TwitCasting" and cfg.get("TC_PASSWORD"):
+        cmd += ["--video-password", cfg["TC_PASSWORD"]]
     # 评论抓取与重编码仅对 Niconico 注入。
     if platform_name == "Niconico" and cfg["NICO_COMMENTS"]:
         cmd += ["--write-comments"]

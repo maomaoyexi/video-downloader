@@ -15,6 +15,7 @@ Twitch/
 Niconico/
 Fantia/
 Bilibili/
+TwitCasting/
 
 # 临时文件
 *.part
@@ -49,3 +50,13 @@ Desktop.ini
 
 # 归档文件
 *_archive.txt
+
+# idea文件
+.idea/
+
+
+# AI
+.claude/
+node_modules/
+package-lock.json
+package.json

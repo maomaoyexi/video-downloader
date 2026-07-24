@@ -33,7 +33,7 @@ def _print_help():
 
 说明:
   - CLI 模式使用默认配置：最佳画质、H.264、MP4、4线程、Cookie 自动
-  - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/Fantia）
+  - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/Fantia/TwitCasting）
   - 下载文件保存到工具目录下的「平台名/作者名/」文件夹
   - 如需自定义配置（画质、编码、代理等），请启动 WebUI 在设置页面调整
   - 依赖 yt-dlp.exe 和 ffmpeg.exe 需位于工具目录中
@@ -97,6 +97,12 @@ def _cmd_download(url):
         print(f"平台: {platform} (自动识别)")
     else:
         print(f"平台: {config['PLATFORM']} (未识别域名，使用默认)")
+
+    # TwitCasting 密码保护内容需通过 WebUI 下载，CLI 不支持交互式密码输入
+    if platform == "TwitCasting":
+        print("提示: TwitCasting 内容可能受密码保护。如遇下载失败，请启动 WebUI 模式下载。")
+        print("      WebUI 中可在设置页预填密码，或在收到密码提示弹窗后输入。")
+        print()
 
     # 检查依赖
     ytdlp = tool_dir / f"yt-dlp{exe_suffix}"

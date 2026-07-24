@@ -173,10 +173,14 @@ class AppContainer:
             add_history=add_history,
             cancel_idle_timer=cancel_idle_timer,
             start_idle_timer=start_idle_timer,
+            emit_event=emit_event,
         )
 
-        def start_download(url: str, bili_parts: str | None = None) -> dict:
-            return download_executor.start_download(url, bili_parts=bili_parts)
+        def start_download(url: str, bili_parts: str | None = None, tc_password: str | None = None) -> dict:
+            return download_executor.start_download(url, bili_parts=bili_parts, tc_password=tc_password)
+
+        def submit_password(url: str, password: str) -> dict:
+            return download_executor.submit_password(url, password)
 
         def stop_download() -> dict:
             return download_executor.stop_download()
@@ -252,6 +256,7 @@ class AppContainer:
                 batch_txt_download=batch_txt_download,
                 start_urls_download=start_urls_download,
                 stop_download=stop_download,
+                submit_password=submit_password,
                 fetch_bili_playlist=fetch_bili_playlist,
                 save_preset=save_preset,
                 load_preset=load_preset,
