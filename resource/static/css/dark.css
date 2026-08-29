@@ -1,0 +1,18 @@
+/* ============================================================
+   深色主题 — 只覆盖 :root 里的颜色变量，组件样式一行不改。
+   挂在 <html data-theme="dark"> 上生效。
+   ============================================================ */
+
+[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D0D0F; --surface:#141416; --surface2:#1A1A1D; --surface3:#242428;
+  --line:#242428; --line2:#35353B;
+  --fg:#EDEDEA; --fg2:#A3A39F; --fg3:#6C6C72;
+  --ok:#5FBF92; --err:#E4776C; --warn:#D4A03F; --live:#6C9BFF;
+}
+[data-theme="dark"] .dlg{box-shadow:0 24px 60px -18px rgba(0,0,0,.8)}
+[data-theme="dark"] .scrim{background:rgba(4,4,6,.62)}
+[data-theme="dark"] .cover-overlay{background:rgba(4,4,6,.82)}
+[data-theme="dark"] .toast{box-shadow:0 10px 30px -12px rgba(0,0,0,.9)}
+[data-theme="dark"] .toast.success .ico{color:#1E7A50}
+[data-theme="dark"] .toast.error .ico{color:#9E2E24}
