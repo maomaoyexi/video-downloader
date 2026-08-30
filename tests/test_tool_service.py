@@ -36,6 +36,7 @@ class ToolServiceTests(unittest.TestCase):
                 "ffmpeg": True,
                 "ffprobe": False,
                 "fantiadl": False,
+                "withny_dl": False,
                 "nicochannel_plugin": False,
             })
 

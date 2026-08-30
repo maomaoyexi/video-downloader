@@ -1,704 +1,582 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark" data-palette="normal">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>多平台视频下载工具 WebUI</title>
 <meta name="color-scheme" content="dark light">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237fbbb3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V3'/%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E">
-<!-- 设计系统：Everforest 主题 + 模块化 CSS -->
-<link rel="stylesheet" href="/static/css/theme.css">
-<link rel="stylesheet" href="/static/css/core.css">
-<link rel="stylesheet" href="/static/css/animations.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/dark.css">
 <link rel="stylesheet" href="/static/css/responsive.css">
+<link rel="stylesheet" href="/static/css/animations.css">
 </head>
 <body>
-<div class="app-shell">
-  <!-- ====== SIDEBAR ====== -->
-  <aside class="app-sidebar" aria-label="应用侧栏">
-    <a class="brand" href="#" aria-label="多平台视频下载工具首页">
-      <span class="brand-mark" id="brandMark"><span class="icon" data-ico="download"></span></span>
-      <span class="brand-text"><b>多平台视频下载工具</b><small>video downloader</small></span>
-    </a>
 
-    <nav class="sidebar-nav" aria-label="主导航">
-      <div class="nav-group">
-        <span class="sidebar-label">下载</span>
-        <button class="tab sidebar-link active" data-page="download"><span class="icon" data-ico="download"></span><span>下载任务</span></button>
-        <button class="tab sidebar-link" data-page="history"><span class="nav-ico-wrap"><span class="icon" data-ico="history"></span><span class="nav-dot" id="historyDot" aria-hidden="true"></span></span><span>下载历史</span></button>
-      </div>
-      <div class="nav-group">
-        <span class="sidebar-label">工具</span>
-        <button class="tab sidebar-link" data-page="tools"><span class="icon" data-ico="wrench"></span><span>实用工具</span></button>
-      </div>
-      <div class="nav-group">
-        <span class="sidebar-label">配置</span>
-        <button class="tab sidebar-link" data-page="settings"><span class="icon" data-ico="settings"></span><span>下载设置</span></button>
-      </div>
-      <div class="nav-group">
-        <span class="sidebar-label">文档</span>
-        <button class="tab sidebar-link" data-page="help"><span class="icon" data-ico="help"></span><span>使用帮助</span></button>
-        <button class="tab sidebar-link" data-page="about"><span class="icon" data-ico="info"></span><span>关于软件</span></button>
-      </div>
+<!-- ====== ICON SPRITE（stroke 1.6 / 16px 网格） ====== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.2V12l3.4 2"></path></symbol>
+  <symbol id="i-toolbox" viewBox="0 0 24 24"><path d="M3 8.5h18V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5z"></path><path d="M8.5 8.5V6.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2"></path><path d="M3 13.2h18"></path></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 8.5h16"></path><path d="M4 15.5h16"></path><path d="M9.5 5.5v6"></path><path d="M15.5 12.5v6"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M9.5 9.6a2.6 2.6 0 1 1 3.2 2.9v1.4"></path><path d="M12.7 17.2h0"></path></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 11.2v5"></path><path d="M12 8h0"></path></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.5 1.5M16.9 16.9l1.5 1.5M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5"></path></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.6 8.6 0 0 1 9.4 4a8.6 8.6 0 1 0 10.6 10.6z"></path></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 4v8"></path><path d="M7.6 6.8a7 7 0 1 0 8.8 0"></path></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+  <symbol id="i-square" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"></rect></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"></circle><path d="M8.1 8.1a5.5 5.5 0 0 0 0 7.8M15.9 15.9a5.5 5.5 0 0 0 0-7.8"></path><path d="M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 18.8a9.6 9.6 0 0 0 0-13.6"></path></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M8 9.8l2.6 2.4L8 14.6"></path><path d="M13.2 15h3.6"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15"></path><path d="M9.8 7V4.8h4.4V7"></path><path d="M6.8 7l.9 12.2h8.6L17.2 7"></path></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 6.8a1 1 0 0 1 1-1h4.3l2 2h8.7a1 1 0 0 1 1 1v8.6a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6.8z"></path></symbol>
+  <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.4 18.6V6.4a1 1 0 0 1 1-1h4.2l2 2h7.4a1 1 0 0 1 1 1v2.2"></path><path d="M3.4 18.6l2.4-7.3h15.4l-2.4 7.3H3.4z"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4l2.2 2.1"></path><path d="M20.2 4.3v4.6h-4.6"></path><path d="M19.8 12a7.8 7.8 0 0 1-13.4 5.4l-2.2-2.1"></path><path d="M3.8 19.7v-4.6h4.6"></path></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L3.6 9"></path><path d="M3.4 4.4V9.4h5"></path></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M6 3.5h7l5 5v12H6z"></path><path d="M13 3.5v5h5"></path><path d="M9 13h6M9 16.6h4"></path></symbol>
+  <symbol id="i-cookie" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M9.2 9.2h0M14.8 10h0M11 14.6h0M15.4 14.4h0"></path></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9.2 17.6V5.8l9.6-1.9v11.8"></path><circle cx="6.9" cy="17.7" r="2.3"></circle><circle cx="16.5" cy="15.7" r="2.3"></circle></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.6h3.2L11 6v12l-3.8-3.6H4z"></path><path d="M14.6 9.6a3.6 3.6 0 0 1 0 4.8"></path><path d="M17.4 7.2a7.2 7.2 0 0 1 0 9.6"></path></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"></path></symbol>
+  <symbol id="i-view-list" viewBox="0 0 24 24"><rect x="3.4" y="5" width="5" height="4.6" rx="1"></rect><rect x="3.4" y="14.4" width="5" height="4.6" rx="1"></rect><path d="M11.4 6.4h9.2M11.4 9.4h6M11.4 15.8h9.2M11.4 18.8h6"></path></symbol>
+  <symbol id="i-view-grid" viewBox="0 0 24 24"><rect x="3.6" y="4.6" width="7.2" height="6.2" rx="1.2"></rect><rect x="13.2" y="4.6" width="7.2" height="6.2" rx="1.2"></rect><rect x="3.6" y="13.2" width="7.2" height="6.2" rx="1.2"></rect><rect x="13.2" y="13.2" width="7.2" height="6.2" rx="1.2"></rect></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.6 4.4L19 7"></path></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"></path></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6.5 9.8l5.5 5.4 5.5-5.4"></path></symbol>
+  <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6.5 14.2l5.5-5.4 5.5 5.4"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.4 5.6L18 12l-9.6 6.4z"></path></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 5.5h11.2L19 8.3v10.2H5z"></path><path d="M8.4 5.5v4.4h6.8V5.5"></path><path d="M8.4 18.5v-4.6h7.2v4.6"></path></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.8 4.5h10.4v15.2L12 16.2l-5.2 3.5z"></path></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"></rect><path d="M8 5v14M16 5v14M3.5 12h17"></path></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.6 12h16.8"></path><path d="M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5s-1.1 6.1-3.3 8.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z"></path></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="7.2" y="7.2" width="9.6" height="9.6" rx="1.4"></rect><path d="M4.4 10h2.8M4.4 14h2.8M16.8 10h2.8M16.8 14h2.8M10 4.4v2.8M14 4.4v2.8M10 16.8v2.8M14 16.8v2.8"></path></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19.5V5"></path><path d="M6 11l6-6 6 6"></path></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.6" width="13" height="9" rx="1.5"></rect><path d="M8.6 10.6V8.2a3.4 3.4 0 0 1 6.8 0v2.4"></path></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3.5 13.2l2.8-8.4h11.4l2.8 8.4v6H3.5v-6z"></path><path d="M3.5 13.2H9a1 1 0 0 1 1 1 1 1 0 0 0 1 1h2a1 1 0 0 0 1-1 1 1 0 0 1 1-1h5.5"></path></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10"></path><path d="M19.5 4.5l-8.2 8.2"></path><path d="M18 13.6v5.9H4.5V6h5.9"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.4l8.4 15.2H3.6z"></path><path d="M12 10v4"></path><path d="M12 16.6h0"></path></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M13.4 4.6c3.6-.7 6 1.7 5.3 5.3-.6 3.2-3.4 6-6.4 7.4l-3-.3-2.9-2.9-.3-3c1.4-3 4.1-5.9 7.3-6.5z"></path><circle cx="14.4" cy="9.6" r="1.6"></circle><path d="M8.4 15.6L5 19"></path></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="12" rx="1.6"></rect><path d="M8.4 3.6L12 7l3.6-3.4"></path></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.6 9.4a4.4 4.4 0 0 1-5.4-5.5l2.6 2.6 2.3-.6.6-2.3-2.6-2.6a4.4 4.4 0 0 1 5.5 5.4l3.1 3.1"></path><path d="M12.6 11.4L5.1 18.9a2 2 0 0 0 2.8 2.8l7.5-7.5"></path></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- ====== RAIL ====== -->
+  <aside class="rail" aria-label="应用侧栏">
+    <div class="brand">
+      <span class="mk" id="brandMark"><svg class="ico s18"><use href="#i-download"></use></svg></span>
+      <span><b>视频下载工具</b><small>VIDEO DOWNLOADER</small></span>
+    </div>
+
+    <nav class="nav" aria-label="主导航">
+      <button class="ni on" data-page="download"><svg class="ico"><use href="#i-download"></use></svg><span>下载任务</span></button>
+      <button class="ni" data-page="history"><svg class="ico"><use href="#i-clock"></use></svg><span>下载历史</span><span class="dot" id="historyDot" aria-hidden="true"></span></button>
+      <span class="gap"></span>
+      <button class="ni" data-page="tools"><svg class="ico"><use href="#i-toolbox"></use></svg><span>实用工具</span></button>
+      <button class="ni" data-page="settings"><svg class="ico"><use href="#i-sliders"></use></svg><span>下载设置</span></button>
+      <span class="gap"></span>
+      <button class="ni" data-page="help"><svg class="ico"><use href="#i-help"></use></svg><span>使用帮助</span></button>
+      <button class="ni" data-page="about"><svg class="ico"><use href="#i-info"></use></svg><span>关于软件</span></button>
     </nav>
 
-    <div class="sidebar-footer">
-      <div class="sidebar-footer-row">
-        <span class="ver" id="ver"></span>
-        <button class="theme-toggle palette-toggle" id="paletteToggle" title="切换为正常中性配色" aria-label="切换为正常中性配色">
-          <span class="icon" data-ico="droplet"></span>
-        </button>
-        <button class="theme-toggle" id="themeToggle" title="切换明暗主题" aria-label="切换明暗主题">
-          <span class="icon icon-sun" data-ico="sun"></span>
-          <span class="icon icon-moon" data-ico="moon"></span>
+    <div class="railft">
+      <div class="railrow">
+        <span class="v" id="ver"></span>
+        <button class="ib theme-toggle" title="切换明暗主题" aria-label="切换明暗主题">
+          <svg class="ico s14 ico-sun"><use href="#i-sun"></use></svg>
+          <svg class="ico s14 ico-moon"><use href="#i-moon"></use></svg>
         </button>
       </div>
-      <button class="btn-exit" onclick="exitApp()" title="彻底关闭工具"><span class="icon" data-ico="power"></span>退出工具</button>
+      <button class="exit" onclick="exitApp()" title="彻底关闭工具"><svg class="ico s14"><use href="#i-power"></use></svg>退出工具</button>
     </div>
   </aside>
 
-  <!-- ====== MAIN CONTENT ====== -->
-  <div class="app-content">
-    <header class="content-header">
-      <div class="crumb"><span class="muted">工作区 /</span>&nbsp;<span id="pageTitle">下载任务</span></div>
-      <div class="header-actions">
-        <button class="update-badge" id="updateBadge" style="display:none" onclick="showUpdatePanel()" title="有新版本可用"><span class="icon" data-ico="info"></span>有更新</button>
-        <button class="theme-toggle palette-toggle theme-toggle-mobile" id="paletteToggleMobile" title="切换为正常中性配色" aria-label="切换为正常中性配色" style="display:none">
-          <span class="icon" data-ico="droplet"></span>
-        </button>
-        <button class="theme-toggle theme-toggle-mobile" id="themeToggleMobile" title="切换主题" aria-label="切换明暗主题" style="display:none">
-          <span class="icon icon-sun" data-ico="sun"></span>
-          <span class="icon icon-moon" data-ico="moon"></span>
+  <!-- ====== MAIN ====== -->
+  <div class="main">
+    <div class="topline" id="topline"></div>
+
+    <header class="top">
+      <h1 id="pageTitle">下载任务</h1>
+      <span class="sub" id="historyCount" data-top="history"></span>
+      <div class="tacts">
+        <button class="btn sm gh" id="updateBadge" style="display:none" onclick="showUpdatePanel()"><svg class="ico s14"><use href="#i-arrow-up"></use></svg><span id="updateBadgeText">有新版本</span></button>
+
+        <span class="seg" data-top="history">
+          <button id="viewList" title="列表视图" onclick="setHistoryView(historyView === 'list' ? 'grid' : 'list')"><svg class="ico s14"><use href="#i-view-list"></use></svg></button>
+          <button id="viewGrid" title="网格视图" onclick="setHistoryView(historyView === 'list' ? 'grid' : 'list')"><svg class="ico s14"><use href="#i-view-grid"></use></svg></button>
+        </span>
+        <button class="btn sm dgr" data-top="history" onclick="clearHistoryUI()"><svg class="ico s14"><use href="#i-trash"></use></svg>清空历史</button>
+
+        <button class="btn sm" data-top="settings" onclick="resetSettings()"><svg class="ico s14"><use href="#i-rotate"></use></svg>恢复默认</button>
+        <button class="btn sm pri" data-top="settings" onclick="saveSettings()"><svg class="ico s14"><use href="#i-save"></use></svg>保存设置</button>
+
+        <button class="btn sm" data-top="about" onclick="checkUpdateNow()"><svg class="ico s14"><use href="#i-refresh"></use></svg>检查更新</button>
+
+        <button class="ib theme-toggle mobile-only" style="display:none" title="切换明暗主题" aria-label="切换明暗主题">
+          <svg class="ico s14 ico-sun"><use href="#i-sun"></use></svg>
+          <svg class="ico s14 ico-moon"><use href="#i-moon"></use></svg>
         </button>
       </div>
     </header>
 
-    <main class="main">
-      <!-- ====== DOWNLOAD PAGE ====== -->
+    <div class="pad">
+
+      <!-- ====== 下载任务 ====== -->
       <div class="page active" id="page-download">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="download"></span></span>
-            <div>
-              <p class="kicker">工作区 · 队列</p>
-              <h2>新建下载任务</h2>
-              <p class="page-desc">粘贴链接后选择目标平台和下载方式，任务进度会实时显示在下方。</p>
-            </div>
-          </div>
+
+        <div class="sect">
+          <div class="sh"><b>平台</b><span class="rule"></span><span class="note">自动识别链接，选错平台也不影响下载</span></div>
+          <div class="chips" id="platforms"></div>
         </div>
 
-        <section class="card download-card" aria-labelledby="downloadHeading">
-          <span id="downloadHeading" class="sr-only">新建下载任务</span>
-
-          <div class="platforms" id="platforms"></div>
-
-          <div class="platform-hint" id="bilibiliHint">
-            <b>Bilibili 1080p 提示：</b>请在浏览器中将画质切换至 <b>1080P 高清</b> 后导出 Cookie，或使用「浏览器 Cookie 模式」自动提取。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
+        <div class="compose-wrap">
+          <div class="notice" id="bilibiliHint">
+            <b>Bilibili 1080P 提示：</b>请在浏览器中将画质切换至 <b>1080P 高清</b> 后导出 Cookie，或使用「浏览器 Cookie 模式」自动提取。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
           </div>
-
-          <div class="platform-hint" id="twitterHint" style="display:none">
+          <div class="notice" id="twitterHint" style="display:none">
             <b>Twitter/X 提示：</b>部分内容需要登录才能下载，建议使用「浏览器 Cookie 模式」自动提取登录状态。
           </div>
-
-          <div class="platform-hint" id="nicochannelHint" style="display:none">
-            <b>NicoChannel 提示：</b>首次下载需从 Firefox 浏览器自动提取 JWT 登录令牌，请确保已在 Firefox 中登录 <b>nicochannel.jp</b>。后续下载由插件通过 Cookie 文件自动刷新令牌。
+          <div class="notice" id="nicochannelHint" style="display:none">
+            <b>NicoChannel 提示：</b>首次下载需从 Firefox 自动提取 JWT 登录令牌，请确保已在 Firefox 中登录 <b>nicochannel.jp</b>。
+          </div>
+          <div class="notice" id="withnyHint" style="display:none">
+            <b>Withny 提示：</b>历史存档选浏览器导出的「包含内容」HAR，直播录制选 withny-dl 的 YAML 配置。凭据可能含登录信息，请勿分享。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
           </div>
 
-          <div class="platform-hint" id="withnyHint" style="display:none">
-            <b>Withny 历史存档：</b>请选择浏览器导出的"包含内容"HAR，此模式不接受普通 URL。HAR 可能包含登录信息，请勿分享，完成后建议删除。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
-          </div>
-
-          <div class="url-row">
-            <textarea class="url-input" id="urlInput" rows="1" placeholder="粘贴视频 / 播放列表 / 频道 / 直播链接，回车开始下载（每行一个链接，Shift/Ctrl+回车换行）…"></textarea>
-            <button class="btn btn-primary" id="btnStart" onclick="startDl()"><span class="icon" data-ico="plus"></span>开始下载</button>
-            <button class="btn btn-danger" id="btnStop" onclick="stopDl()" disabled><span class="icon" data-ico="square"></span>停止</button>
-          </div>
-
-          <div class="progress-section">
-            <div class="progress-head"><span id="statusText">就绪</span><span id="progressText">0%</span></div>
-            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="progress-info"><span id="speedText"></span><span id="etaText"></span></div>
-          </div>
-
-          <div class="task-stats" id="taskStatsWrap" aria-label="任务统计" style="display:none">
-            <div style="display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--bg-elevated);border-radius:6px;border:1px solid var(--border);font-size:0.75rem;cursor:pointer" onclick="toggleTaskStats()" title="点击展开/折叠">
-              <span id="statsSummary" style="color:var(--fg-muted)"></span>
-              <span id="btnStatsToggle" style="margin-left:auto;color:var(--fg-muted);font-size:0.65rem">&#9654;</span>
-            </div>
-            <div id="taskStatsDetail" style="display:none;gap:8px;margin-top:6px">
-              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:var(--success-dim);border-radius:5px">
-                <span style="font-size:0.65rem;color:var(--success)">成功</span>
-                <span class="stat-value" id="statOk" style="display:block;font-size:0.9rem;font-weight:700;color:var(--success)">0</span>
-              </div>
-              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:var(--danger-dim);border-radius:5px">
-                <span style="font-size:0.65rem;color:var(--danger)">失败</span>
-                <span class="stat-value" id="statFail" style="display:block;font-size:0.9rem;font-weight:700;color:var(--danger)">0</span>
-              </div>
-              <div class="stat-mini" style="flex:1;text-align:center;padding:4px 6px;background:var(--accent-dim);border-radius:5px">
-                <span style="font-size:0.65rem;color:var(--accent)">总计</span>
-                <span class="stat-value" id="statTotal" style="display:block;font-size:0.9rem;font-weight:700;color:var(--accent)">0</span>
+          <div class="compose">
+            <textarea class="ta" id="urlInput" rows="1" placeholder="粘贴视频 / 播放列表 / 频道 / 直播链接，每行一个…"></textarea>
+            <div class="cbar">
+              <span class="tip" id="composeTip">Enter 开始 · Shift+Enter 换行</span>
+              <div class="cacts">
+                <button class="btn" id="btnWithnyLive" onclick="startWithnyLive()" style="display:none"><svg class="ico s14"><use href="#i-radio"></use></svg>选择配置并录制</button>
+                <button class="btn dgr" id="btnStop" onclick="stopDl()" disabled><svg class="ico s14"><use href="#i-square"></use></svg>停止</button>
+                <button class="btn pri" id="btnStart" onclick="startDl()"><svg class="ico s14"><use href="#i-plus"></use></svg><span id="btnStartLabel">开始下载</span></button>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section class="card log-card" aria-labelledby="logHeading" style="margin-top:16px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span id="logHeading" style="color:var(--fg-high);font-weight:600;font-size:0.9rem;"><span class="icon" data-ico="terminal"></span> 运行日志</span>
-            <button class="btn btn-quiet" onclick="toggleLogBox()" id="btnLogToggle" title="折叠/展开" style="margin-left:auto">▲</button>
-            <button class="btn btn-quiet" onclick="clearConsole()"><span class="icon" data-ico="trash"></span>清空</button>
-          </div>
-          <div id="logBoxWrap">
-            <div class="log-box" id="logBox" aria-live="polite" style="height:450px"></div>
-          </div>
-        </section>
-      </div>
-
-      <!-- ====== SETTINGS PAGE ====== -->
-      <div class="page" id="page-settings">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="settings"></span></span>
-            <div>
-              <p class="kicker">偏好 · 配置</p>
-              <h2>下载设置</h2>
-              <p class="page-desc">调整画质、网络、Cookie 与编码参数，可保存为预设随时切换。</p>
-            </div>
-          </div>
-          <div class="page-header-actions">
-            <button class="btn btn-neutral" onclick="resetSettings()"><span class="icon" data-ico="rotate"></span>恢复默认</button>
-            <button class="btn btn-save" onclick="saveSettings()"><span class="icon" data-ico="save"></span>保存设置</button>
           </div>
         </div>
 
-        <section class="card">
-          <div class="card-lead"><span class="icon" data-ico="bookmark"></span><div class="card-title">配置预设<small>保存当前全部设置为命名预设，随时一键加载切换</small></div></div>
-          <div class="setting-row">
-            <label>选择预设</label>
-            <select id="presetSelect" style="flex:1" onchange="loadPresetFromSelect()">
-              <option value="">— 选择预设快速应用 —</option>
-            </select>
-            <button class="btn btn-success btn-sm" onclick="showSavePreset()"><span class="icon" data-ico="save"></span>保存</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePresetFromSelect()"><span class="icon" data-ico="trash"></span>删除</button>
+        <div class="status">
+          <div class="srow">
+            <span class="st"><span class="blip idle" id="statusBlip"></span><span id="statusText">就绪</span></span>
+            <span class="dim" id="idleText">等待任务</span>
+            <span class="metric" id="speedText"></span>
+            <span class="dim" id="etaText"></span>
+            <span class="pct dim" id="progressText">0%</span>
           </div>
-          <div class="setting-row" id="presetSaveRow" style="display:none">
-            <label>预设名称</label>
-            <input type="text" id="presetNameInput" style="flex:1" placeholder="输入预设名称，如：4K原画、手机兼容…">
-            <button class="btn btn-success btn-sm" onclick="savePresetFromInput()">确认</button>
-            <button class="btn btn-neutral btn-sm" onclick="hideSavePreset()">取消</button>
+          <div class="bar"><i id="progressFill" style="width:0%"></i></div>
+          <div class="srow batch" id="taskStatsWrap" style="display:none">
+            <span class="dim">批量进度 <span id="statDone">0</span> / <span id="statTotal">0</span></span>
+            <span class="dim">·</span>
+            <span class="txt-ok">成功 <span id="statOk">0</span></span>
+            <span class="dim">·</span>
+            <span class="txt-err">失败 <span id="statFail">0</span></span>
           </div>
-        </section>
+        </div>
 
-        <section class="card">
-          <div class="card-lead"><span class="icon" data-ico="film"></span><div class="card-title">画质与输出</div></div>
-          <div class="setting-row"><label>分辨率上限</label><select id="s_resolution"></select></div>
-          <div class="setting-row"><label>编码模式</label><select id="s_codec"></select></div>
-          <div class="setting-row"><label>音频质量</label><select id="s_audio"></select></div>
-          <div class="setting-row"><label>视频输出格式</label><select id="s_format"></select></div>
-          <div class="setting-row"><label>音频处理方案</label><select id="s_audiomode" onchange="onAudioModeChange()"></select></div>
-        </section>
-
-        <section class="card">
-          <div class="card-lead"><span class="icon" data-ico="globe"></span><div class="card-title">网络与代理</div></div>
-          <div class="setting-row"><label>并发线程数</label><input type="range" id="s_threads" min="1" max="8" value="4" oninput="document.getElementById('thr_val').textContent=this.value"><span class="range-val" id="thr_val">4</span></div>
-          <div class="setting-row"><label>下载限速 (MB/s)</label><input type="range" id="s_speed" min="0" max="50" value="0" oninput="document.getElementById('spd_val').textContent=this.value==0?'不限':this.value"><span class="range-val" id="spd_val">不限</span></div>
-          <div class="setting-row"><label>启用代理</label><div class="switch" id="sw_proxy" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>代理类型</label><select id="s_proxytype"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select></div>
-          <div class="setting-row"><label>代理地址</label><input type="text" id="s_proxyaddr" value="127.0.0.1" style="max-width:9.5rem"><span>:</span><input type="text" id="s_proxyport" value="7890" style="min-width:0;max-width:5rem"></div>
-        </section>
-
-        <section class="card">
-          <div class="card-lead"><span class="icon" data-ico="cookie"></span><div class="card-title">Cookie 登录</div></div>
-          <div class="setting-row"><label>启用 Cookie</label><div class="switch on" id="sw_cookies" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>Cookie 模式</label>
-            <select id="s_cookiemode" onchange="toggleCookieMode()">
-              <option value="1">cookies.txt 文件（推荐）</option>
-              <option value="2">浏览器提取</option>
-            </select>
+        <div class="console" id="logConsole">
+          <div class="chead">
+            <svg class="ico s14"><use href="#i-terminal"></use></svg>
+            <b>运行日志</b>
+            <div class="cacts">
+              <button class="btn sm gh" onclick="toggleLogBox()" id="btnLogToggle" title="折叠/展开"><svg class="ico s14"><use href="#i-chevron"></use></svg>折叠</button>
+              <button class="btn sm gh" onclick="clearConsole()"><svg class="ico s14"><use href="#i-trash"></use></svg>清空</button>
+            </div>
           </div>
-          <div class="setting-row" id="row_browser"><label>浏览器</label><select id="s_browser"></select></div>
-          <div class="setting-row" id="row_profile"><label>配置文件名</label><input type="text" id="s_profile" value="Default"></div>
-        </section>
-
-        <section class="card">
-          <div class="card-lead"><span class="icon" data-ico="cpu"></span><div class="card-title">编码与高级</div></div>
-          <div class="setting-row"><label>直播下载方式</label>
-            <select id="s_live_stream_method">
-              <option value="yt-dlp">yt-dlp (默认)</option>
-            </select>
-          </div>
-          <div class="setting-row"><label>硬件加速</label><select id="s_hwaccel"></select></div>
-          <div class="setting-row"><label>嵌入元数据</label><div class="switch on" id="sw_meta" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>下载封面</label><div class="switch on" id="sw_thumb" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>音频输出格式</label><select id="s_audiofmt"></select></div>
-          <div class="setting-row"><label>Win 文件名兼容</label><div class="switch on" id="sw_winfn" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>严格文件名</label><div class="switch" id="sw_strict" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>B站多P下载策略</label>
-            <select id="s_bili_policy">
-              <option value="all">全部下载</option>
-              <option value="select">弹出选择</option>
-            </select>
-          </div>
-          <div class="setting-row"><label>Niconico 弹幕</label><div class="switch" id="sw_nicocmt" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>Niconico 重编码</label><div class="switch" id="sw_nicorec" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>启用运行日志</label><div class="switch on" id="sw_log" onclick="toggleSwitch(this)"></div></div>
-        </section>
+          <div class="cbody" id="logBox" aria-live="polite"></div>
+        </div>
       </div>
 
-      <!-- ====== HISTORY PAGE ====== -->
+      <!-- ====== 下载历史 ====== -->
       <div class="page" id="page-history">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="history"></span></span>
-            <div>
-              <p class="kicker">归档 · 记录</p>
-              <h2>下载历史</h2>
-              <p class="page-desc">查看已完成与失败的下载任务。</p>
-            </div>
-          </div>
-          <div class="page-header-actions">
-            <button class="btn btn-danger" onclick="clearHistoryUI()"><span class="icon" data-ico="trash"></span>清空历史</button>
-          </div>
-        </div>
-        <div class="history-summary" id="historyCount">共 0 条记录</div>
-        <div class="history-list" id="historyList"></div>
+        <div id="historyList"></div>
       </div>
 
-      <!-- ====== TOOLS PAGE ====== -->
+      <!-- ====== 下载设置 ====== -->
+      <div class="page" id="page-settings">
+
+        <div class="sect">
+          <div class="sh"><b>配置预设</b><span class="rule"></span></div>
+          <div class="row">
+            <span class="sel" style="max-width:300px">
+              <select class="ctl" id="presetSelect" onchange="loadPresetFromSelect()"><option value="">— 选择预设快速应用 —</option></select>
+              <svg class="ico s14 cv"><use href="#i-chevron"></use></svg>
+            </span>
+            <button class="btn sm" onclick="showSavePreset()"><svg class="ico s14"><use href="#i-save"></use></svg>另存为</button>
+            <button class="btn sm dgr" onclick="deletePresetFromSelect()"><svg class="ico s14"><use href="#i-trash"></use></svg>删除</button>
+          </div>
+          <div class="row" id="presetSaveRow" style="display:none">
+            <input type="text" class="ctl" id="presetNameInput" style="max-width:300px" placeholder="预设名称，如：4K 收藏">
+            <button class="btn sm pri" onclick="savePresetFromInput()">确认</button>
+            <button class="btn sm" onclick="hideSavePreset()">取消</button>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div class="colstack">
+
+            <div class="sect">
+              <div class="sh"><b>画质与输出</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">分辨率上限</span><span class="sel"><select class="ctl" id="s_resolution"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">编码模式</span><span class="sel"><select class="ctl" id="s_codec"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">音频质量</span><span class="sel"><select class="ctl" id="s_audio"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">视频输出格式</span><span class="sel"><select class="ctl" id="s_format"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">音频处理方案</span><span class="sel"><select class="ctl" id="s_audiomode" onchange="onAudioModeChange()"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>网络与代理</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">并发线程数</span><input type="range" id="s_threads" min="1" max="8" value="4"><span class="rval" id="thr_val">4</span></div>
+              <div class="row"><span class="lb">下载限速</span><input type="range" id="s_speed" min="0" max="50" value="0"><span class="rval" id="spd_val">不限</span></div>
+              <div class="row"><span class="lb">启用代理</span><span class="sw" id="sw_proxy" onclick="toggleSwitch(this)"><i></i></span></div>
+              <div class="row"><span class="lb">代理类型</span><span class="sel" style="max-width:150px"><select class="ctl" id="s_proxytype"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">代理地址</span><input type="text" class="ctl mono" id="s_proxyaddr" value="127.0.0.1" style="flex:1"><span class="dim">:</span><input type="text" class="ctl mono" id="s_proxyport" value="7890" style="width:88px;flex:none"></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>Cookie 登录</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">启用 Cookie</span><span class="sw on" id="sw_cookies" onclick="toggleSwitch(this)"><i></i></span></div>
+              <div class="row"><span class="lb">Cookie 模式</span><span class="sel"><select class="ctl" id="s_cookiemode" onchange="toggleCookieMode()"><option value="1">cookies.txt 文件</option><option value="2">浏览器提取</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row" id="row_browser"><span class="lb">浏览器</span><span class="sel"><select class="ctl" id="s_browser"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row" id="row_profile"><span class="lb">配置文件名</span><input type="text" class="ctl mono" id="s_profile" value="Default" style="flex:1"></div>
+            </div>
+
+          </div>
+          <div class="colstack">
+
+            <div class="sect">
+              <div class="sh"><b>编码与合并</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">硬件加速</span><span class="sel"><select class="ctl" id="s_hwaccel"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">音频输出格式</span><span class="sel"><select class="ctl" id="s_audiofmt"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">直播下载方式</span><span class="sel"><select class="ctl" id="s_live_stream_method"><option value="yt-dlp">yt-dlp（默认）</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">嵌入元数据</span><span class="sw on" id="sw_meta" onclick="toggleSwitch(this)"><i></i></span></div>
+              <div class="row"><span class="lb">下载封面</span><span class="sw on" id="sw_thumb" onclick="toggleSwitch(this)"><i></i></span></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>文件名</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">Win 兼容命名</span><span class="sw on" id="sw_winfn" onclick="toggleSwitch(this)"><i></i></span><span class="hint">去掉 Windows 不允许的字符</span></div>
+              <div class="row"><span class="lb">严格文件名</span><span class="sw" id="sw_strict" onclick="toggleSwitch(this)"><i></i></span><span class="hint">仅保留 ASCII 与数字</span></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>平台专项</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">B站多 P 策略</span><span class="sel"><select class="ctl" id="s_bili_policy"><option value="all">全部下载</option><option value="select">弹出选择</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">Niconico 弹幕</span><span class="sw" id="sw_nicocmt" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载并保存 XML 弹幕</span></div>
+              <div class="row"><span class="lb">Niconico 重编码</span><span class="sw" id="sw_nicorec" onclick="toggleSwitch(this)"><i></i></span><span class="hint">兼容性优先，速度较慢</span></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>诊断</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">运行日志</span><span class="sw on" id="sw_log" onclick="toggleSwitch(this)"><i></i></span><span class="hint">写入 logs/ 目录</span></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 实用工具 ====== -->
       <div class="page" id="page-tools">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="wrench"></span></span>
-            <div>
-              <p class="kicker">工具 · 实用程序</p>
-              <h2>实用工具</h2>
-              <p class="page-desc">批量下载、模板生成、依赖更新与文件维护。</p>
+
+        <div class="tiles">
+          <button class="tile" onclick="startBatch()"><svg class="ico s20"><use href="#i-list"></use></svg><span class="nm">TXT 混合批量下载</span></button>
+          <button class="tile" onclick="toolAction('gen-template')"><svg class="ico s20"><use href="#i-file-text"></use></svg><span class="nm">生成批量下载模板</span></button>
+          <button class="tile" onclick="toolAction('gen-cookie-template')"><svg class="ico s20"><use href="#i-cookie"></use></svg><span class="nm">生成 Cookie 模板</span></button>
+          <button class="tile" onclick="toolAction('update-ytdlp')"><svg class="ico s20"><use href="#i-refresh"></use></svg><span class="nm">更新 yt-dlp</span></button>
+          <button class="tile" onclick="toolAction('clean-temp')"><svg class="ico s20"><use href="#i-trash"></use></svg><span class="nm">清理临时文件</span></button>
+          <button class="tile" data-panel="audioConvertDialog" onclick="showAudioConverter()"><svg class="ico s20"><use href="#i-music"></use></svg><span class="nm">音频格式转换</span></button>
+          <button class="tile" data-panel="audioLoudnormDialog" onclick="showAudioLoudnorm()"><svg class="ico s20"><use href="#i-sliders"></use></svg><span class="nm">音频响度统一</span></button>
+          <button class="tile" data-panel="audioVolumeDialog" onclick="showAudioVolume()"><svg class="ico s20"><use href="#i-volume"></use></svg><span class="nm">音频音量调整</span></button>
+          <button class="tile" onclick="toolAction('open-downloads')"><svg class="ico s20"><use href="#i-folder-open"></use></svg><span class="nm">打开下载目录</span></button>
+          <button class="tile" onclick="toolAction('open-logs')"><svg class="ico s20"><use href="#i-folder"></use></svg><span class="nm">打开日志目录</span></button>
+        </div>
+
+        <!-- 音频格式转换 -->
+        <div class="panel" id="audioConvertDialog">
+          <div class="ptitle">
+            <svg class="ico s18"><use href="#i-music"></use></svg>
+            <b>音频格式转换</b><small>ffmpeg · 9 种格式互转</small>
+            <button class="btn sm gh" style="margin-left:auto" onclick="hideAudioConverter()"><svg class="ico s14"><use href="#i-x"></use></svg>关闭</button>
+          </div>
+          <div class="cols" style="gap:14px 44px">
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">源文件目录</span><input type="text" class="ctl mono" id="audioDir" style="flex:1" placeholder="选择或输入音频目录…"><button class="btn sm" onclick="browseAudioDir()"><svg class="ico s14"><use href="#i-folder-open"></use></svg>浏览</button></div>
+              <div class="row"><span class="lb">目标格式</span><span class="sel"><select class="ctl" id="audioOutFormat"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row" id="audioQualityRow"><span class="lb">质量参数</span><span class="sel"><select class="ctl" id="audioQuality"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+            </div>
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">包含子目录</span><span class="sw" id="sw_audioRecursive" onclick="toggleSwitch(this)"><i></i></span></div>
+              <div class="row"><span class="lb">转换后删除源文件</span><span class="sw" id="sw_audioDelSrc" onclick="toggleSwitch(this)"><i></i></span></div>
             </div>
           </div>
-        </div>
-
-        <div class="tools-grid">
-          <button class="tool-card" onclick="startBatch()"><span class="tool-ico"><span class="icon" data-ico="list"></span></span><span class="name">TXT 混合批量下载</span></button>
-          <button class="tool-card" onclick="toolAction('gen-template')"><span class="tool-ico"><span class="icon" data-ico="file-text"></span></span><span class="name">生成批量下载模板</span></button>
-          <button class="tool-card" onclick="toolAction('gen-cookie-template')"><span class="tool-ico"><span class="icon" data-ico="cookie"></span></span><span class="name">生成 Cookie 模板</span></button>
-          <button class="tool-card" onclick="toolAction('update-ytdlp')"><span class="tool-ico"><span class="icon" data-ico="refresh"></span></span><span class="name">更新 yt-dlp</span></button>
-          <button class="tool-card" onclick="toolAction('clean-temp')"><span class="tool-ico"><span class="icon" data-ico="trash"></span></span><span class="name">清理临时文件</span></button>
-          <button class="tool-card" onclick="showAudioConverter()"><span class="tool-ico"><span class="icon" data-ico="music"></span></span><span class="name">音频格式转换</span></button>
-          <button class="tool-card" onclick="showAudioLoudnorm()"><span class="tool-ico"><span class="icon" data-ico="sliders"></span></span><span class="name">音频响度统一</span></button>
-          <button class="tool-card" onclick="showAudioVolume()"><span class="tool-ico"><span class="icon" data-ico="volume-2"></span></span><span class="name">音频音量调整</span></button>
-          <button class="tool-card" onclick="toolAction('open-downloads')"><span class="tool-ico"><span class="icon" data-ico="folder-open"></span></span><span class="name">打开下载目录</span></button>
-          <button class="tool-card" onclick="toolAction('open-logs')"><span class="tool-ico"><span class="icon" data-ico="folder"></span></span><span class="name">打开日志目录</span></button>
-        </div>
-
-        <!-- Audio Format Converter Dialog -->
-        <div class="card audio-convert-dialog" id="audioConvertDialog">
-          <div class="card-lead"><span class="icon" data-ico="music"></span><div class="card-title">音频格式转换<small>借助 ffmpeg，支持 9 种常见/专业音频格式互相转换</small></div></div>
-
-          <div class="setting-row">
-            <label>源文件目录</label>
-            <input type="text" id="audioDir" style="flex:1" placeholder="选择或输入包含音频文件的目录路径…">
-            <button class="btn btn-neutral btn-sm" onclick="browseAudioDir()"><span class="icon" data-ico="folder-open"></span>浏览</button>
-          </div>
-
-          <div class="setting-row">
-            <label>目标格式</label>
-            <select id="audioOutFormat" style="flex:1"></select>
-          </div>
-
-          <div class="setting-row" id="audioQualityRow">
-            <label>质量参数</label>
-            <select id="audioQuality" style="flex:1"></select>
-          </div>
-
-          <div class="setting-row"><label>包含子目录</label><div class="switch" id="sw_audioRecursive" onclick="toggleSwitch(this)"></div></div>
-          <div class="setting-row"><label>转换后删除源文件</label><div class="switch" id="sw_audioDelSrc" onclick="toggleSwitch(this)"></div></div>
-
-          <div class="setting-row" style="border-top:1px solid var(--border);padding-top:0.75rem;color:var(--fg-muted);font-size:0.75rem">
-            <span class="icon" data-ico="info" style="width:0.875rem;height:0.875rem;flex:none"></span>
-            <span>ffmpeg 将自动识别源文件格式（支持所有常见音频格式）。无损格式（WAV/FLAC/ALAC）无需设置质量参数。</span>
-          </div>
-
-          <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
-            <button class="btn btn-primary" onclick="startAudioConvert()"><span class="icon" data-ico="play"></span>开始转换</button>
-            <button class="btn btn-neutral" onclick="hideAudioConverter()">关闭</button>
+          <div class="pfoot">
+            <span class="hint">无损格式（WAV / FLAC / ALAC）无需设置质量参数。</span>
+            <button class="btn pri" onclick="startAudioConvert()"><svg class="ico s14"><use href="#i-play"></use></svg>开始转换</button>
           </div>
         </div>
 
-        <!-- Audio Loudness Normalization Dialog -->
-        <div class="card audio-convert-dialog" id="audioLoudnormDialog">
-          <div class="card-lead"><span class="icon" data-ico="sliders"></span><div class="card-title">音频响度统一<small>基于 EBU R128 标准，使用 FFmpeg loudnorm 滤镜统一音频响度</small></div></div>
-
-          <div class="setting-row">
-            <label>源文件目录</label>
-            <input type="text" id="loudnormDir" style="flex:1" placeholder="选择或输入包含音频文件的目录路径…">
-            <button class="btn btn-neutral btn-sm" onclick="browseLoudnormDir()"><span class="icon" data-ico="folder-open"></span>浏览</button>
+        <!-- 音频响度统一 -->
+        <div class="panel" id="audioLoudnormDialog">
+          <div class="ptitle">
+            <svg class="ico s18"><use href="#i-sliders"></use></svg>
+            <b>音频响度统一</b><small>EBU R128 · FFmpeg loudnorm</small>
+            <button class="btn sm gh" style="margin-left:auto" onclick="hideAudioLoudnorm()"><svg class="ico s14"><use href="#i-x"></use></svg>关闭</button>
           </div>
-
-          <div class="setting-row">
-            <label>处理模式</label>
-            <select id="loudnormMode" style="flex:1">
-              <option value="single">单次标准处理 — 使用 EBU R128 默认参数，速度快</option>
-              <option value="double">双次精准处理 — 先分析后处理，质量更高</option>
-            </select>
+          <div class="cols" style="gap:14px 44px">
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">源文件目录</span><input type="text" class="ctl mono" id="loudnormDir" style="flex:1" placeholder="选择或输入音频目录…"><button class="btn sm" onclick="browseLoudnormDir()"><svg class="ico s14"><use href="#i-folder-open"></use></svg>浏览</button></div>
+              <div class="row"><span class="lb">处理模式</span><span class="sel"><select class="ctl" id="loudnormMode"><option value="single">单次标准处理 — 速度快</option><option value="double">双次精准处理 — 先分析后处理</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">输出格式</span><span class="sel"><select class="ctl" id="loudnormOutFormat"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">输出目录</span><input type="text" class="ctl" id="loudnormOutDir" style="flex:1" placeholder="留空 = 源目录下 loudnorm_output/"></div>
+              <div class="row"><span class="lb">包含子目录</span><span class="sw" id="sw_loudnormRecursive" onclick="toggleSwitch(this)"><i></i></span></div>
+            </div>
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">目标响度 I</span><input type="range" id="loudnormI" min="-70" max="-5" value="-24" step="0.5"><span class="rval" id="loudnormIVal">-24 LUFS</span></div>
+              <div class="sub-hint">广播标准 -23 LUFS，流媒体常用 -16 ~ -14 LUFS</div>
+              <div class="row"><span class="lb">响度范围 LRA</span><input type="range" id="loudnormLRA" min="1" max="20" value="7" step="0.5"><span class="rval" id="loudnormLRAVal">7 LU</span></div>
+              <div class="row"><span class="lb">真峰值上限 TP</span><input type="range" id="loudnormTP" min="-9" max="0" value="-2" step="0.5"><span class="rval" id="loudnormTPVal">-2 dBTP</span></div>
+              <div class="sub-hint">EBU R128 为 -2 dBTP，CD 母带常用 -1 dBTP</div>
+            </div>
           </div>
-          <div style="font-size:0.75rem;color:var(--fg-muted);margin:0.125rem 0 0.625rem 10.75rem" id="loudnormModeDesc"></div>
-
-          <div class="setting-row">
-            <label>目标响度 (I)</label>
-            <span style="display:flex;align-items:center;gap:0.5rem;flex:1">
-              <input type="range" id="loudnormI" min="-70" max="-5" value="-24" step="0.5" style="flex:1" oninput="$('loudnormIVal').textContent = this.value + ' LUFS'">
-              <span class="range-val" id="loudnormIVal" style="min-width:5.5rem">-24 LUFS</span>
-            </span>
-          </div>
-          <div style="font-size:0.72rem;color:var(--fg-muted);margin:0.125rem 0 0.625rem 10.75rem">EBU R128 广播标准为 -23 LUFS，流媒体通常 -16 ~ -14 LUFS</div>
-
-          <div class="setting-row">
-            <label>响度范围 (LRA)</label>
-            <span style="display:flex;align-items:center;gap:0.5rem;flex:1">
-              <input type="range" id="loudnormLRA" min="1" max="20" value="7" step="0.5" style="flex:1" oninput="$('loudnormLRAVal').textContent = this.value + ' LU'">
-              <span class="range-val" id="loudnormLRAVal" style="min-width:4rem">7 LU</span>
-            </span>
-          </div>
-
-          <div class="setting-row">
-            <label>真峰值上限 (TP)</label>
-            <span style="display:flex;align-items:center;gap:0.5rem;flex:1">
-              <input type="range" id="loudnormTP" min="-9" max="0" value="-2" step="0.5" style="flex:1" oninput="$('loudnormTPVal').textContent = this.value + ' dBTP'">
-              <span class="range-val" id="loudnormTPVal" style="min-width:4.5rem">-2 dBTP</span>
-            </span>
-          </div>
-          <div style="font-size:0.72rem;color:var(--fg-muted);margin:0.125rem 0 0.625rem 10.75rem">EBU R128 标准为 -2 dBTP，CD 母带通常 -1 dBTP</div>
-
-          <div class="setting-row">
-            <label>输出格式</label>
-            <select id="loudnormOutFormat" style="flex:1"></select>
-          </div>
-
-          <div class="setting-row">
-            <label>输出目录</label>
-            <input type="text" id="loudnormOutDir" style="flex:1" placeholder="留空 = 源目录下 loudnorm_output/">
-          </div>
-
-          <div class="setting-row"><label>包含子目录</label><div class="switch" id="sw_loudnormRecursive" onclick="toggleSwitch(this)"></div></div>
-
-          <div class="setting-row" style="border-top:1px solid var(--border);padding-top:0.75rem;color:var(--fg-muted);font-size:0.75rem">
-            <span class="icon" data-ico="info" style="width:0.875rem;height:0.875rem;flex:none"></span>
-            <span>双次处理先用默认参数分析音频实际响度，再填入测量值进行精准归一化。支持 MP3 / WAV / FLAC / AAC / OGG / Opus 等常见格式。</span>
-          </div>
-
-          <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
-            <button class="btn btn-primary" onclick="startAudioLoudnorm()"><span class="icon" data-ico="play"></span>开始处理</button>
-            <button class="btn btn-neutral" onclick="hideAudioLoudnorm()">关闭</button>
+          <div class="pfoot">
+            <span class="hint">支持 MP3 / WAV / FLAC / AAC / OGG / Opus，双次模式会先分析实际响度再精准归一化。</span>
+            <button class="btn pri" onclick="startAudioLoudnorm()"><svg class="ico s14"><use href="#i-play"></use></svg>开始处理</button>
           </div>
         </div>
 
-        <!-- Audio Volume Adjustment Dialog -->
-        <div class="card audio-convert-dialog" id="audioVolumeDialog">
-          <div class="card-lead"><span class="icon" data-ico="volume-2"></span><div class="card-title">音频音量调整<small>调整音频增益，正增益可启用限幅器防止削波失真</small></div></div>
-
-          <div class="setting-row">
-            <label>源文件目录</label>
-            <input type="text" id="volumeDir" style="flex:1" placeholder="选择或输入包含音频文件的目录路径…">
-            <button class="btn btn-neutral btn-sm" onclick="browseVolumeDir()"><span class="icon" data-ico="folder-open"></span>浏览</button>
+        <!-- 音频音量调整 -->
+        <div class="panel" id="audioVolumeDialog">
+          <div class="ptitle">
+            <svg class="ico s18"><use href="#i-volume"></use></svg>
+            <b>音频音量调整</b><small>ffmpeg volume · alimiter</small>
+            <button class="btn sm gh" style="margin-left:auto" onclick="hideAudioVolume()"><svg class="ico s14"><use href="#i-x"></use></svg>关闭</button>
           </div>
-
-          <div class="setting-row">
-            <label>音量增益</label>
-            <span style="display:flex;align-items:center;gap:0.5rem;flex:1">
-              <input type="range" id="volumeGain" min="-30" max="30" value="0" step="0.5" style="flex:1">
-              <span class="range-val" id="volumeGainVal" style="min-width:5rem;font-weight:600">0.0 dB</span>
-            </span>
+          <div class="cols" style="gap:14px 44px">
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">源文件目录</span><input type="text" class="ctl mono" id="volumeDir" style="flex:1" placeholder="选择或输入音频目录…"><button class="btn sm" onclick="browseVolumeDir()"><svg class="ico s14"><use href="#i-folder-open"></use></svg>浏览</button></div>
+              <div class="row"><span class="lb">输出格式</span><span class="sel"><select class="ctl" id="volumeOutFormat"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">输出目录</span><input type="text" class="ctl" id="volumeOutDir" style="flex:1" placeholder="留空 = 源目录下 volume_output/"></div>
+              <div class="row"><span class="lb">包含子目录</span><span class="sw" id="sw_volumeRecursive" onclick="toggleSwitch(this)"><i></i></span></div>
+            </div>
+            <div class="colstack" style="gap:12px">
+              <div class="row"><span class="lb">音量增益</span><input type="range" id="volumeGain" min="-30" max="30" value="0" step="0.5"><span class="rval" id="volumeGainVal">0.0 dB</span></div>
+              <div class="sub-hint">正增益建议 ≤ +6 dB，过大会削波失真；负增益安全无失真。</div>
+              <div class="row" id="volumeLimiterRow" style="display:none"><span class="lb">限幅器保护</span><span class="sw on" id="sw_volumeLimiter" onclick="toggleSwitch(this)"><i></i></span><span class="hint">前瞻限幅 alimiter，峰值不超过 -0.1 dBTP</span></div>
+            </div>
           </div>
-          <div style="font-size:0.72rem;color:var(--fg-muted);margin:0.125rem 0 0.625rem 10.75rem">正增益（提升音量）: 建议 ≤ +6dB，过大会导致削波失真 · 负增益（降低音量）: 安全无失真</div>
-
-          <div class="setting-row" id="volumeLimiterRow" style="display:none">
-            <label>限幅器保护</label>
-            <div class="switch on" id="sw_volumeLimiter" onclick="toggleSwitch(this)"></div>
-            <span style="font-size:0.75rem;color:var(--fg-muted);margin-left:0.25rem">使用前瞻限幅器 (alimiter) 防止削波</span>
-          </div>
-
-          <div class="setting-row">
-            <label>输出格式</label>
-            <select id="volumeOutFormat" style="flex:1"></select>
-          </div>
-
-          <div class="setting-row">
-            <label>输出目录</label>
-            <input type="text" id="volumeOutDir" style="flex:1" placeholder="留空 = 源目录下 volume_output/">
-          </div>
-
-          <div class="setting-row"><label>包含子目录</label><div class="switch" id="sw_volumeRecursive" onclick="toggleSwitch(this)"></div></div>
-
-          <div class="setting-row" style="border-top:1px solid var(--border);padding-top:0.75rem;color:var(--fg-muted);font-size:0.75rem">
-            <span class="icon" data-ico="info" style="width:0.875rem;height:0.875rem;flex:none"></span>
-            <span>限幅器 (alimiter) 会在音量提升后自动限制峰值不超过 -0.1 dBTP，避免削波失真。降低音量时无需限幅。支持 MP3 / WAV / FLAC / AAC / OGG / Opus 等格式。</span>
-          </div>
-
-          <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
-            <button class="btn btn-primary" onclick="startAudioVolume()"><span class="icon" data-ico="play"></span>开始处理</button>
-            <button class="btn btn-neutral" onclick="hideAudioVolume()">关闭</button>
+          <div class="pfoot">
+            <span class="hint">支持 MP3 / WAV / FLAC / AAC / OGG / Opus。</span>
+            <button class="btn pri" onclick="startAudioVolume()"><svg class="ico s14"><use href="#i-play"></use></svg>开始处理</button>
           </div>
         </div>
 
-        <!-- Tool operation feedback -->
         <div class="tool-status" id="toolStatus" style="display:none"></div>
 
-        <!-- Tools log console -->
-        <section class="card log-card" aria-labelledby="toolLogHeading" style="margin-top:16px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span id="toolLogHeading" style="color:var(--fg-high);font-weight:600;font-size:0.9rem;"><span class="icon" data-ico="terminal"></span> 工具运行日志</span>
-            <button class="btn btn-quiet" onclick="toggleToolLog()" id="btnToolLogToggle" title="折叠/展开" style="margin-left:auto">▲</button>
-            <button class="btn btn-quiet" onclick="clearToolConsole()"><span class="icon" data-ico="trash"></span>清空</button>
-          </div>
-          <div id="toolLogBoxWrap">
-            <div class="log-box" id="toolLogBox" aria-live="polite" style="height:320px"></div>
-          </div>
-        </section>
-      </div>
-
-      <!-- ====== HELP PAGE ====== -->
-      <div class="page" id="page-help">
-        <div class="page-header">
-          <div class="page-header-lead">
-            <span class="page-icon"><span class="icon" data-ico="help"></span></span>
-            <div>
-              <p class="kicker">文档 · 指南</p>
-              <h2>使用帮助</h2>
-              <p class="page-desc">快速上手、Cookie 配置与各平台下载说明。</p>
+        <div class="console" id="toolConsole">
+          <div class="chead">
+            <svg class="ico s14"><use href="#i-terminal"></use></svg>
+            <b>工具运行日志</b>
+            <div class="cacts">
+              <button class="btn sm gh" onclick="toggleToolLog()" id="btnToolLogToggle" title="折叠/展开"><svg class="ico s14"><use href="#i-chevron"></use></svg>折叠</button>
+              <button class="btn sm gh" onclick="clearToolConsole()"><svg class="ico s14"><use href="#i-trash"></use></svg>清空</button>
             </div>
           </div>
+          <div class="cbody" id="toolLogBox" aria-live="polite"></div>
         </div>
+      </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="rocket"></span>快速开始</h3>
-          <div class="help-content">
-            <p><b>单视频下载：</b>在下载页粘贴视频链接，点击「开始下载」即可。工具会自动识别平台。</p>
-            <p><b>播放列表/频道：</b>直接粘贴播放列表 URL 或频道 URL，会自动下载全部视频。</p>
-            <p><b>TXT批量下载：</b>在工具目录下创建 <code>urls.txt</code>，每行一个链接（支持混合平台），然后点击工具箱的「TXT批量下载」。</p>
+      <!-- ====== 使用帮助 ====== -->
+      <div class="page" id="page-help">
+        <div class="doc two">
+
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-rocket"></use></svg>快速开始</h3>
+            <p><b>单个视频：</b>在下载页粘贴链接，回车即可，平台会自动识别。</p>
+            <p><b>播放列表 / 频道：</b>直接粘贴列表或频道 URL，会按顺序下载全部视频。</p>
+            <p><b>批量：</b>在输入框里每行粘一个链接；或把链接写进工具目录的 <span class="code">urls.txt</span>，用工具页的「TXT 混合批量下载」。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="settings"></span>设置说明</h3>
-          <div class="help-content">
-            <p><b>画质设置：</b>分辨率限制最高画质（best 为无限制），编码选择优先使用的视频编码。H.264 兼容性最好，AV1/VP9 体积更小。</p>
-            <p><b>输出格式：</b>MP4 兼容性最佳，MKV 支持多音轨字幕，WebM 是开源格式。</p>
-            <p><b>音频分离：</b>可单独提取音频为 MP3/FLAC/WAV/m4a 格式。</p>
-            <p><b>代理设置：</b>支持 HTTP 和 SOCKS5 代理，格式如 <code>http://127.0.0.1:7890</code>。</p>
-            <p><b>硬件加速：</b>根据你的显卡选择编码器，可大幅提升合并速度。</p>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <h3><span class="icon" data-ico="file-text"></span>Withny 历史存档</h3>
-          <div class="help-content">
-            <p><b>使用方式：</b>在下载任务页选择 Withny，点击「选择 HAR 并下载」，依次选择浏览器导出的“包含内容”HAR 和保存位置。</p>
-            <p><b>安全限制：</b>仅处理已授权的普通未加密 HLS 历史存档；检测到 DRM、加密 HLS、无媒体播放列表正文或缺失签名 Cookie 时会拒绝下载。</p>
-            <p><b>隐私提示：</b>HAR 可能包含登录 Cookie 和签名地址，请勿上传或分享，使用完成后建议立即删除。</p>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <h3><span class="icon" data-ico="cookie"></span>Cookie 配置（必看）</h3>
-          <div class="help-content">
-            <p><b>为什么需要 Cookie？</b>Fantia 需要登录才能下载，YouTube/Twitch 的年龄限制/会员视频也需要。</p>
-            <p><b>方法1 - cookies.txt 文件：</b></p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-cookie"></use></svg>Cookie 配置</h3>
+            <p>Fantia 必须登录；YouTube / Twitch 的年龄限制与会员内容也需要。两种方式二选一：</p>
             <ol>
-              <li>浏览器安装「Get cookies.txt LOCALLY」扩展</li>
-              <li>登录目标网站，点击扩展导出 cookies.txt</li>
-              <li>将文件放到工具目录，重命名为 <code>cookies.txt</code></li>
-              <li>或者在工具箱点击「生成 Cookie 模板」查看详细说明</li>
+              <li><b>cookies.txt 文件</b> — 用浏览器扩展导出，改名放到工具目录。</li>
+              <li><b>浏览器提取（推荐）</b> — 在设置里选已登录的浏览器，每次下载前自动取最新 Cookie。</li>
             </ol>
-            <p><b>方法2 - 浏览器自动提取（推荐）：</b>在设置中选择你登录过该网站的浏览器，会自动提取 Cookie。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="tv"></span>Bilibili 下载指南（1080p 必读）</h3>
-          <div class="help-content">
-            <p><b>1080p 下载前提：</b>Bilibili 1080p 及以上画质需要登录 Cookie。标准 1080p（非高码率）<b>无需大会员</b>，只需登录账号即可。</p>
-            <p><b>关键步骤 - CURRENT_QUALITY Cookie：</b></p>
-            <ol>
-              <li>在浏览器中打开任意 B站视频</li>
-              <li>将播放器画质<b>手动切换到 1080P 高清</b>（不是高码率）</li>
-              <li>立即导出 Cookie（使用「Get cookies.txt LOCALLY」扩展）</li>
-              <li>将导出的 <code>cookies.txt</code> 放到工具目录</li>
-            </ol>
-            <p><b>画质对照：</b>标准 1080p（qn=80，需登录）、1080P 高码率（qn=112，需大会员）、4K 超清（qn=120，需大会员）。</p>
-            <p><b>推荐使用浏览器模式：</b>在设置中将 Cookie 模式设为「浏览器提取」，选择已登录 B站的浏览器即可自动获取最新 Cookie。</p>
-            <p><b>分P/合集下载：</b>直接粘贴视频链接，工具会自动下载所有分P。合集链接同样支持批量下载。</p>
-            <p><b>直播录制：</b>粘贴 <code>https://live.bilibili.com/房间号</code> 即可录制，支持断流重连。</p>
-            <p><b>BV/AV/b23.tv：</b>所有 B站链接格式均自动识别，无需手动转换。</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-tv"></use></svg>Bilibili 1080P</h3>
+            <p>1080P 及以上需要登录 Cookie；标准 1080P 只要登录账号，<b>不需要大会员</b>。</p>
+            <p><b>关键一步：</b>导出 Cookie 前，先在浏览器里把播放器画质手动切到 1080P 高清，Cookie 里的 <span class="code">CURRENT_QUALITY</span> 才会正确。</p>
+            <p>分P 与合集会自动全部下载，也可在设置里改成「弹出选择」。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="tv"></span>Twitch 直播录制</h3>
-          <div class="help-content">
-            <p><b>录制直播：</b>直接粘贴主播频道 URL（如 <code>https://www.twitch.tv/xqc</code>），会从直播开始处自动录制。</p>
-            <p><b>录制回放：</b>粘贴视频 URL（<code>/videos/</code> 开头）即可下载回放。</p>
-            <p><b>注意：</b>直播录制需要一直保持工具运行，停止则录制结束。录制文件会自动保存到 Twitch/主播名/直播/ 文件夹。</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-radio"></use></svg>直播录制</h3>
+            <p><b>Bilibili：</b>粘贴 <span class="code">live.bilibili.com/房间号</span>，支持断流重连。</p>
+            <p><b>Twitch：</b>粘贴频道 URL 从当前进度开始录；<span class="code">/videos/</span> 链接则是下载回放。</p>
+            <p><b>TwitCasting：</b>粘贴主播页录直播，<span class="code">/movie/ID</span> 下载单条，<span class="code">/show</span> 拉取历史列表。密码保护内容会弹窗要求输入密码。</p>
+            <p>录制期间需保持工具运行，点「停止」即结束。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="tv"></span>TwitCasting 直播录制</h3>
-          <div class="help-content">
-            <p><b>录制直播：</b>粘贴主播页 URL（如 <code>https://twitcasting.tv/主播名</code>），会从直播开始处自动录制。</p>
-            <p><b>下载录播：</b>粘贴单条录播 URL（<code>/movie/数字ID</code>）即可下载。粘贴 <code>/show</code> 或 <code>/archive</code> 可获取该主播的历史直播列表。</p>
-            <p><b>密码保护：</b>密码保护或会员限定的直播/录播，在「设置」页填写「TwitCasting 密码」后再下载。</p>
-            <p><b>注意：</b>直播录制需要一直保持工具运行，停止则录制结束。录制文件会自动保存到 TwitCasting/主播名/直播/ 文件夹。</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-file-text"></use></svg>Withny 存档与录制</h3>
+            <p><b>历史存档：</b>选 Withny 平台，点「开始下载」，选浏览器导出的「包含内容」HAR。</p>
+            <p><b>直播录制：</b>把 withny-dl 可执行文件放在程序目录，点「选择配置并录制」，选它的 YAML 配置，工具会持续监控频道。</p>
+            <p><b>限制与隐私：</b>仅处理未加密的普通 HLS 存档；检测到 DRM、加密或缺失签名会拒绝。HAR 含登录凭据，用完请删除，不要分享。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="info"></span>Twitter/X 视频下载</h3>
-          <div class="help-content">
-            <p><b>下载推文视频：</b>粘贴推文链接（如 <code>https://x.com/用户名/status/推文ID</code> 或 <code>https://twitter.com/用户名/status/推文ID</code>），自动提取视频。</p>
-            <p><b>下载 Space 录音：</b>粘贴 Space 链接（<code>https://x.com/i/spaces/空间ID</code>），将下载音频录制。</p>
-            <p><b>Cookie 建议：</b>部分内容需要登录才能访问，强烈建议使用「浏览器 Cookie 模式」自动提取登录状态，或手动导出 cookies.txt。</p>
-            <p><b>注意：</b>Twitter 对未登录访问有较严格的频率限制，登录后可获得更好的下载体验。</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-globe"></use></svg>Twitter / NicoChannel</h3>
+            <p><b>Twitter / X：</b>推文链接直接提取视频，Space 链接下载音频。未登录访问限流较严，建议开浏览器 Cookie 模式。</p>
+            <p><b>NicoChannel：</b>首次下载会从 Firefox 提取 JWT 登录令牌，请先在 Firefox 里登录；之后由插件通过 Cookie 文件自动续期。</p>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="bookmark"></span>配置预设</h3>
-          <div class="help-content">
-            <p>在「设置」页面顶部的「配置预设」区域可以保存当前设置为命名预设，例如：</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-bookmark"></use></svg>配置预设</h3>
+            <p>设置页顶部可把当前整套参数存成命名预设，一键切换。常用几组：</p>
             <ul>
-              <li><b>4K原画</b> - 最高画质，用于收藏</li>
-              <li><b>手机兼容</b> - 1080P H.264 MP4，手机直接播放</li>
-              <li><b>仅音频</b> - 提取 MP3 320kbps，用于音乐/播客</li>
+              <li><b>4K 收藏</b> — 最高画质，留原始编码</li>
+              <li><b>手机兼容</b> — 1080P + H.264 + MP4</li>
+              <li><b>仅音频</b> — 只输出 MP3 320k</li>
             </ul>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="wrench"></span>常见问题</h3>
-          <div class="help-content">
-            <p><b>下载速度慢？</b>检查代理设置是否正确，或增加并发数。</p>
-            <p><b>提示需要登录？</b>配置 Cookie（见上方说明）。</p>
-            <p><b>断点续传：</b>工具默认启用断点续传，中断后重新下载会自动继续。</p>
-            <p><b>更新 yt-dlp：</b>工具箱点击「更新 yt-dlp」获取最新版本以支持网站更新。</p>
-            <p><b>下载的文件在哪？</b>工具目录下按平台名/作者名/分类存放。</p>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-folder"></use></svg>目录结构</h3>
+            <div class="tree">工具目录/
+├── YouTube/          按作者分文件夹
+├── Bilibili/
+│   └── UP主名/直播/  直播录制
+├── Twitch/ Nico/ Fantia/
+├── Withny/ TwitCasting/ Twitter/
+├── urls.txt          批量链接
+├── cookies.txt       Cookie
+├── presets.json      配置预设
+└── download_history.json</div>
           </div>
-        </div>
 
-        <div class="help-section">
-          <h3><span class="icon" data-ico="folder"></span>目录结构</h3>
-          <div class="help-content">
-            <div class="dir-tree">工具目录/<br>
-├── YouTube/          # YouTube下载<br>
-│   └── 作者名/<br>
-├── Bilibili/         # Bilibili下载<br>
-│   ├── UP主名/<br>
-│   │   └── 直播/     # 直播录制<br>
-├── Twitch/           # Twitch下载<br>
-│   ├── 主播名/<br>
-│   │   └── 直播/     # 直播录制<br>
-├── Nico/             # Niconico下载<br>
-├── Fantia/           # Fantia下载<br>
-├── Withny/           # Withny历史存档<br>
-├── TwitCasting/      # TwitCasting下载<br>
-├── Twitter/          # Twitter/X下载<br>
-│   ├── 主播名/<br>
-│   │   └── 直播/     # 直播录制<br>
-├── urls.txt          # TXT批量链接文件<br>
-├── cookies.txt       # Cookie文件<br>
-├── presets.json      # 配置预设<br>
-└── download_history.json  # 下载历史</div>
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-wrench"></use></svg>常见问题</h3>
+            <p><b>速度慢：</b>检查代理，或把并发线程调高。</p>
+            <p><b>提示需要登录：</b>按上面的 Cookie 配置来。</p>
+            <p><b>中断了：</b>默认开启断点续传，重新下载会自动接上。</p>
+            <p><b>网站改版下不动：</b>工具页点「更新 yt-dlp」。</p>
           </div>
+
         </div>
       </div>
 
-      <!-- ====== ABOUT PAGE ====== -->
+      <!-- ====== 关于软件 ====== -->
       <div class="page" id="page-about">
-        <div class="about">
-          <span class="about-mark"><span class="icon" data-ico="download"></span></span>
-          <h2>多平台视频下载工具</h2>
-          <p id="aboutVer"></p>
-          <p>支持平台：YouTube / Bilibili / Twitch / Niconico / Fantia / TwitCasting / Twitter</p>
-          <p class="small">另提供 Withny 已授权历史存档 HAR 保存功能</p>
-          <p class="small">基于 yt-dlp + ffmpeg ｜ 原版作者：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy (@maomaoyexi)</a></p>
-          <p class="small">v2.1.0 UI 重构：<a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">DarkKandaoMaster（强壮的砍刀）</a></p>
-          <p class="small">v2.2.0 Twitter/X、TwitCasting、UI 与音频工具：<a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">ErgouTree (@ergou10086)</a></p>
-          <p class="small">v2.2.0 Withny 下载与 UI 调整：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy (@maomaoyexi)</a></p>
-          <section class="card" style="margin-top:1.5rem;text-align:left">
-            <div class="card-lead"><span class="icon" data-ico="check"></span><div class="card-title">依赖文件状态</div></div>
-            <div class="dep-status" id="depStatus"></div>
-          </section>
+        <div class="about-grid">
+
+          <div class="about-col">
+            <div class="about-head">
+              <span class="about-mk"><svg class="ico s28"><use href="#i-download"></use></svg></span>
+              <div>
+                <div class="about-name">多平台视频下载工具</div>
+                <div class="mono dim" style="font-size:12px;margin-top:3px"><span id="aboutVer"></span> · 基于 yt-dlp + ffmpeg</div>
+              </div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>支持平台</b><span class="rule"></span></div>
+              <div class="chips" id="aboutPlatforms"></div>
+              <p class="notice">Withny 提供已授权历史存档保存与直播监控录制。</p>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>贡献者</b><span class="rule"></span></div>
+              <div class="credits">
+                <div class="specrow"><span class="k">原版作者</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a></span></div>
+                <div class="specrow"><span class="k">v2.1.0 UI 重构</span><span>强壮的砍刀 <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a></span></div>
+                <div class="specrow"><span class="k">v2.3.0 平台与工具</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — NicoChannel、Twitter/X、TwitCasting、音频工具</span></div>
+                <div class="specrow"><span class="k">v2.3.0 Withny</span><span>猫猫葉汐A_spy — 历史存档、直播录制</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel show" style="gap:16px">
+            <div class="ptitle" style="padding-bottom:0"><svg class="ico s18"><use href="#i-check"></use></svg><b>依赖状态</b></div>
+            <div class="deps" id="depStatus"></div>
+          </div>
+
         </div>
       </div>
-    </main>
-  </div>
-</div>
 
-<!-- ====== UPDATE PANEL ====== -->
-<div class="update-panel" id="updatePanel">
-  <h3><span class="icon" data-ico="arrow-up"></span>发现新版本</h3>
-  <div class="ver-info">当前版本：<b id="updateCurVer"></b> &rarr; 最新版本：<b id="updateNewVer" style="color:var(--success)"></b></div>
-  <div class="notes" id="updateNotes">正在获取更新内容…</div>
-  <div class="update-progress" id="updateProgress">
-    <div style="font-size:0.82rem;color:var(--warning)" id="updateProgText">正在下载更新…</div>
-    <div class="bar"><div class="fill" id="updateProgFill"></div></div>
-    <div class="info"><span id="updateProgPct">0%</span><span id="updateProgSpeed"></span></div>
-  </div>
-  <div class="update-done" id="updateDone">
-    <div class="icon-lg">✅</div>
-    <div class="msg" id="updateDoneMsg">更新完成！程序将自动重启。</div>
-  </div>
-  <div class="update-actions" id="updateActions">
-    <button class="btn btn-neutral" onclick="hideUpdatePanel()">稍后</button>
-    <button class="btn btn-primary" id="btnDoUpdate" onclick="doUpdateNow()">一键更新</button>
-  </div>
-</div>
-
-<!-- ====== BILIBILI PART SELECTOR MODAL ====== -->
-<div class="modal-overlay" id="partSelectorOverlay" style="display:none">
-  <div class="modal-dialog" id="partSelectorDialog">
-    <div class="modal-header">
-      <h3><span class="icon" data-ico="list"></span>选择要下载的分P</h3>
-      <button class="modal-close" onclick="closePartSelector()" aria-label="关闭">&times;</button>
     </div>
-    <div class="modal-body">
-      <div class="part-selector-toolbar">
-        <button class="btn btn-neutral btn-sm" onclick="toggleAllParts(true)">全选</button>
-        <button class="btn btn-neutral btn-sm" onclick="toggleAllParts(false)">反选</button>
-        <span class="part-count" id="partCount"></span>
+  </div>
+</div>
+
+<!-- ====== 版本更新 ====== -->
+<div class="scrim" id="updatePanel">
+  <div class="dlg" style="width:460px">
+    <div class="dhead"><svg class="ico s18"><use href="#i-arrow-up"></use></svg><b>发现新版本</b></div>
+    <div class="dbody">
+      <div class="specrow" style="font-size:12.5px"><span class="k">版本</span><span class="mono"><span id="updateCurVer"></span> → <span id="updateNewVer" class="txt-ok"></span></span></div>
+      <div class="notes" id="updateNotes">正在获取更新内容…</div>
+      <div id="updateProgress" style="display:none;flex-direction:column;gap:7px">
+        <div class="srow" style="font-size:12px"><span class="dim" id="updateProgText">正在下载更新…</span><span class="pct mono" id="updateProgPct">0%</span></div>
+        <div class="bar"><i id="updateProgFill" style="width:0%"></i></div>
+        <div class="srow" style="font-size:11.5px"><span class="dim mono" id="updateProgSpeed"></span></div>
       </div>
-      <div class="part-list" id="partList"></div>
+      <div id="updateDone" style="display:none;align-items:center;gap:9px;font-size:12.5px">
+        <svg class="ico s14 txt-ok"><use href="#i-check"></use></svg><span id="updateDoneMsg">更新完成！程序将自动重启。</span>
+      </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-neutral" onclick="closePartSelector()">取消</button>
-      <button class="btn btn-primary" id="btnPartConfirm" onclick="confirmPartSelection()">确认下载选中分P</button>
-    </div>
-  </div>
-</div>
-
-<!-- ====== TWITCASTING PASSWORD MODAL ====== -->
-<div class="modal-overlay" id="tcPasswordOverlay" style="display:none">
-  <div class="modal-dialog" id="tcPasswordDialog">
-    <div class="modal-header">
-      <h3><span class="icon" data-ico="lock"></span>TwitCasting 密码输入</h3>
-      <button class="modal-close" onclick="closeTcPasswordPrompt()" aria-label="关闭">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p id="tcPasswordMsg" style="margin-bottom:12px;color:var(--fg-muted);font-size:.9rem">该视频/直播受密码保护或为会员限定内容，请输入密码后下载。</p>
-      <label style="display:block;margin-bottom:6px;font-weight:600">密码</label>
-      <input type="password" id="tcPasswordInput" placeholder="输入 TwitCasting 密码" style="width:100%;padding:10px 14px;background:var(--bg-elevated);color:var(--fg-high);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:1rem">
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-neutral" onclick="closeTcPasswordPrompt()">取消</button>
-      <button class="btn btn-primary" id="btnTcPasswordConfirm" onclick="confirmTcPassword()">确认下载</button>
+    <div class="dfoot" id="updateActions">
+      <button class="btn" onclick="hideUpdatePanel()">稍后</button>
+      <button class="btn pri" id="btnDoUpdate" onclick="doUpdateNow()">一键更新</button>
     </div>
   </div>
 </div>
 
-<!-- Session Token 注入（服务端模板替换） -->
+<!-- ====== 分P 选择 ====== -->
+<div class="scrim" id="partSelectorOverlay">
+  <div class="dlg">
+    <div class="dhead">
+      <svg class="ico s18"><use href="#i-list"></use></svg><b>选择要下载的分P</b>
+      <button class="btn sm gh" onclick="closePartSelector()" aria-label="关闭"><svg class="ico s14"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="dbody">
+      <div class="row" style="min-height:0">
+        <button class="btn sm" onclick="toggleAllParts(true)">全选</button>
+        <button class="btn sm" onclick="toggleAllParts(false)">反选</button>
+        <span class="hint" id="partCount" style="margin-left:auto;font-size:12px;color:var(--fg3)"></span>
+      </div>
+      <div class="plist" id="partList"></div>
+    </div>
+    <div class="dfoot">
+      <button class="btn" onclick="closePartSelector()">取消</button>
+      <button class="btn pri" id="btnPartConfirm" onclick="confirmPartSelection()">下载选中分P</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TwitCasting 密码 ====== -->
+<div class="scrim" id="tcPasswordOverlay">
+  <div class="dlg" style="width:420px">
+    <div class="dhead">
+      <svg class="ico s18"><use href="#i-lock"></use></svg><b>TwitCasting 密码</b>
+      <button class="btn sm gh" onclick="closeTcPasswordPrompt()" aria-label="关闭"><svg class="ico s14"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="dbody">
+      <p class="notice" id="tcPasswordMsg">该视频受密码保护或为会员限定内容，输入密码后继续下载。</p>
+      <input type="password" class="ctl mono" id="tcPasswordInput" placeholder="输入密码">
+    </div>
+    <div class="dfoot">
+      <button class="btn" onclick="closeTcPasswordPrompt()">取消</button>
+      <button class="btn pri" id="btnTcPasswordConfirm" onclick="confirmTcPassword()">确认下载</button>
+    </div>
+  </div>
+</div>
+
 <script>
   window.SESSION_TOKEN = "__SESSION_TOKEN__";
 </script>
-<script src="/static/js/icons.js"></script>
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/audio-convert.js"></script>
 <script src="/static/js/audio-volume.js"></script>

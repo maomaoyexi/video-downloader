@@ -26,6 +26,7 @@ class HttpHandlerDependencies:
     start_idle_timer: object
     start_download: object
     start_withny_archive: object
+    start_withny_live: object
     batch_txt_download: object
     start_urls_download: object
     stop_download: object
@@ -215,6 +216,8 @@ def create_handler(dependencies):
                 self._json(dependencies.start_download(url, bili_parts=bili_parts, tc_password=tc_password))
             elif path == "/api/start-withny-archive":
                 self._json(dependencies.start_withny_archive())
+            elif path == "/api/start-withny-live":
+                self._json(dependencies.start_withny_live())
             elif path == "/api/submit-password":
                 url = self._field(data, "url", str, "")
                 if url is None:

@@ -47,6 +47,7 @@ def create_executor(tool_dir, manager=None):
         "start_idle_timer": Mock(),
         "emit_event": Mock(),
         "pick_withny_archive": Mock(return_value={"ok": True, "cancelled": True}),
+        "pick_withny_live_config": Mock(return_value={"ok": True, "cancelled": True}),
     }
     executor = DownloadExecutor(
         tool_dir=tool_dir,
@@ -125,6 +126,56 @@ class DownloadExecutorTests(unittest.TestCase):
             result = executor.start_withny_archive()
             self.assertEqual(result, {"ok": True, "cancelled": True})
             callbacks["pick_withny_archive"].assert_called_once_with()
+
+    def test_start_withny_live_returns_cancelled_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executor, callbacks = create_executor(Path(directory))
+            result = executor.start_withny_live()
+            self.assertEqual(result, {"ok": True, "cancelled": True})
+            callbacks["pick_withny_live_config"].assert_called_once_with()
+
+    def test_start_withny_live_requires_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tool_dir = Path(directory)
+            config = tool_dir / "config.yaml"
+            config.touch()
+            executor, callbacks = create_executor(tool_dir)
+            callbacks["pick_withny_live_config"].return_value = {"ok": True, "config_path": str(config)}
+            result = executor.start_withny_live()
+            self.assertEqual(result, {"error": "缺少依赖: withny-dl-windows-amd64.exe"})
+
+    def test_start_withny_live_builds_argument_list_and_config_cwd(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tool_dir = Path(directory)
+            executable = tool_dir / "withny-dl-windows-amd64.exe"
+            executable.touch()
+            config_dir = tool_dir / "config"
+            config_dir.mkdir()
+            config = config_dir / "live.yaml"
+            config.touch()
+            executor, callbacks = create_executor(tool_dir)
+            callbacks["pick_withny_live_config"].return_value = {"ok": True, "config_path": str(config)}
+            captured = {}
+
+            def capture_thread(target, args=(), daemon=None):
+                captured["args"] = args
+                return ImmediateThread(target, args, daemon)
+
+            with patch("video_downloader.services.download_executor.threading.Thread", side_effect=capture_thread):
+                result = executor.start_withny_live()
+            self.assertEqual(result, {"ok": True})
+            args = captured["args"]
+            self.assertEqual(args[1][:3], [str(executable), "watch", "--config"])
+            self.assertEqual(args[1][3], str(config.resolve()))
+            self.assertEqual(args[2], config_dir.resolve())
+
+    def test_withny_live_log_sanitizer_hides_credentials(self):
+        line = 'authorization=Bearer abc token=secret "password":"hidden" normal=value'
+        cleaned = DownloadExecutor._sanitize_withny_live_line(line)
+        self.assertNotIn("abc", cleaned)
+        self.assertNotIn("secret", cleaned)
+        self.assertNotIn("hidden", cleaned)
+        self.assertIn("normal=value", cleaned)
 
     def test_fetch_bili_playlist_uses_bounded_communicate(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,11 +1,11 @@
 /**
- * 主题管理器 — Everforest 深色/浅色切换
+ * 主题管理器 — 明 / 暗两态
  *
- * 将偏好保存到 localStorage，默认跟随系统主题设置。
+ * 偏好保存到 localStorage，未设置时跟随系统。
+ * 深色只是覆盖 :root 里的颜色变量（dark.css），组件样式不变。
  */
 
 const THEME_KEY = 'video-dl-theme';
-const PALETTE_KEY = 'video-dl-palette';
 
 /** 获取系统级主题偏好。 */
 function getSystemTheme() {
@@ -17,69 +17,48 @@ function getStoredTheme() {
   try { return localStorage.getItem(THEME_KEY); } catch(e) { return null; }
 }
 
-function getStoredPalette() {
-  try { return localStorage.getItem(PALETTE_KEY); } catch(e) { return null; }
-}
-
-function applyPalette(palette) {
+/**
+ * 应用主题。
+ * @param {string} theme - light / dark。
+ * @param {boolean} animate - 是否播放颜色过渡。
+ * @param {boolean} persist - 是否保存为用户偏好。
+ */
+function applyTheme(theme, animate = false, persist = true) {
   const html = document.documentElement;
-  html.classList.add('theme-transitioning');
-  html.setAttribute('data-palette', palette);
-  try { localStorage.setItem(PALETTE_KEY, palette); } catch(e) {}
-  document.querySelectorAll('.palette-toggle').forEach(btn => {
-    const normal = palette === 'normal';
-    btn.classList.toggle('active', normal);
-    btn.title = normal ? '切换为原始暖色配色' : '切换为正常中性配色';
-    btn.setAttribute('aria-label', btn.title);
-  });
-  clearTimeout(html._paletteTimeout);
-  html._paletteTimeout = setTimeout(() => html.classList.remove('theme-transitioning'), 400);
-}
-
-function togglePalette() {
-  const current = document.documentElement.getAttribute('data-palette');
-  applyPalette(current === 'normal' ? 'everforest' : 'normal');
-}
-
-/** 应用指定主题并持久化。 */
-function applyTheme(theme) {
-  const html = document.documentElement;
-  html.classList.add('theme-transitioning');
+  if(animate) {
+    html.classList.add('theme-transitioning');
+    void html.offsetWidth;
+  }
   html.setAttribute('data-theme', theme);
-  try { localStorage.setItem(THEME_KEY, theme); } catch(e) {}
-  clearTimeout(html._themeTimeout);
-  html._themeTimeout = setTimeout(() => {
-    html.classList.remove('theme-transitioning');
-  }, 400);
+  if(persist) {
+    try { localStorage.setItem(THEME_KEY, theme); } catch(e) {}
+  }
+  if(animate) {
+    clearTimeout(html._themeTimeout);
+    html._themeTimeout = setTimeout(() => html.classList.remove('theme-transitioning'), 420);
+  }
 }
 
-/** 切换深色/浅色主题并触发按钮旋转动画。 */
+/** 切换深色 / 浅色主题，并恢复重构前的旋转反馈。 */
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'light' ? 'dark' : 'light';
-  applyTheme(next);
-  document.querySelectorAll('.theme-toggle:not(.palette-toggle)').forEach(btn => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  applyTheme(next, true, true);
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.classList.remove('spin');
+    void btn.offsetWidth;
     btn.classList.add('spin');
-    setTimeout(() => btn.classList.remove('spin'), 400);
+    setTimeout(() => btn.classList.remove('spin'), 430);
   });
 }
 
 /** 初始化主题系统：应用存储/系统偏好，监听系统主题变更。 */
 function initTheme() {
   const stored = getStoredTheme();
-  applyTheme(stored || getSystemTheme());
-  applyPalette(getStoredPalette() || 'normal');
+  applyTheme(stored || getSystemTheme(), false, Boolean(stored));
 
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-    if (!getStoredTheme()) {
-      applyTheme(e.matches ? 'light' : 'dark');
-    }
+    if (!getStoredTheme()) applyTheme(e.matches ? 'light' : 'dark', true, false);
   });
 
-  document.querySelectorAll('.theme-toggle:not(.palette-toggle)').forEach(btn => {
-    btn.addEventListener('click', toggleTheme);
-  });
-  document.querySelectorAll('.palette-toggle').forEach(btn => {
-    btn.addEventListener('click', togglePalette);
-  });
+  document.querySelectorAll('.theme-toggle').forEach(btn => btn.addEventListener('click', toggleTheme));
 }

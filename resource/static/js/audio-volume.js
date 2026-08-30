@@ -3,7 +3,7 @@
  *
  * 包含响度归一化（EBU R128 loudnorm）和音量调整两大功能。
  * 高内聚：所有音频音量处理逻辑集中在本模块。
- * 低耦合：仅依赖全局函数 $(), api(), ICONS, showToolStatus, addLog。
+ * 低耦合：仅依赖全局函数 $(), api(), icon(), showToolStatus, showToast, addLog, syncToolTiles。
  */
 
 // ========== 输出格式定义 ==========
@@ -32,12 +32,10 @@ function initAudioVolumeTools() {
   const volumeFmt = $('volumeOutFormat');
   if (volumeFmt) volumeFmt.innerHTML = fmtHtml;
 
-  // 绑定响度归一化模式切换事件
-  const modeSel = $('loudnormMode');
-  if (modeSel) {
-    modeSel.addEventListener('change', updateLoudnormModeUI);
-    updateLoudnormModeUI();
-  }
+  // 绑定响度参数滑块的数值回显
+  bindRangeValue('loudnormI', 'loudnormIVal', ' LUFS');
+  bindRangeValue('loudnormLRA', 'loudnormLRAVal', ' LU');
+  bindRangeValue('loudnormTP', 'loudnormTPVal', ' dBTP');
 
   // 绑定音量增益滑块事件
   const gainSlider = $('volumeGain');
@@ -47,31 +45,33 @@ function initAudioVolumeTools() {
   }
 }
 
-// ========== 响度归一化 ==========
-
-function updateLoudnormModeUI() {
-  const mode = $('loudnormMode').value;
-  const descEl = $('loudnormModeDesc');
-  if (!descEl) return;
-
-  if (mode === 'single') {
-    descEl.textContent = '使用 EBU R128 默认参数一次处理，速度快，适合大多数场景。';
-  } else {
-    descEl.textContent = '先分析音频获取实际响度参数，再用精确参数二次处理，质量更高但耗时翻倍。';
-  }
+/**
+ * 把滑块当前值回显到指定元素。
+ * @param {string} sliderId - 滑块元素 ID。
+ * @param {string} valueId - 数值显示元素 ID。
+ * @param {string} unit - 单位后缀。
+ */
+function bindRangeValue(sliderId, valueId, unit) {
+  const slider = $(sliderId), out = $(valueId);
+  if (!slider || !out) return;
+  const paint = () => { out.textContent = slider.value + unit; };
+  slider.addEventListener('input', paint);
+  paint();
 }
+
+// ========== 响度归一化 ==========
 
 function showAudioLoudnorm() {
   const dlg = $('audioLoudnormDialog');
   if (dlg) {
     dlg.classList.add('show');
-    updateLoudnormModeUI();
+    syncToolTiles();
   }
 }
 
 function hideAudioLoudnorm() {
   const dlg = $('audioLoudnormDialog');
-  if (dlg) dlg.classList.remove('show');
+  if (dlg) { dlg.classList.remove('show'); syncToolTiles(); }
 }
 
 async function browseLoudnormDir() {
@@ -130,7 +130,7 @@ async function startAudioLoudnorm() {
     });
     if (result.error) throw new Error(result.error);
     const msg = result.message || `响度统一已启动 (${modeLabel})，共 ${result.total} 个文件`;
-    addLog('logBox', { time: new Date().toTimeString().slice(0, 8), msg: msg, level: 'success' });
+    addLog({ time: new Date().toTimeString().slice(0, 8), msg: msg, level: 'success' });
     showToolStatus(msg, 'success');
     showToast(msg, 'success');
   } catch (e) {
@@ -150,12 +150,12 @@ function updateVolumeGainUI() {
   const gain = parseFloat(slider.value);
   if (valDisplay) {
     valDisplay.textContent = gain > 0 ? `+${gain.toFixed(1)} dB` : `${gain.toFixed(1)} dB`;
-    valDisplay.style.color = gain > 0 ? 'var(--warning)' : gain < 0 ? 'var(--success)' : 'var(--fg-muted)';
+    valDisplay.style.color = gain > 0 ? 'var(--warn)' : gain < 0 ? 'var(--ok)' : 'var(--fg3)';
   }
 
   // 仅在正增益时显示限幅器选项
   if (limiterRow) {
-    limiterRow.style.display = gain > 0 ? 'flex' : 'none';
+    limiterRow.style.display = gain > 0 ? '' : 'none';
   }
 }
 
@@ -164,12 +164,13 @@ function showAudioVolume() {
   if (dlg) {
     dlg.classList.add('show');
     updateVolumeGainUI();
+    syncToolTiles();
   }
 }
 
 function hideAudioVolume() {
   const dlg = $('audioVolumeDialog');
-  if (dlg) dlg.classList.remove('show');
+  if (dlg) { dlg.classList.remove('show'); syncToolTiles(); }
 }
 
 async function browseVolumeDir() {
@@ -221,7 +222,7 @@ async function startAudioVolume() {
     });
     if (result.error) throw new Error(result.error);
     const msg = result.message || `音量调整已启动 (${gainLabel})，共 ${result.total} 个文件`;
-    addLog('logBox', { time: new Date().toTimeString().slice(0, 8), msg: msg, level: 'success' });
+    addLog({ time: new Date().toTimeString().slice(0, 8), msg: msg, level: 'success' });
     showToolStatus(msg, 'success');
     showToast(msg, 'success');
   } catch (e) {

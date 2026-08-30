@@ -289,18 +289,18 @@ ul.compact li::before {
 <body>
 <div class="container">
 
-  <!-- v2.2.0 WebUI 更新 -->
+  <!-- v2.3.0 WebUI 更新 -->
   <div class="hero">
-    <div class="version-badge">v2.2.0 WebUI</div>
+    <div class="version-badge">v2.3.0 WebUI</div>
     <h1>多平台视频下载工具</h1>
     <div class="subtitle">Twitter/X · TwitCasting · NicoChannel · Withny · 音频工具 · 双配色 UI</div>
-    <div class="date">发布日期：2026-08-04 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
+    <div class="date">发布日期：2026-08-16 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
   </div>
 
   <div class="notice-box info">
     <div class="notice-title">ℹ️ 更新说明</div>
-    <p>v2.2.0 新增 Twitter/X、TwitCasting 与 NicoChannel 支持、Withny 已授权历史存档 HAR 下载、音频格式转换、响度统一和音量调整，并完成模块化 UI 与正常中性配色。</p>
-    <p><strong>本次贡献者：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 制作 Twitter/X、TwitCasting、UI 改版与音频工具；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 添加 Withny 下载、中性配色及本版 UI 调整。</p>
+    <p>v2.3.0 新增 Twitter/X、TwitCasting 与 NicoChannel 支持、Withny 已授权历史存档 HAR 下载和直播监控录制、音频格式转换、响度统一和音量调整，并完成模块化 UI 与正常中性配色。</p>
+    <p><strong>本次贡献者：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 制作 NicoChannel、Twitter/X、TwitCasting、UI 改版与音频工具；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 制作 Withny 历史存档、直播录制、中性配色及本版 UI 调整。</p>
   </div>
 
   <div class="summary-grid">
@@ -316,7 +316,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v2.2.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。</p>
+    <p>v2.3.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -345,6 +345,7 @@ ul.compact li::before {
       </div>
       <div class="desc">
         新增 <strong>nicochannel.jp</strong>（ニコニコチャンネルプラス）下载支持。通过 yt-dlp 插件 + Firefox localStorage JWT 自动提取实现鉴权，支持频道内的视频与直播下载。首次下载需在 Firefox 中登录 nicochannel.jp，后续由插件通过 Cookie 文件自动刷新令牌。
+        <br><strong>制作：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>
       </div>
     </div>
 
@@ -356,6 +357,18 @@ ul.compact li::before {
       </div>
       <div class="desc">
         从包含内容的 HAR 验证并保存普通未加密 HLS，强制检查来源、媒体清单和签名 Cookie，并拒绝 DRM 与加密内容。
+      </div>
+    </div>
+
+    <div class="bug-card fix">
+      <div class="header">
+        <span class="tag minor">新增</span>
+        <span class="title">Withny 直播监控与录制</span>
+        <span class="severity">直播工作流</span>
+      </div>
+      <div class="desc">
+        支持选择 withny-dl YAML 配置持续监控频道并自动录制直播，统一接入任务停止、运行状态和敏感日志过滤。
+        <br><strong>制作：</strong><a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a>
       </div>
     </div>
 
@@ -377,7 +390,7 @@ ul.compact li::before {
         <span class="severity">界面与可靠性</span>
       </div>
       <div class="desc">
-        提供正常蓝灰中性配色与原始暖色配色切换，优化音频工具文字对齐；自动化测试扩展至 111 项。
+        提供正常蓝灰中性配色与原始暖色配色切换，优化音频工具文字对齐；自动化测试扩展至 129 项。
       </div>
     </div>
   </div>
@@ -393,8 +406,8 @@ ul.compact li::before {
       <div class="notice-title">📦 Release 附件说明</div>
       <p>本次发布分为两个附件：</p>
       <ul class="compact" style="margin-top: 0.8rem;">
-        <li><strong>主程序</strong>：<code>视频下载工具v2.2.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
-        <li><strong>完整依赖包</strong>：<code>视频下载工具v2.2.0-依赖包.zip</code> - 包含全部依赖 exe（yt-dlp/ffmpeg/ffprobe/deno/fantiadl）+ 帮助文档，解压即用</li>
+        <li><strong>主程序</strong>：<code>视频下载工具v2.3.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
+        <li><strong>通用依赖包</strong>：<code>视频下载工具v2.3.0-依赖包.zip</code> - 包含 yt-dlp、ffmpeg、ffprobe、deno、fantiadl、withny-dl 与帮助文档</li>
       </ul>
     </div>
   </div>
@@ -409,12 +422,12 @@ ul.compact li::before {
     <div class="notice-box success">
       <div class="notice-title">✅ 安装步骤（超简单，4步搞定）</div>
       <ul class="compact">
-        <li>下载 <code>视频下载工具v2.2.0-GUI.exe</code> 和 <code>视频下载工具v2.2.0-依赖包.zip</code> 两个文件</li>
-        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.2.0-GUI.exe</code> 放入其中</li>
+        <li>下载 <code>视频下载工具v2.3.0-GUI.exe</code> 和 <code>视频下载工具v2.3.0-依赖包.zip</code> 两个文件</li>
+        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.3.0-GUI.exe</code> 放入其中</li>
         <li>解压依赖包，将里面的<strong>全部内容</strong>（所有 exe 文件 + <code>docs</code> 文件夹 + <code>changelog.html</code> 等）解压到 exe 同一目录</li>
-        <li>双击 <code>视频下载工具v2.2.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
+        <li>双击 <code>视频下载工具v2.3.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
-      <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：依赖包已包含所有必需 exe（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code>、<code>ffprobe.exe</code>、<code>deno.exe</code>、<code>fantiadl.exe</code>），解压后无需再下载任何文件。</p>
+      <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：NicoChannel 还需要单独准备 <code>nicochannel.zip</code> 并放在主程序同一目录。</p>
     </div>
   </div>
 
@@ -429,7 +442,7 @@ ul.compact li::before {
       <div class="notice-title">✅ 升级步骤（超简单）</div>
       <ul class="compact">
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
-        <li>只需下载新版 <code>视频下载工具v2.2.0-GUI.exe</code>，替换旧版 exe 即可</li>
+        <li>只需下载新版 <code>视频下载工具v2.3.0-GUI.exe</code>，替换旧版 exe 即可</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
         <li>原有依赖文件（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code> 等）<strong>无需重新下载</strong>，继续使用即可</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
@@ -438,8 +451,8 @@ ul.compact li::before {
   </div>
 
   <div class="footer">
-    多平台视频下载工具 v2.2.0 WebUI <br>
-    2026-08-04 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny HAR 保存
+    多平台视频下载工具 v2.3.0 WebUI <br>
+    2026-08-16 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny HAR 保存与直播监控录制
   </div>
 
 </div>

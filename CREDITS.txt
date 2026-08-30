@@ -12,8 +12,8 @@ https://github.com/ergou10086
 
 主要贡献
 - DarkKandaoMaster：WebUI 界面与交互重构
-- ErgouTree：MP3 音频单独下载；v2.2.0 Twitter/X 与 TwitCasting 直播支持、UI 改版、音频格式转换、响度统一和音量调整工具
-- 猫猫葉汐A_spy：项目原版与维护；v2.2.0 Withny 已授权历史存档下载、中性配色切换及音频工具界面对齐调整
+- ErgouTree：MP3 音频单独下载；v2.3.0 NicoChannel、Twitter/X 与 TwitCasting 直播支持、UI 改版、音频格式转换、响度统一和音量调整工具
+- 猫猫葉汐A_spy：项目原版与维护；v2.3.0 Withny 已授权历史存档下载、直播监控录制、中性配色切换及音频工具界面对齐调整
 
 项目仓库
 https://github.com/maomaoyexi/video-downloader

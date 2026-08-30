@@ -33,7 +33,7 @@ def _print_help():
 
 说明:
   - CLI 模式使用默认配置：最佳画质、H.264、MP4、4线程、Cookie 自动
-  - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/Fantia/TwitCasting/Twitter）
+  - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/NicoChannel/Fantia/TwitCasting/Twitter）
   - 下载文件保存到工具目录下的「平台名/作者名/」文件夹
   - 如需自定义配置（画质、编码、代理等），请启动 WebUI 在设置页面调整
   - 依赖 yt-dlp.exe 和 ffmpeg.exe 需位于工具目录中

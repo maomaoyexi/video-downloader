@@ -5,6 +5,10 @@ cookies.txt
 urls.txt
 download_history.json
 *.har
+withny-live-config.yaml
+withny-live-config.yml
+credentials.yaml
+withny-dl.json
 
 # 日志
 logs/

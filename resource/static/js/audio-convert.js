@@ -3,7 +3,7 @@
  *
  * 支持 9 种输出格式，每种格式配置正确的编码器和质量参数。
  * 高内聚：所有音频转换逻辑集中在本模块。
- * 低耦合：仅依赖全局函数 $(), api(), ICONS, showToolStatus, addLog。
+ * 低耦合：仅依赖全局函数 $(), api(), icon(), showToolStatus, showToast, addLog, syncToolTiles。
  */
 
 const AUDIO_FORMATS = {
@@ -158,7 +158,7 @@ function updateAudioQualityUI() {
     return;
   }
 
-  qualityRow.style.display = 'flex';
+  qualityRow.style.display = '';
   qualitySel.innerHTML = fmt.qualities.map(q =>
     `<option value="${q.value}" ${q.value === fmt.defaultQuality ? 'selected' : ''}>${q.label}</option>`
   ).join('');
@@ -228,7 +228,7 @@ async function startAudioConvert() {
     });
     if(result.error) throw new Error(result.error);
     const msg = result.message || `音频转换已启动，目标格式: ${fmtName}`;
-    addLog('logBox', { time: new Date().toTimeString().slice(0,8), msg: msg, level: 'success' });
+    addLog({ time: new Date().toTimeString().slice(0,8), msg: msg, level: 'success' });
     showToolStatus(msg, 'success');
     showToast(msg, 'success');
   } catch(e) {
@@ -244,10 +244,11 @@ function showAudioConverter() {
   if(dlg) {
     dlg.classList.add('show');
     updateAudioQualityUI();
+    syncToolTiles();
   }
 }
 
 function hideAudioConverter() {
   const dlg = $('audioConvertDialog');
-  if(dlg) dlg.classList.remove('show');
+  if(dlg) { dlg.classList.remove('show'); syncToolTiles(); }
 }

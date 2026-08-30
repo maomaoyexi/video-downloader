@@ -1,249 +1,231 @@
 /* ============================================================
-   动画系统 — 关键帧 + 工具类
-   性能：所有动画均使用 transform 和 opacity（GPU 加速）
-   无障碍：所有动画均遵循 prefers-reduced-motion 设置
+   动画系统 — 适配重构后的单色 UI
+   仅使用 transform / opacity 等低成本属性，并尊重减少动态效果设置。
    ============================================================ */
 
-/* ----------------------------------------------------------
-   页面过渡
-   ---------------------------------------------------------- */
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+:root{
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-in-out:cubic-bezier(.65,0,.35,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-fast:150ms;
+  --dur-base:240ms;
+  --dur-slow:360ms;
 }
 
-/* ----------------------------------------------------------
-   滑入淡出预设
-   ---------------------------------------------------------- */
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: none; }
+/* ============ keyframes ============ */
+@keyframes page-in{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:none}
+}
+@keyframes content-rise{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:none}
+}
+@keyframes list-enter{
+  from{opacity:0;transform:translateX(-10px)}
+  to{opacity:1;transform:none}
+}
+@keyframes log-enter{
+  from{opacity:0;transform:translateX(-7px)}
+  to{opacity:1;transform:none}
+}
+@keyframes hint-reveal{
+  from{opacity:0;transform:translateY(-5px)}
+  to{opacity:1;transform:none}
+}
+@keyframes panel-in{
+  from{opacity:0;transform:translateY(-8px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+@keyframes overlay-in{
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes dialog-in{
+  from{opacity:0;transform:translateY(10px) scale(.97)}
+  to{opacity:1;transform:none}
+}
+@keyframes toast-in{
+  from{opacity:0;transform:translateY(12px) scale(.96)}
+  to{opacity:1;transform:none}
+}
+@keyframes toast-out{
+  from{opacity:1;transform:none}
+  to{opacity:0;transform:translateY(8px) scale(.96)}
+}
+@keyframes number-pop{
+  0%{transform:scale(1)}
+  48%{transform:scale(1.22);color:var(--fg)}
+  100%{transform:scale(1)}
+}
+@keyframes complete-burst{
+  0%{filter:brightness(1);box-shadow:0 0 0 transparent}
+  42%{filter:brightness(1.7);box-shadow:0 0 18px var(--ok)}
+  100%{filter:brightness(1);box-shadow:0 0 0 transparent}
+}
+@keyframes shimmer{
+  from{transform:translateX(-110%)}
+  to{transform:translateX(210%)}
+}
+@keyframes live-blip{
+  0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 transparent}
+  50%{opacity:.72;transform:scale(.82);box-shadow:0 0 0 5px color-mix(in srgb,var(--live) 18%,transparent)}
+}
+@keyframes icon-spin{
+  0%{transform:rotate(0) scale(1)}
+  50%{transform:rotate(180deg) scale(.72)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+@keyframes refresh-spin{to{transform:rotate(360deg)}}
+@keyframes nav-select{
+  from{opacity:.55;transform:translateX(-4px)}
+  to{opacity:1;transform:none}
+}
+@keyframes dot-pop{
+  0%{transform:scale(.45)}
+  65%{transform:scale(1.35)}
+  100%{transform:scale(1)}
+}
+@keyframes badge-glow{
+  0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 35%,transparent)}
+  50%{box-shadow:0 0 0 6px transparent}
+}
+@keyframes status-change{
+  from{opacity:.35;transform:translateY(3px)}
+  to{opacity:1;transform:none}
+}
+@keyframes focus-pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fg) 20%,transparent)}
+  70%{box-shadow:0 0 0 5px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
 }
 
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: none; }
+/* ============ page / content entry ============ */
+.page.active{animation:page-in var(--dur-base) var(--ease-out) backwards}
+.page.active>*{animation:content-rise var(--dur-slow) var(--ease-out) backwards}
+.page.active>:nth-child(2){animation-delay:45ms}
+.page.active>:nth-child(3){animation-delay:90ms}
+.page.active>:nth-child(4){animation-delay:135ms}
+.page.active>:nth-child(n+5){animation-delay:180ms}
+
+#page-settings .colstack>.sect,
+.doc.two>.dsec,
+.deps>.dep{animation:content-rise var(--dur-slow) var(--ease-out) backwards}
+#page-settings .colstack>.sect:nth-child(2),.doc.two>.dsec:nth-child(2),.deps>.dep:nth-child(2){animation-delay:45ms}
+#page-settings .colstack>.sect:nth-child(3),.doc.two>.dsec:nth-child(3),.deps>.dep:nth-child(3){animation-delay:90ms}
+#page-settings .colstack>.sect:nth-child(4),.doc.two>.dsec:nth-child(4),.deps>.dep:nth-child(4){animation-delay:135ms}
+#page-settings .colstack>.sect:nth-child(n+5),.doc.two>.dsec:nth-child(n+5),.deps>.dep:nth-child(n+5){animation-delay:180ms}
+
+.tiles>.tile{animation:content-rise .42s var(--ease-out) backwards}
+.tiles>.tile:nth-child(2){animation-delay:35ms}
+.tiles>.tile:nth-child(3){animation-delay:70ms}
+.tiles>.tile:nth-child(4){animation-delay:105ms}
+.tiles>.tile:nth-child(5){animation-delay:140ms}
+.tiles>.tile:nth-child(6){animation-delay:175ms}
+.tiles>.tile:nth-child(7){animation-delay:210ms}
+.tiles>.tile:nth-child(8){animation-delay:245ms}
+.tiles>.tile:nth-child(9){animation-delay:280ms}
+.tiles>.tile:nth-child(10){animation-delay:315ms}
+
+.hitem{animation:list-enter .32s var(--ease-out) backwards}
+.hcard{animation:content-rise .36s var(--ease-out) backwards}
+.hitem:nth-child(2),.hcard:nth-child(2){animation-delay:35ms}
+.hitem:nth-child(3),.hcard:nth-child(3){animation-delay:70ms}
+.hitem:nth-child(4),.hcard:nth-child(4){animation-delay:105ms}
+.hitem:nth-child(5),.hcard:nth-child(5){animation-delay:140ms}
+.hitem:nth-child(n+6),.hcard:nth-child(n+6){animation-delay:175ms}
+
+/* ============ transitions / micro interactions ============ */
+body,.rail,.top,.panel,.console,.compose,.dlg,.ctl,.tile,.chip,.btn,.ib,.exit,.ni,.seg button,.pitem,.dep,.thumb{
+  transition:background-color var(--dur-base) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),box-shadow var(--dur-base) var(--ease-out),opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out)
+}
+.btn:not(:disabled):hover,.ib:hover,.exit:hover{transform:translateY(-1px)}
+.btn:not(:disabled):active,.ib:active,.exit:active{transform:scale(.96)}
+.chip:hover{border-color:var(--line2);transform:translateY(-1px)}
+.chip:active{transform:scale(.97)}
+.chip .pd{transition:transform var(--dur-base) var(--ease-spring)}
+.chip:hover .pd{transform:scale(1.35)}
+.chip.on .pd{animation:dot-pop .3s var(--ease-spring)}
+.tile:hover{transform:translateY(-3px);box-shadow:0 8px 24px -20px rgba(0,0,0,.65)}
+.tile:active{transform:translateY(-1px) scale(.985)}
+.tile:hover .ico{transform:translateY(-1px) scale(1.08)}
+.tile .ico,.ni .ico,.theme-toggle .ico{transition:color var(--dur-fast) var(--ease-out),transform var(--dur-base) var(--ease-spring)}
+.ni:hover .ico{transform:translateX(2px)}
+.ni.on .ico{animation:nav-select .28s var(--ease-out)}
+.seg button:active{transform:scale(.9)}
+.pitem:hover{border-color:var(--line2);transform:translateX(2px)}
+.sw{transition:background-color var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out),transform var(--dur-fast) var(--ease-out)}
+.sw:active{transform:scale(.94)}
+.sw i{transition:left var(--dur-base) var(--ease-spring),background-color var(--dur-base) var(--ease-out),transform var(--dur-fast) var(--ease-out)}
+input[type=range]::-webkit-slider-thumb{transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.13)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(.92)}
+.thumb img{transition:opacity .28s var(--ease-out),transform .4s var(--ease-out)}
+.thumb:hover img.show{transform:scale(1.035)}
+
+/* 导航绿点从 display 切换改为可补间的缩放淡入。 */
+.ni .dot{display:block;opacity:0;transform:scale(.4);transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-spring)}
+.ni .dot.show{opacity:1;transform:scale(1);animation:dot-pop .34s var(--ease-spring)}
+@keyframes dot-pop-mobile{
+  0%{transform:translate(12px,-9px) scale(.45)}
+  65%{transform:translate(12px,-9px) scale(1.35)}
+  100%{transform:translate(12px,-9px) scale(1)}
+}
+@media (max-width:1024px){
+  .ni .dot{transform:translate(12px,-9px) scale(.4)}
+  .ni .dot.show{transform:translate(12px,-9px) scale(1);animation-name:dot-pop-mobile}
 }
 
-@keyframes list-enter {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: none; }
+/* ============ dynamic feedback ============ */
+.compose-wrap>.notice{animation:hint-reveal .24s var(--ease-out) both}
+.panel.show{animation:panel-in .28s var(--ease-out) both}
+.tool-status{animation:hint-reveal .24s var(--ease-out) both}
+.ln{animation:log-enter .2s var(--ease-out) both}
+.status-change{animation:status-change .24s var(--ease-out)}
+.stat-pop{display:inline-block;animation:number-pop .35s var(--ease-spring)}
+.blip.live{animation:live-blip 1.45s ease-in-out infinite}
+.theme-toggle.spin{animation:icon-spin .42s var(--ease-out)}
+.toast.working .ico{animation:refresh-spin .9s linear infinite}
+#updateBadge.attention{animation:badge-glow 1.8s ease-in-out 3}
+.exit-screen{animation:page-in .35s var(--ease-out) both}
+
+/* 进度流光和完成脉冲。 */
+.bar i{position:relative;overflow:hidden}
+.bar i.progressing::after,#updateProgress[style*="flex"] .bar i::after{
+  content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);animation:shimmer 1.7s ease-in-out infinite
+}
+[data-theme="light"] .bar i.progressing::after,[data-theme="light"] #updateProgress[style*="flex"] .bar i::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.48),transparent)}
+.bar i.complete{animation:complete-burst .65s var(--ease-out)}
+
+/* ============ overlays / notifications ============ */
+.scrim.show{animation:overlay-in .2s ease-out both}
+.scrim.show>.dlg{animation:dialog-in .27s var(--ease-out) both}
+.cover-overlay{animation:overlay-in .2s ease-out both}
+.cover-overlay img{animation:dialog-in .28s var(--ease-out) both}
+.toast{animation:toast-in .3s var(--ease-out) both}
+.toast.removing{animation:toast-out .25s ease-in forwards}
+
+/* 主题切换期间只补间色彩，避免覆盖组件自己的 transform 动画。 */
+html.theme-transitioning *,html.theme-transitioning *::before,html.theme-transitioning *::after{
+  transition-property:background-color,border-color,color,box-shadow,fill,stroke!important;
+  transition-duration:.35s!important;
+  transition-timing-function:var(--ease-out)!important
 }
 
-/* ----------------------------------------------------------
-   卡片与组件入场
-   ---------------------------------------------------------- */
-@keyframes card-rise {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: none; }
-}
+:focus-visible{animation:focus-pulse 1.2s ease-out 1}
 
-@keyframes hint-reveal {
-  from { opacity: 0; max-height: 0; transform: translateY(-4px); }
-  to   { opacity: 1; max-height: 8rem; transform: none; }
-}
+/* ============ reusable helpers ============ */
+.anim-fade-in{animation:hint-reveal .3s var(--ease-out) both}
+.anim-fade-up{animation:content-rise .4s var(--ease-out) both}
+.anim-pop-in{animation:dot-pop .35s var(--ease-spring) both}
 
-/* ----------------------------------------------------------
-   日志条目入场
-   ---------------------------------------------------------- */
-@keyframes log-enter {
-  from { opacity: 0; transform: translateX(-8px); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* ----------------------------------------------------------
-   导航指示器
-   ---------------------------------------------------------- */
-@keyframes slideIn {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
-}
-
-/* ----------------------------------------------------------
-   进度条动画
-   ---------------------------------------------------------- */
-@keyframes shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-
-@keyframes live-pulse {
-  to { background-position: -200% 0; }
-}
-
-@keyframes complete-burst {
-  0%   { filter: brightness(1); }
-  40%  { filter: brightness(1.8); box-shadow: 0 0 24px var(--accent-glow); }
-  100% { filter: brightness(1); box-shadow: 0 0 10px var(--accent-glow); }
-}
-
-/* ----------------------------------------------------------
-   模态框与遮罩层
-   ---------------------------------------------------------- */
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes modal-in {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-
-@keyframes panel-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* ----------------------------------------------------------
-   反馈与微交互
-   ---------------------------------------------------------- */
-@keyframes icon-spin {
-  0%   { transform: rotate(0deg) scale(1); }
-  50%  { transform: rotate(180deg) scale(0.6); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
-@keyframes subtle-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.7; }
-}
-
-@keyframes success-pop {
-  0%   { transform: scale(0.8); opacity: 0; }
-  60%  { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* ----------------------------------------------------------
-   骨架屏加载
-   ---------------------------------------------------------- */
-@keyframes skeleton-shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-elevated) 0%,
-    var(--bg-hover) 40%,
-    var(--bg-elevated) 80%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
-  border-radius: var(--radius);
-}
-
-/* ----------------------------------------------------------
-   工具类
-   ---------------------------------------------------------- */
-.anim-fade-in {
-  animation: fadeSlideIn 0.3s var(--ease-out) both;
-}
-.anim-fade-up {
-  animation: fadeSlideUp 0.4s var(--ease-out) both;
-}
-.anim-pop-in {
-  animation: success-pop 0.35s var(--ease-spring) both;
-}
-
-/* 逐个子元素延迟入场（应用于父容器） */
-.stagger-children > * {
-  animation: card-rise 0.4s var(--ease-out) both;
-}
-.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
-.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
-.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
-.stagger-children > *:nth-child(9) { animation-delay: 400ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
-
-/* ----------------------------------------------------------
-   焦点与交互
-   ---------------------------------------------------------- */
-@keyframes focus-pulse {
-  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
-  70%  { box-shadow: 0 0 0 6px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-
-:focus-visible {
-  animation: focus-pulse 1.5s ease-out 1;
-}
-
-/* ----------------------------------------------------------
-   更新徽标关注动画
-   ---------------------------------------------------------- */
-@keyframes badge-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(245 158 11 / 0.4); }
-  50%      { box-shadow: 0 0 0 6px rgb(245 158 11 / 0); }
-}
-
-.update-badge.show {
-  animation: badge-glow 2s ease-in-out 3;
-}
-
-/* ----------------------------------------------------------
-   统计数字弹出
-   ---------------------------------------------------------- */
-@keyframes number-pop {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.2); color: var(--accent); }
-  100% { transform: scale(1); }
-}
-
-.stat-pop {
-  animation: number-pop 0.35s var(--ease-spring);
-}
-
-/* ----------------------------------------------------------
-   涟漪效果（JS 触发）
-   ---------------------------------------------------------- */
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.2);
-  transform: scale(0);
-  animation: ripple-effect 0.6s ease-out;
-  pointer-events: none;
-}
-
-@keyframes ripple-effect {
-  to { transform: scale(4); opacity: 0; }
-}
-
-/* ----------------------------------------------------------
-   Toast 通知滑入/滑出
-   ---------------------------------------------------------- */
-@keyframes toast-in {
-  0%   { opacity: 0; transform: translateY(-100%) scale(0.95); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes toast-out {
-  0%   { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-100%) scale(0.95); }
-}
-
-/* ----------------------------------------------------------
-   减少动画（必须放在最后以覆盖以上所有规则）
-   ---------------------------------------------------------- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+/* 必须置于最后：系统要求减少动态效果时关闭动画和补间。 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    animation-delay:0s!important;
+    transition-duration:.001ms!important
   }
 }

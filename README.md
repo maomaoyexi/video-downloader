@@ -1,17 +1,17 @@
-# 多平台视频下载工具 v2.2.0 WebUI
-支持 YouTube / Bilibili / Twitch / Niconico / Fantia / TwitCasting / Twitter 七个平台的视频/直播下载，并提供 Withny 已授权历史存档 HAR 保存功能。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
+# 多平台视频下载工具 v2.3.0 WebUI
+支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter 八个平台的视频/直播下载，并提供 Withny 已授权历史存档 HAR 保存及直播监控录制功能。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
-![Version](https://img.shields.io/badge/version-v2.2.0%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v2.3.0%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> v2.2.0 新增 Twitter/X 与 TwitCasting 直播支持、Withny 已授权历史存档下载、音频工具和双配色 UI。Twitter/X、TwitCasting、UI 与音频工具由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 制作；Withny 下载及本版 UI 调整由 [猫猫葉汐A_spy (@maomaoyexi)](https://github.com/maomaoyexi) 添加。
+> v2.3.0 新增 Twitter/X、TwitCasting、NicoChannel、Withny 历史存档与直播录制、音频工具和双配色 UI。NicoChannel 及 Twitter/X、TwitCasting、UI 与音频工具由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 制作；Withny 历史存档、直播录制及本版 UI 调整由 [猫猫葉汐A_spy (@maomaoyexi)](https://github.com/maomaoyexi) 制作。
 
 ## ✨ 功能特性
 
 - 🌐 **全新WebUI界面** - 内置HTTP服务器，自动打开浏览器，深色主题，响应式设计
-- 🎬 **七平台支持** - YouTube、Bilibili、Twitch、Niconico、Fantia、TwitCasting、Twitter，自动识别平台
-- 📦 **Withny 存档** - 从包含内容的 HAR 验证并保存已授权的普通未加密 HLS 历史存档
+- 🎬 **八平台支持** - YouTube、Bilibili、Twitch、Niconico、NicoChannel、Fantia、TwitCasting、Twitter，自动识别平台
+- 📦 **Withny 支持** - 从 HAR 保存已授权历史存档，也可通过 withny-dl 配置监控和录制直播
 - 📺 **Bilibili 支持** - 支持普通视频、直播和多 P 分集选择
 - 🎮 **直播录制** - 支持 YouTube、Twitch、Niconico、TwitCasting 直播识别、从头录制和实时状态
 - 💾 **配置预设** - 保存常用设置组合，一键切换
@@ -31,20 +31,20 @@
 ## 🚀 快速开始
 
 1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
-   - `视频下载工具v2.2.0-GUI.exe` - 主程序
-   - `视频下载工具v2.2.0-依赖包.zip` - 完整依赖包（包含所有依赖exe和帮助文档）
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.2.0-GUI.exe` 放入其中
+   - `视频下载工具v2.3.0-GUI.exe` - 主程序
+   - `视频下载工具v2.3.0-依赖包.zip` - 通用依赖包（包含下载工具和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.3.0-GUI.exe` 放入其中
 3. 解压依赖包，将里面的**全部内容**（所有exe文件、docs文件夹、changelog.html等）解压到主程序同一目录
-4. 双击 `视频下载工具v2.2.0-GUI.exe` 运行，自动打开浏览器界面
+4. 双击 `视频下载工具v2.3.0-GUI.exe` 运行，自动打开浏览器界面
 
-> 💡 **提示**：依赖包已包含所有必需文件（yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe），解压后无需再下载任何东西。首次运行会自动生成配置文件、下载目录等。所有文件都保存在exe同目录下，绿色软件无需安装。
+> 💡 **提示**：依赖包包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe 和 withny-dl-windows-amd64.exe。NicoChannel 还需要单独准备 `nicochannel.zip` 并放在主程序同一目录。首次运行会自动生成配置文件和下载目录。
 
 ### 源码运行版
 
-保持 `视频下载工具v2.2.0-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
+保持 `视频下载工具v2.3.0-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
 
 ```powershell
-python ".\视频下载工具v2.2.0-GUI.py"
+python ".\视频下载工具v2.3.0-GUI.py"
 ```
 
 源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本与 `video_downloader/` 目录。
@@ -116,7 +116,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ```
 工具目录/
-├── 视频下载工具v2.2.0-GUI.exe # 主程序
+├── 视频下载工具v2.3.0-GUI.exe # 主程序
 ├── yt-dlp.exe               # 下载核心
 ├── ffmpeg.exe               # 音视频处理
 ├── ffprobe.exe              # 媒体信息探测
@@ -189,7 +189,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
 **Q: 老用户如何升级？**
-> A: 只需下载新版 `视频下载工具v2.2.0-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
+> A: 只需下载新版 `视频下载工具v2.3.0-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
 
 ## 📚 详细文档
 
@@ -204,7 +204,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ## 📋 版本更新
 
-v2.2.0 的完整更新内容、贡献者和升级说明请查看：
+v2.3.0 的完整更新内容、贡献者和升级说明请查看：
 
 - [发布说明](RELEASE_NOTES.md)
 - [内置更新日志](resource/templates/changelog.html)
@@ -224,8 +224,8 @@ v2.2.0 的完整更新内容、贡献者和升级说明请查看：
 
 - 项目原版作者：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
 - v2.1.0 WebUI 重构：[DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster)
-- v2.2.0 Twitter/X、TwitCasting、UI 与音频工具：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
-- v2.2.0 Withny 下载与 UI 调整：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
+- v2.3.0 NicoChannel、Twitter/X、TwitCasting、UI 与音频工具：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
+- v2.3.0 Withny 历史存档、直播录制与 UI 调整：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
 
 ## 致谢
 

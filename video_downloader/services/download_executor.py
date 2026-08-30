@@ -45,6 +45,7 @@ class DownloadExecutor:
         start_idle_timer,
         emit_event,
         pick_withny_archive=None,
+        pick_withny_live_config=None,
     ):
         self._tool_dir = tool_dir
         self._exe_suffix = exe_suffix
@@ -59,6 +60,7 @@ class DownloadExecutor:
         self._start_idle_timer = start_idle_timer
         self._emit_event = emit_event
         self._pick_withny_archive = pick_withny_archive
+        self._pick_withny_live_config = pick_withny_live_config
         # 批量下载密码阻塞等待机制
         self._password_event = threading.Event()
         self._password_value: str | None = None
@@ -242,6 +244,103 @@ class DownloadExecutor:
                 except OSError:
                     pass
             self._finish(handle, proc)
+
+    def start_withny_live(self):
+        if self._pick_withny_live_config is None:
+            return {"error": "Withny 直播配置选择器不可用"}
+        selection = self._pick_withny_live_config()
+        if selection.get("error"):
+            return {"error": selection["error"]}
+        if selection.get("cancelled"):
+            return {"ok": True, "cancelled": True}
+
+        executable = self._tool_dir / f"withny-dl-windows-amd64{self._exe_suffix}"
+        if not executable.is_file():
+            return {"error": f"缺少依赖: {executable.name}"}
+        try:
+            config_path = Path(selection["config_path"]).expanduser().resolve(strict=True)
+        except (KeyError, OSError) as exc:
+            return {"error": f"无法读取 Withny 直播配置: {exc}"}
+        if config_path.suffix.lower() not in {".yaml", ".yml"}:
+            return {"error": "Withny 直播配置只允许 yaml 或 yml 文件"}
+
+        handle = self._download_manager.begin("withny-live")
+        if handle is None:
+            return {"error": "已有下载任务在运行"}
+        self._cancel_idle_timer()
+        self._broadcast_download_state()
+        stats = self._app_state.batch_stats
+        stats.clear()
+        stats.update({"ok": 0, "fail": 0, "total": 1, "current": 1})
+        self._app_state.publish({"type": "stats", "data": dict(stats)})
+        self._update_progress(-1, "正在启动 Withny 直播监控...")
+        self._log(f"[Withny 直播] 已加载配置: {config_path.name}", "info")
+        command = [str(executable), "watch", "--config", str(config_path), "--pprof.listen-address", "127.0.0.1:0"]
+        try:
+            threading.Thread(
+                target=self._run_withny_live,
+                args=(handle, command, config_path.parent),
+                daemon=True,
+            ).start()
+        except Exception as exc:
+            self._download_manager.finish(handle)
+            self._broadcast_download_state()
+            self._start_idle_timer()
+            return {"error": f"直播录制线程启动失败: {exc}"}
+        return {"ok": True}
+
+    def _run_withny_live(self, handle, command, working_dir):
+        self._app_state.download_thread_context.task_id = handle.generation
+        stats = self._app_state.batch_stats
+        proc = None
+        try:
+            proc = self._spawn(command, cwd=working_dir)
+            if not self._download_manager.publish_process(handle, proc):
+                self.kill_process_tree(proc)
+                return
+            self._broadcast_download_state()
+            line_q, read_done = self._start_reader(proc)
+            self._update_progress(-1, "Withny 直播监控运行中")
+            while not read_done.is_set() or not line_q.empty():
+                if handle.cancel_event.is_set():
+                    break
+                try:
+                    line = line_q.get(timeout=0.5).strip()
+                except queue.Empty:
+                    continue
+                if not line:
+                    continue
+                cleaned = self._sanitize_withny_live_line(line)
+                if cleaned:
+                    level = "error" if any(word in cleaned.lower() for word in ("error", "panic", "fatal")) else "info"
+                    self._log(f"[withny-dl] {cleaned[:500]}", level)
+                    if "download" in cleaned.lower() or "stream" in cleaned.lower():
+                        self._update_progress(-1, "Withny 直播录制中")
+            self._close_process(proc)
+            rc = proc.returncode if proc.returncode is not None else -1
+            if handle.cancel_event.is_set():
+                self._log("[Withny 直播] 监控和录制已停止", "warn")
+                self._update_progress(0, "已停止", "", "")
+            else:
+                stats["fail"] = 1
+                self._app_state.publish({"type": "stats", "data": dict(stats)})
+                self._log(f"[Withny 直播] 进程意外退出，退出码: {rc}", "error")
+                self._update_progress(0, f"失败 (退出码 {rc})", "", "")
+        except Exception as exc:
+            stats["fail"] = 1
+            self._app_state.publish({"type": "stats", "data": dict(stats)})
+            self._log(f"[Withny 直播] 异常: {self._sanitize_withny_live_line(str(exc))}", "error")
+            self._update_progress(0, "异常终止", "", "")
+            self.kill_process_tree(proc)
+        finally:
+            self._finish(handle, proc)
+
+    @staticmethod
+    def _sanitize_withny_live_line(line):
+        cleaned = str(line)
+        cleaned = re.sub(r"(?i)((?:authorization[=:]\s*)?bearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[已隐藏]", cleaned)
+        cleaned = re.sub(r'(?i)(["\']?(?:authorization|token|password|passcode|secret|encryptionkey)["\']?\s*[=:]\s*["\']?)[^\s,;"\']+', r"\1[已隐藏]", cleaned)
+        return cleaned
 
     def submit_password(self, url: str, password: str) -> dict:
         """处理密码提交：批量下载等待中则唤醒线程，否则启动新的单链接下载（密码重试）。"""
@@ -912,13 +1011,13 @@ class DownloadExecutor:
                 return filename
         return None
 
-    def _spawn(self, cmd):
+    def _spawn(self, cmd, cwd=None):
         env = os.environ.copy()
         env.update({"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"})
         startupinfo, creationflags = _win_startup_info()
         return subprocess.Popen(
             cmd,
-            cwd=self._tool_dir,
+            cwd=cwd or self._tool_dir,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

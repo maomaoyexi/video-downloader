@@ -33,6 +33,7 @@ class ToolService:
         for dep in ["yt-dlp", "ffmpeg", "ffprobe"]:
             deps[dep] = (self._tool_dir / f"{dep}{self._exe_suffix}").exists()
         deps["fantiadl"] = (self._tool_dir / f"fantiadl{self._exe_suffix}").exists()
+        deps["withny_dl"] = (self._tool_dir / f"withny-dl-windows-amd64{self._exe_suffix}").exists()
         deps["nicochannel_plugin"] = (self._tool_dir / "nicochannel.zip").exists()
         return deps
 
@@ -61,6 +62,32 @@ class ToolService:
             if not output_path:
                 return {"ok": True, "cancelled": True}
             return {"ok": True, "har_path": har_path, "output_path": output_path}
+        except Exception as exc:
+            return {"error": f"打开文件选择失败: {exc}"}
+        finally:
+            if root is not None:
+                try:
+                    root.destroy()
+                except Exception:
+                    pass
+
+    def pick_withny_live_config(self):
+        root = None
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            config_path = filedialog.askopenfilename(
+                initialdir=str(self._tool_dir),
+                title="选择 withny-dl 直播录制配置",
+                filetypes=[("YAML 配置", "*.yaml *.yml"), ("所有文件", "*.*")],
+            )
+            if not config_path:
+                return {"ok": True, "cancelled": True}
+            return {"ok": True, "config_path": config_path}
         except Exception as exc:
             return {"error": f"打开文件选择失败: {exc}"}
         finally:

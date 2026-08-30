@@ -196,6 +196,7 @@ class AppContainer:
             start_idle_timer=start_idle_timer,
             emit_event=emit_event,
             pick_withny_archive=tool_service.pick_withny_archive,
+            pick_withny_live_config=tool_service.pick_withny_live_config,
         )
 
         def start_download(url: str, bili_parts: str | None = None, tc_password: str | None = None) -> dict:
@@ -206,6 +207,9 @@ class AppContainer:
 
         def start_withny_archive() -> dict:
             return download_executor.start_withny_archive()
+
+        def start_withny_live() -> dict:
+            return download_executor.start_withny_live()
 
         def stop_download() -> dict:
             return download_executor.stop_download()
@@ -273,6 +277,7 @@ class AppContainer:
                 start_idle_timer=start_idle_timer,
                 start_download=start_download,
                 start_withny_archive=start_withny_archive,
+                start_withny_live=start_withny_live,
                 batch_txt_download=batch_txt_download,
                 start_urls_download=start_urls_download,
                 stop_download=stop_download,

@@ -1,7 +1,28 @@
+import sys
+from types import ModuleType
 import unittest
 from unittest.mock import MagicMock, patch
 
 from video_downloader.services.nicochannel_auth import NicochannelAuthService
+
+
+def mock_nicochannel_dependencies():
+    yt_dlp = ModuleType("yt_dlp")
+    cookies = ModuleType("yt_dlp.cookies")
+    cookies._firefox_browser_dirs = []
+    cookies._firefox_cookie_dbs = []
+    cookies._is_path = lambda *args: False
+    cookies._newest = lambda *args: None
+    cookies._open_database_copy = lambda *args: None
+    utils = ModuleType("yt_dlp.utils")
+    utils.try_call = lambda *args, **kwargs: None
+    cramjam = ModuleType("cramjam")
+    return patch.dict(sys.modules, {
+        "yt_dlp": yt_dlp,
+        "yt_dlp.cookies": cookies,
+        "yt_dlp.utils": utils,
+        "cramjam": cramjam,
+    })
 
 
 class NicochannelAuthServiceTests(unittest.TestCase):
@@ -89,7 +110,8 @@ class NicochannelAuthServiceTests(unittest.TestCase):
     @patch("video_downloader.services.nicochannel_auth.NicochannelAuthService._locate_ff_profile")
     def test_returns_none_when_firefox_profile_not_found(self, mock_locate):
         mock_locate.side_effect = FileNotFoundError("no profile")
-        result = self.service.get_auth_token()
+        with mock_nicochannel_dependencies():
+            result = self.service.get_auth_token()
         self.assertIsNone(result)
         self.assertTrue(
             any("Firefox 配置未找到" in msg for msg, _ in self.logs),
@@ -99,7 +121,8 @@ class NicochannelAuthServiceTests(unittest.TestCase):
     @patch("video_downloader.services.nicochannel_auth.NicochannelAuthService._locate_ff_profile")
     def test_returns_none_on_unexpected_error(self, mock_locate):
         mock_locate.side_effect = OSError("permission denied")
-        result = self.service.get_auth_token()
+        with mock_nicochannel_dependencies():
+            result = self.service.get_auth_token()
         self.assertIsNone(result)
         self.assertTrue(
             any("提取 JWT 失败" in msg for msg, _ in self.logs),
