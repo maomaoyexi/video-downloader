@@ -360,7 +360,6 @@ select option { color: #1c1917; background: #fffbef; }
 .setting-row select, .setting-row input[type="text"], .setting-row input[type="number"] { min-width: 11rem; }
 .setting-row input[type="range"] { flex: 1; max-width: 15rem; accent-color: var(--accent); }
 .setting-row .range-val { min-width: 2.5rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
-.subtitle-custom-input { display: none; flex: 1; }
 
 /* 拨动开关 */
 .switch {

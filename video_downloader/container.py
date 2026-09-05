@@ -17,7 +17,6 @@ from typing import Any, Callable
 from .core.validation import validate_config
 from .core.constants import DEFAULT_CONFIG, IDLE_TIMEOUT, VERSION
 from .core.command import build_ytdlp_cmd as _build_ytdlp_cmd
-from .core.platform import detect_platform
 from .state.app_state import AppState
 from .services.download_executor import DownloadExecutor
 from .services.nicochannel_auth import NicochannelAuthService
@@ -152,9 +151,7 @@ class AppContainer:
         def build_command(url: str, *, is_live: bool = False,
                           platform_override: str | None = None,
                           config_override: dict | None = None,
-                          bili_parts: str | None = None,
-                          include_subtitles: bool = True,
-                          subtitle_only: bool = False) -> list[str]:
+                          bili_parts: str | None = None) -> list[str]:
             cfg = config_override if config_override is not None else app_state.config_snapshot()
             cookie_file = tool_dir / "cookies.txt"
             effective_platform = platform_override if platform_override else cfg["PLATFORM"]
@@ -173,24 +170,6 @@ class AppContainer:
                 cookie_file=cookie_file if cookie_file.exists() else None,
                 bili_parts=bili_parts,
                 nicochannel_auth_token=nicochannel_token,
-                include_subtitles=include_subtitles,
-                subtitle_only=subtitle_only,
-            )
-
-        def build_subtitle_command(url: str, *, subtitle_type: str, subtitle_langs: str) -> list[str]:
-            cfg = dict(app_state.config_snapshot())
-            cfg.update({
-                "DOWNLOAD_SUBTITLES": 1,
-                "SUBTITLE_TYPE": subtitle_type,
-                "SUBTITLE_LANGS": subtitle_langs,
-            })
-            platform_name = detect_platform(url) or cfg.get("PLATFORM", "YouTube")
-            return build_command(
-                url,
-                platform_override=platform_name,
-                config_override=cfg,
-                include_subtitles=True,
-                subtitle_only=True,
             )
 
         # ---- 工具服务 ----
@@ -200,7 +179,6 @@ class AppContainer:
             app_state=app_state,
             save_config=save_config,
             log=add_log,
-            build_subtitle_command=build_subtitle_command,
         )
 
         # ---- 下载执行器 ----
@@ -258,7 +236,6 @@ class AppContainer:
         wav_to_mp3 = tool_service.wav_to_mp3
         audio_loudnorm = tool_service.audio_loudnorm
         audio_volume = tool_service.audio_volume
-        download_subtitles = tool_service.download_subtitles
         browse_folder = tool_service.browse_folder
         handle_tool_action = tool_service.handle_tool_action
         read_urls_file = tool_service.read_urls_file
@@ -321,7 +298,6 @@ class AppContainer:
                 wav_to_mp3=wav_to_mp3,
                 audio_loudnorm=audio_loudnorm,
                 audio_volume=audio_volume,
-                download_subtitles=download_subtitles,
                 request_exit=request_exit,
             )
             return HttpService(lambda: create_handler(deps), port=0)

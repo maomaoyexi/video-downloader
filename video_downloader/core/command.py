@@ -1,50 +1,4 @@
-from .constants import RECOMMENDED_SUBTITLE_LANGS
-
-
-def _append_subtitle_options(cmd, cfg, tool_dir, platform_name, *, also_set_default_output=False):
-    """把字幕下载参数追加到 yt-dlp 命令，返回是否实际启用字幕。"""
-    if not cfg.get("DOWNLOAD_SUBTITLES", 0):
-        return False
-
-    subtitle_type = cfg.get("SUBTITLE_TYPE", "all")
-    subtitle_langs = cfg.get("SUBTITLE_LANGS") or RECOMMENDED_SUBTITLE_LANGS
-    subtitle_tmpl = tool_dir / platform_name / "subtitles" / "%(title)s [%(id)s].%(ext)s"
-    if also_set_default_output:
-        cmd += ["-o", str(subtitle_tmpl)]
-    cmd += ["-o", f"subtitle:{subtitle_tmpl}"]
-    if subtitle_type in {"all", "manual"}:
-        cmd.append("--write-subs")
-    if subtitle_type in {"all", "auto"}:
-        cmd.append("--write-auto-subs")
-    cmd += ["--sub-langs", subtitle_langs]
-    return True
-
-
-def _append_common_runtime_options(cmd, cfg, cookie_file=None, nicochannel_auth_token=None, platform_name=None, bili_parts=None):
-    """追加主下载和字幕 sidecar 都需要的运行时选项。"""
-    if cfg["SPEED_LIMIT"] > 0:
-        cmd += ["-r", f"{cfg['SPEED_LIMIT']}M"]
-    if cfg["PROXY_ENABLED"]:
-        cmd += ["--proxy", f"{cfg['PROXY_TYPE']}://{cfg['PROXY_ADDR']}:{cfg['PROXY_PORT']}"]
-    if cfg["USE_COOKIES"]:
-        if cfg["COOKIE_MODE"] == 1:
-            if cookie_file is not None:
-                cmd += ["--cookies", str(cookie_file)]
-        else:
-            cmd += ["--cookies-from-browser", f"{cfg['BROWSER_NAME']}:{cfg['BROWSER_PROFILE']}"]
-    if cfg["WIN_FILENAMES"]:
-        cmd += ["--windows-filenames"]
-    if cfg["STRICT_FILENAME"]:
-        cmd += ["--restrict-filenames"]
-    if platform_name == "TwitCasting" and cfg.get("TC_PASSWORD"):
-        cmd += ["--video-password", cfg["TC_PASSWORD"]]
-    if platform_name == "NicoChannel" and nicochannel_auth_token:
-        cmd += ["--username", "jwt_token", "--password", nicochannel_auth_token]
-    if bili_parts and bili_parts != "all":
-        cmd += ["-I", bili_parts]
-
-
-def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, include_subtitles=True, subtitle_only=False):
+def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None):
     """构建 yt-dlp 下载命令行参数。
 
     根据配置项组装完整的 yt-dlp 命令行参数列表，包括输出模板、格式选择、
@@ -59,7 +13,7 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         platform_override: 平台覆盖名，如果不为 None 则替代 config 中的 PLATFORM。
         cookie_file: Cookie 文件路径，用于文件模式 Cookie 鉴权。
         bili_parts: Bilibili 分P 选择参数，如 "1,3,5" 或 "all"，通过 -I 传递给 yt-dlp。
-        nicochannel_auth_token: NicoChannel 的 JWT 鉴权令牌，通过用户名/密码参数注入。
+        nicochannel_auth_token: NicoChannel 的 JWT 鉴权令牌，通过 --extractor-args 注入。
 
     Returns:
         list[str]: 完整的 yt-dlp 命令行参数列表。
@@ -70,21 +24,6 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
            "--socket-timeout", "30", "--plugin-dirs", str(tool_dir)]
     platform_name = platform_override if platform_override else cfg["PLATFORM"]
     is_nico_live = "live.nicovideo.jp" in url.lower() or "live2.nicovideo.jp" in url.lower()
-
-    if subtitle_only:
-        cmd += ["--skip-download"]
-        if not _append_subtitle_options(cmd, cfg, tool_dir, platform_name, also_set_default_output=True):
-            return cmd + [url]
-        _append_common_runtime_options(
-            cmd,
-            cfg,
-            cookie_file=cookie_file,
-            nicochannel_auth_token=nicochannel_auth_token,
-            platform_name=platform_name,
-            bili_parts=bili_parts,
-        )
-        cmd.append(url)
-        return cmd
 
     # VOD 模板：开启嵌入元数据时，在文件名前追加 [YYYYMMDD] 发布日期，便于按时间排序
     vod_date_prefix = "[%(upload_date)s] " if cfg["EMBED_META"] else ""
@@ -116,11 +55,6 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     cmd += ["-o", out_tmpl]
     archive = tool_dir / f"{platform_name.lower()}_archive.txt"
     cmd += ["--download-archive", str(archive)]
-
-    # 字幕作为视频旁路文件保存到平台目录下的 subtitles/，默认关闭。
-    # 默认只请求常用语言，避免 YouTube 对全量字幕语言逐个请求时触发限流。
-    if include_subtitles:
-        _append_subtitle_options(cmd, cfg, tool_dir, platform_name)
 
     res = cfg["RESOLUTION"]
     codec = cfg["CODEC"]
@@ -167,14 +101,16 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
             cmd += ["--remux-video", fmt]
 
     cmd += ["-N", str(cfg["THREADS"])]
-    _append_common_runtime_options(
-        cmd,
-        cfg,
-        cookie_file=cookie_file,
-        nicochannel_auth_token=nicochannel_auth_token,
-        platform_name=platform_name,
-        bili_parts=bili_parts,
-    )
+    if cfg["SPEED_LIMIT"] > 0:
+        cmd += ["-r", f"{cfg['SPEED_LIMIT']}M"]
+    if cfg["PROXY_ENABLED"]:
+        cmd += ["--proxy", f"{cfg['PROXY_TYPE']}://{cfg['PROXY_ADDR']}:{cfg['PROXY_PORT']}"]
+    if cfg["USE_COOKIES"]:
+        if cfg["COOKIE_MODE"] == 1:
+            if cookie_file is not None:
+                cmd += ["--cookies", str(cookie_file)]
+        else:
+            cmd += ["--cookies-from-browser", f"{cfg['BROWSER_NAME']}:{cfg['BROWSER_PROFILE']}"]
     if cfg["EMBED_META"]:
         cmd += ["--embed-metadata"]
     if cfg["DOWNLOAD_THUMB"]:
@@ -182,13 +118,27 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         # 正常合并模式（且非 WebM）才嵌图
         if audio_mode == "0" and fmt != "webm":
             cmd += ["--embed-thumbnail"]
+    if cfg["WIN_FILENAMES"]:
+        cmd += ["--windows-filenames"]
+    if cfg["STRICT_FILENAME"]:
+        cmd += ["--restrict-filenames"]
     if cfg["HWACCEL"] != "cpu":
         cmd += ["--postprocessor-args", f"Merger+ffmpeg_o:-c:v {cfg['HWACCEL']}"]
     cmd += ["--ffmpeg-location", str(tool_dir)]
+    # TwitCasting 密码保护/会员限定直播与录播需要通过 --video-password 解锁。
+    if platform_name == "TwitCasting" and cfg.get("TC_PASSWORD"):
+        cmd += ["--video-password", cfg["TC_PASSWORD"]]
     # 评论抓取与重编码仅对 Niconico 注入。
     if platform_name == "Niconico" and cfg["NICO_COMMENTS"]:
         cmd += ["--write-comments"]
     if platform_name == "Niconico" and cfg["NICO_RECODE"]:
         cmd += ["--recode-video", fmt]
+    # NicoChannel: 插件通过 --username jwt_token --password <JWT> 接收鉴权令牌
+    # （而非 --extractor-args），详见插件的 _perform_login() 方法
+    if platform_name == "NicoChannel" and nicochannel_auth_token:
+        cmd += ["--username", "jwt_token", "--password", nicochannel_auth_token]
+    # Bilibili 多P选择：通过 -I 指定下载哪些分P
+    if bili_parts and bili_parts != "all":
+        cmd += ["-I", bili_parts]
     cmd.append(url)
     return cmd

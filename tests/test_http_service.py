@@ -8,7 +8,6 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import Mock
 
-from video_downloader.core.constants import RECOMMENDED_SUBTITLE_LANGS
 from video_downloader.state.app_state import AppState
 from video_downloader.web.handler import HttpHandlerDependencies, HttpService, create_handler
 
@@ -74,7 +73,6 @@ def make_dependencies(exit_event):
         wav_to_mp3=lambda *args: {"args": args},
         audio_loudnorm=lambda *args, **kwargs: {"args": args},
         audio_volume=lambda *args, **kwargs: {"args": args},
-        download_subtitles=lambda *args, **kwargs: {"args": args},
         request_exit=exit_event.set,
     )
 
@@ -149,37 +147,6 @@ class HttpServiceTests(unittest.TestCase):
         status, body, _ = self.request("/api/start-withny-live", method="POST", payload={})
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body), {"ok": True, "kind": "withny-live"})
-
-    def test_download_subtitles_route_uses_injected_dependency(self):
-        status, body, _ = self.request(
-            "/api/download-subtitles",
-            method="POST",
-            payload={
-                "urls": ["https://youtube.com/watch?v=abc"],
-                "subtitle_type": "manual",
-                "subtitle_langs": "zh.*",
-            },
-        )
-        self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {"args": [["https://youtube.com/watch?v=abc"], "manual", "zh.*"]})
-
-    def test_download_subtitles_route_uses_recommended_default_languages(self):
-        status, body, _ = self.request(
-            "/api/download-subtitles",
-            method="POST",
-            payload={"urls": ["https://youtube.com/watch?v=abc"]},
-        )
-        self.assertEqual(status, 200)
-        self.assertEqual(
-            json.loads(body),
-            {"args": [["https://youtube.com/watch?v=abc"], "all", RECOMMENDED_SUBTITLE_LANGS]},
-        )
-
-    def test_download_subtitles_route_rejects_non_string_urls(self):
-        with self.assertRaises(HTTPError) as raised:
-            self.request("/api/download-subtitles", method="POST", payload={"urls": [123]})
-        self.assertEqual(raised.exception.code, 400)
-        self.assertIn("urls", json.loads(raised.exception.read())["error"])
 
     def test_post_rejects_unsupported_media_type(self):
         with self.assertRaises(HTTPError) as raised:

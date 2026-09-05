@@ -7,9 +7,7 @@ import threading
 import time
 from pathlib import Path
 
-from video_downloader.core.constants import LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS
 from video_downloader.core.platform import clean_url, detect_platform, is_live_url, safe_decode
-from video_downloader.core.subtitles import classify_subtitle_result
 from video_downloader.services.withny_archive import WithnyArchiveError, build_ffmpeg_command, load_and_select, redact_line
 
 
@@ -98,18 +96,7 @@ class DownloadExecutor:
                 platform_override=effective_platform,
                 config_override=config_snapshot,
                 bili_parts=bili_parts,
-                include_subtitles=False,
             )
-            subtitle_cmd = None
-            if config_snapshot.get("DOWNLOAD_SUBTITLES", 0):
-                subtitle_cmd = self._build_command(
-                    url,
-                    is_live=is_live_download,
-                    platform_override=effective_platform,
-                    config_override=config_snapshot,
-                    bili_parts=bili_parts,
-                    subtitle_only=True,
-                )
         except Exception as exc:
             return {"error": f"下载配置无效: {exc}"}
 
@@ -134,7 +121,7 @@ class DownloadExecutor:
         try:
             threading.Thread(
                 target=self._run_single,
-                args=(handle, cmd, url, effective_platform, is_live_download, audio_mode, audio_fmt, verbose, subtitle_cmd),
+                args=(handle, cmd, url, effective_platform, is_live_download, audio_mode, audio_fmt, verbose),
                 daemon=True,
             ).start()
         except Exception as exc:
@@ -436,100 +423,6 @@ class DownloadExecutor:
         except Exception as exc:
             self._log(f"[音频提取] 异常: {exc}", "warn")
 
-    def _run_subtitle_sidecar(self, handle, cmd, prefix=""):
-        """最佳努力下载字幕；字幕失败不改变视频下载成功状态。"""
-        if handle.cancel_event.is_set():
-            return False
-
-        proc = None
-        captured_lines = []
-        self._log(f"{prefix}[字幕] 开始下载字幕（失败不影响视频）", "info")
-        try:
-            proc = self._spawn(cmd)
-            if not self._download_manager.publish_process(handle, proc):
-                self.kill_process_tree(proc)
-                return False
-
-            line_q, read_done = self._start_reader(proc)
-            while not read_done.is_set() or not line_q.empty():
-                if handle.cancel_event.is_set():
-                    self.kill_process_tree(proc)
-                    break
-                try:
-                    line = line_q.get(timeout=0.5).strip()
-                except queue.Empty:
-                    continue
-                if not line:
-                    continue
-                captured_lines.append(line)
-
-                if "ERROR" in line:
-                    self._log(f"{prefix}[字幕] {line}", "warn")
-                elif "WARNING" in line:
-                    self._log(f"{prefix}[字幕] {line}", "warn")
-                elif any(kw in line for kw in ["Destination:", "Writing video subtitles", "Downloading subtitles"]):
-                    self._log(f"{prefix}[字幕] {line}", "info")
-
-            self._close_process(proc)
-            rc = proc.returncode if proc.returncode is not None else -1
-            if handle.cancel_event.is_set():
-                return False
-            if rc == 0:
-                result = classify_subtitle_result(rc, "\n".join(captured_lines))
-                if result == "success":
-                    self._log(f"{prefix}[字幕] 字幕下载完成", "success")
-                    return True
-                self._log(f"{prefix}[字幕] 未找到匹配字幕，已跳过（不影响视频）", "warn")
-                return False
-
-            if self._should_retry_recommended_subtitles(cmd, captured_lines):
-                self._download_manager.clear_process(handle, proc)
-                proc = None
-                retry_cmd = self._replace_subtitle_langs(cmd, RECOMMENDED_SUBTITLE_LANGS)
-                self._log(f"{prefix}[字幕] 全量字幕请求被限流，改用常用字幕重试", "warn")
-                return self._run_subtitle_sidecar(handle, retry_cmd, prefix=prefix)
-
-            self._log(
-                f"{prefix}[字幕] 字幕下载失败或无可用字幕，已跳过（不影响视频），退出码: {rc}",
-                "warn",
-            )
-            return False
-        except Exception as exc:
-            self._log(f"{prefix}[字幕] 字幕下载异常，已跳过（不影响视频）: {exc}", "warn")
-            if proc is not None:
-                self.kill_process_tree(proc)
-            return False
-        finally:
-            if proc is not None:
-                self._download_manager.clear_process(handle, proc)
-
-    @staticmethod
-    def _subtitle_langs_index(cmd):
-        try:
-            index = cmd.index("--sub-langs") + 1
-        except ValueError:
-            return None
-        if index >= len(cmd):
-            return None
-        return index
-
-    @classmethod
-    def _replace_subtitle_langs(cls, cmd, langs):
-        index = cls._subtitle_langs_index(cmd)
-        if index is None:
-            return list(cmd)
-        retry_cmd = list(cmd)
-        retry_cmd[index] = langs
-        return retry_cmd
-
-    @classmethod
-    def _should_retry_recommended_subtitles(cls, cmd, lines):
-        index = cls._subtitle_langs_index(cmd)
-        if index is None or cmd[index] != LEGACY_ALL_SUBTITLE_LANGS:
-            return False
-        output = "\n".join(lines)
-        return "HTTP Error 429" in output or "Too Many Requests" in output
-
     def fetch_bili_playlist(self, url):
         """获取 Bilibili 视频的分P列表。
 
@@ -602,7 +495,7 @@ class DownloadExecutor:
                 self.kill_process_tree(proc)
             return {"error": f"获取分P列表失败: {exc}"}
 
-    def _run_single(self, handle, cmd, url, effective_platform, is_live_download, audio_mode="0", audio_fmt="mp3", verbose=False, subtitle_cmd=None):
+    def _run_single(self, handle, cmd, url, effective_platform, is_live_download, audio_mode="0", audio_fmt="mp3", verbose=False):
         # 线程局部代际会随进度回调传递，旧工作线程无法覆盖新任务界面状态。
         self._app_state.download_thread_context.task_id = handle.generation
         stats = self._app_state.batch_stats
@@ -755,7 +648,6 @@ class DownloadExecutor:
                     self._update_progress(-1, status_text, speed=speed, eta="")
 
             self._close_process(proc)
-            self._download_manager.clear_process(handle, proc)
             rc = proc.returncode if proc.returncode is not None else -1
             if handle.cancel_event.is_set():
                 self._log("[停止] 下载已取消", "warn")
@@ -764,14 +656,6 @@ class DownloadExecutor:
                 # 模式 2（同时输出音频）：下载完成后用 ffmpeg 从合并文件提取音频
                 if audio_mode == "2" and output_path and os.path.isfile(output_path):
                     self._extract_audio_from_video(output_path, audio_fmt)
-                if subtitle_cmd:
-                    self._update_progress(1, "视频完成，正在下载字幕...", "", "")
-                    self._run_subtitle_sidecar(handle, subtitle_cmd)
-                    if handle.cancel_event.is_set():
-                        self._log("[停止] 下载已取消", "warn")
-                        self._update_progress(0, "已停止", "", "")
-                        update_stats()
-                        return
                 stats["ok"] = 1
                 self._log("[完成] 下载成功！", "success")
                 self._update_progress(1, "下载完成", "", "")
@@ -888,18 +772,7 @@ class DownloadExecutor:
                             platform_override=effective_platform,
                             config_override=cmd_config,
                             bili_parts=bili_parts_for_url,
-                            include_subtitles=False,
                         )
-                        subtitle_cmd = None
-                        if cmd_config.get("DOWNLOAD_SUBTITLES", 0):
-                            subtitle_cmd = self._build_command(
-                                url,
-                                is_live=is_live_url(url, detected),
-                                platform_override=effective_platform,
-                                config_override=cmd_config,
-                                bili_parts=bili_parts_for_url,
-                                subtitle_only=True,
-                            )
                         proc = self._spawn(cmd)
                         if not self._download_manager.publish_process(handle, proc):
                             stopped = True
@@ -1024,14 +897,6 @@ class DownloadExecutor:
                         if rc == 0:
                             if audio_mode == "2" and output_path and os.path.isfile(output_path):
                                 self._extract_audio_from_video(output_path, audio_fmt)
-                            if subtitle_cmd:
-                                self._update_progress(1, f"批量下载 {index}/{len(urls)} - 正在下载字幕")
-                                self._run_subtitle_sidecar(handle, subtitle_cmd, prefix=f"[{index}/{len(urls)}] ")
-                                if handle.cancel_event.is_set():
-                                    stopped = True
-                                    self._log(f"[{index}/{len(urls)}] ✗ 已取消", "warn")
-                                    update_stats()
-                                    break
                             stats["ok"] += 1
                             self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
                             self._add_history(url, "", effective_platform, "success", output_path)

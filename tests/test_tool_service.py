@@ -3,7 +3,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from video_downloader.core.constants import LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS
 from video_downloader.services.tools import ToolService
 
 
@@ -15,30 +14,14 @@ class FakeAppState:
         self.updates.append(values)
 
 
-def create_service(tool_dir, build_subtitle_command=None, app_state=None, log=None):
+def create_service(tool_dir):
     return ToolService(
         tool_dir=tool_dir,
         exe_suffix=".exe",
-        app_state=app_state or FakeAppState(),
+        app_state=FakeAppState(),
         save_config=lambda: None,
-        log=log or (lambda message, level="info": None),
-        build_subtitle_command=build_subtitle_command,
+        log=lambda message, level="info": None,
     )
-
-
-class ImmediateThread:
-    def __init__(self, target, daemon=False):
-        self._target = target
-
-    def start(self):
-        self._target()
-
-
-class CompletedProcess:
-    def __init__(self, returncode=0, stdout="", stderr=""):
-        self.returncode = returncode
-        self.stdout = stdout
-        self.stderr = stderr
 
 
 class ToolServiceTests(unittest.TestCase):
@@ -123,155 +106,6 @@ class ToolServiceTests(unittest.TestCase):
             with patch.object(service, "open_folder", side_effect=lambda path: {"path": path}):
                 self.assertEqual(service.handle_tool_action("open-downloads"), {"path": tool_dir})
                 self.assertEqual(service.handle_tool_action("open-logs"), {"path": tool_dir / "logs"})
-
-    def test_download_subtitles_requires_ytdlp(self):
-        with tempfile.TemporaryDirectory() as directory:
-            service = create_service(Path(directory), build_subtitle_command=lambda **kwargs: [])
-            self.assertEqual(
-                service.download_subtitles(["https://youtube.com/watch?v=abc"], "all", "all,-live_chat"),
-                {"error": "未找到yt-dlp.exe"},
-            )
-
-    def test_download_subtitles_validates_type_and_language_length(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
-            (tool_dir / "yt-dlp.exe").touch()
-            service = create_service(tool_dir, build_subtitle_command=lambda **kwargs: [])
-
-            self.assertEqual(
-                service.download_subtitles(["https://youtube.com/watch?v=abc"], "bad", "all,-live_chat"),
-                {"error": "字幕类型无效"},
-            )
-            self.assertEqual(
-                service.download_subtitles(["https://youtube.com/watch?v=abc"], "all", "x" * 201),
-                {"error": "字幕语言设置长度不能超过 200 字符"},
-            )
-
-    def test_download_subtitles_runs_subtitle_command_without_updating_config(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
-            (tool_dir / "yt-dlp.exe").touch()
-            app_state = FakeAppState()
-            build_calls = []
-            logs = []
-
-            def build_subtitle_command(url, *, subtitle_type, subtitle_langs):
-                build_calls.append((url, subtitle_type, subtitle_langs))
-                return [str(tool_dir / "yt-dlp.exe"), "--skip-download", url]
-
-            service = create_service(
-                tool_dir,
-                build_subtitle_command=build_subtitle_command,
-                app_state=app_state,
-                log=lambda message, level="info": logs.append((message, level)),
-            )
-            with patch("video_downloader.services.tools.threading.Thread", ImmediateThread), \
-                 patch("video_downloader.services.tools.subprocess.run", return_value=CompletedProcess(
-                     stdout="[info] Writing video subtitles to: subtitles/video.zh.vtt",
-                 )) as run:
-                result = service.download_subtitles([
-                    " `https://youtube.com/watch?v=abc` ",
-                    "",
-                ], "manual", "zh.*")
-
-            self.assertEqual(result, {"ok": True, "total": 1})
-            self.assertEqual(build_calls, [("https://youtube.com/watch?v=abc", "manual", "zh.*")])
-            self.assertEqual(run.call_args.args[0], [str(tool_dir / "yt-dlp.exe"), "--skip-download", "https://youtube.com/watch?v=abc"])
-            self.assertEqual(app_state.updates, [])
-            self.assertTrue(any(level == "success" for _, level in logs))
-
-    def test_download_subtitles_counts_success_when_stdout_writes_with_stderr_warning(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
-            (tool_dir / "yt-dlp.exe").touch()
-            logs = []
-
-            def build_subtitle_command(url, *, subtitle_type, subtitle_langs):
-                return [str(tool_dir / "yt-dlp.exe"), "--skip-download", url]
-
-            service = create_service(
-                tool_dir,
-                build_subtitle_command=build_subtitle_command,
-                log=lambda message, level="info": logs.append((message, level)),
-            )
-            with patch("video_downloader.services.tools.threading.Thread", ImmediateThread), \
-                 patch("video_downloader.services.tools.subprocess.run", return_value=CompletedProcess(
-                     returncode=0,
-                     stdout="[info] Writing video subtitles to: subtitles/video.ja.vtt",
-                     stderr="WARNING: subtitles are only available when logged in",
-                 )):
-                result = service.download_subtitles(["https://youtube.com/watch?v=abc"], "manual", "ja.*")
-
-            self.assertEqual(result, {"ok": True, "total": 1})
-            self.assertTrue(any("字幕处理完成" in message for message, _ in logs))
-            self.assertTrue(any("成功1 未找到0 失败0" in message for message, _ in logs))
-
-    def test_download_subtitles_counts_zero_return_without_written_file_as_missing(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
-            (tool_dir / "yt-dlp.exe").touch()
-            logs = []
-
-            def build_subtitle_command(url, *, subtitle_type, subtitle_langs):
-                return [str(tool_dir / "yt-dlp.exe"), "--skip-download", url]
-
-            service = create_service(
-                tool_dir,
-                build_subtitle_command=build_subtitle_command,
-                log=lambda message, level="info": logs.append((message, level)),
-            )
-            with patch("video_downloader.services.tools.threading.Thread", ImmediateThread), \
-                 patch("video_downloader.services.tools.subprocess.run", return_value=CompletedProcess(
-                     returncode=0,
-                     stdout="[info] There are no subtitles for the requested languages",
-                 )):
-                result = service.download_subtitles(["https://youtube.com/watch?v=abc"], "manual", "ja.*")
-
-            self.assertEqual(result, {"ok": True, "total": 1})
-            self.assertTrue(any("未找到匹配字幕" in message for message, _ in logs))
-            self.assertTrue(any("成功0 未找到1 失败0" in message for message, _ in logs))
-
-    def test_download_subtitles_retries_recommended_languages_after_legacy_all_rate_limit(self):
-        with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
-            (tool_dir / "yt-dlp.exe").touch()
-            build_calls = []
-            logs = []
-
-            def build_subtitle_command(url, *, subtitle_type, subtitle_langs):
-                build_calls.append((url, subtitle_type, subtitle_langs))
-                return [str(tool_dir / "yt-dlp.exe"), "--sub-langs", subtitle_langs, "--skip-download", url]
-
-            service = create_service(
-                tool_dir,
-                build_subtitle_command=build_subtitle_command,
-                log=lambda message, level="info": logs.append((message, level)),
-            )
-            with patch("video_downloader.services.tools.threading.Thread", ImmediateThread), \
-                 patch("video_downloader.services.tools.subprocess.run", side_effect=[
-                     CompletedProcess(
-                         returncode=1,
-                         stderr="ERROR: Unable to download video subtitles for 'ab': HTTP Error 429: Too Many Requests",
-                     ),
-                     CompletedProcess(
-                         returncode=0,
-                         stdout="[info] Writing video subtitles to: subtitles/video.ja.vtt",
-                     ),
-                 ]) as run:
-                result = service.download_subtitles(
-                    ["https://youtube.com/watch?v=abc"],
-                    "all",
-                    LEGACY_ALL_SUBTITLE_LANGS,
-                )
-
-            self.assertEqual(result, {"ok": True, "total": 1})
-            self.assertEqual(build_calls, [
-                ("https://youtube.com/watch?v=abc", "all", LEGACY_ALL_SUBTITLE_LANGS),
-                ("https://youtube.com/watch?v=abc", "all", RECOMMENDED_SUBTITLE_LANGS),
-            ])
-            self.assertEqual(run.call_count, 2)
-            self.assertTrue(any("改用常用字幕重试" in message for message, _ in logs))
-            self.assertTrue(any(level == "success" for _, level in logs))
 
     def test_handle_tool_action_rejects_unknown_action(self):
         with tempfile.TemporaryDirectory() as directory:

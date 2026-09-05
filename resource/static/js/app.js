@@ -26,17 +26,6 @@ const PAGE_TITLES = {
   download: '下载任务', logs: '运行日志', settings: '下载设置', history: '下载历史',
   tools: '实用工具', help: '使用帮助', about: '关于软件'
 };
-const LEGACY_ALL_SUBTITLE_LANGS = 'all,-live_chat';
-const DEFAULT_SUBTITLE_LANGS = 'ja.*,zh.*,zh-Hans,zh-Hant,en.*,ko.*';
-const SUBTITLE_LANG_PRESETS = [
-  [DEFAULT_SUBTITLE_LANGS, '常用字幕（推荐）'],
-  ['zh.*,zh-Hans,zh-Hant', '中文'],
-  ['en.*', '英文'],
-  ['ja.*', '日文'],
-  ['ko.*', '韩文'],
-  ['zh.*,zh-Hans,zh-Hant,en.*', '中文 + 英文'],
-  ['custom', '自定义'],
-];
 
 function $(id){return document.getElementById(id);}
 
@@ -123,8 +112,7 @@ function init() {
   fillSelect('s_audiofmt', [['m4a','m4a(原生)'],['mp3','MP3'],['wav','WAV']]);
   fillSelect('s_hwaccel', [['cpu','CPU软编码'],['h264_nvenc','N卡 NVENC'],['h264_qsv','Intel QSV'],['h264_amf','AMD AMF']]);
   fillSelect('s_browser', [['chrome','Chrome'],['edge','Edge'],['firefox','Firefox'],['brave','Brave'],['opera','Opera']]);
-  fillSelect('s_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
-  fillSelect('tool_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
+
   // 标签页切换事件绑定
   document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
@@ -287,9 +275,6 @@ function applyConfig(s) {
   if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
   setSwitch('sw_meta', s.EMBED_META);
   setSwitch('sw_thumb', s.DOWNLOAD_THUMB);
-  setSwitch('sw_subtitles', s.DOWNLOAD_SUBTITLES);
-  if(s.SUBTITLE_TYPE !== undefined) $('s_subtitle_type').value = s.SUBTITLE_TYPE;
-  applySubtitleLangsValue(s.SUBTITLE_LANGS || DEFAULT_SUBTITLE_LANGS);
   setSwitch('sw_winfn', s.WIN_FILENAMES);
   setSwitch('sw_strict', s.STRICT_FILENAME);
   setSwitch('sw_nicocmt', s.NICO_COMMENTS);
@@ -301,7 +286,6 @@ function applyConfig(s) {
   setSwitch('sw_audioDelSrc', s.DEL_SRC_AFTER_CONVERT);
   setSwitch('sw_audioRecursive', s.AUDIO_RECURSIVE);
   toggleCookieMode();
-  updateSubtitleOptions();
 }
 
 /** 根据值设置开关的开关状态。 */
@@ -320,142 +304,6 @@ function onAudioModeChange() {
   } else {
     fmtEl.disabled = false;
     fmtEl.style.opacity = '1';
-  }
-}
-
-/** 字幕开关切换时更新字幕配置控件的可用状态。 */
-function onSubtitleToggle(el) {
-  toggleSwitch(el);
-  updateSubtitleOptions();
-}
-
-function updateSubtitleOptions() {
-  const enabled = isOn('sw_subtitles');
-  const preset = $('s_subtitle_lang_preset');
-  const custom = $('s_subtitle_langs');
-  const customMode = preset && preset.value === 'custom';
-  ['s_subtitle_type', 's_subtitle_lang_preset'].forEach(id => {
-    const el = $(id);
-    if(!el) return;
-    el.disabled = !enabled;
-    el.style.opacity = enabled ? '1' : '0.4';
-  });
-  if(custom) {
-    custom.style.display = customMode ? 'block' : 'none';
-    custom.disabled = !enabled || !customMode;
-    custom.style.opacity = enabled && customMode ? '1' : '0.4';
-  }
-}
-
-function applySubtitleLangsValue(value) {
-  const preset = $('s_subtitle_lang_preset');
-  const custom = $('s_subtitle_langs');
-  if(!preset || !custom) return;
-  const langs = normalizeSubtitleLangsValue(value);
-  const matchesPreset = Array.from(preset.options).some(option => option.value === langs && option.value !== 'custom');
-  preset.value = matchesPreset ? langs : 'custom';
-  custom.value = langs;
-}
-
-function getSubtitleLangsValue() {
-  const preset = $('s_subtitle_lang_preset');
-  if(preset && preset.value !== 'custom') return preset.value;
-  const custom = $('s_subtitle_langs');
-  return custom && custom.value.trim() ? custom.value.trim() : DEFAULT_SUBTITLE_LANGS;
-}
-
-function normalizeSubtitleLangsValue(value) {
-  const langs = (value || '').trim();
-  if(!langs || langs === LEGACY_ALL_SUBTITLE_LANGS) return DEFAULT_SUBTITLE_LANGS;
-  return langs;
-}
-
-function onSubtitleLangPresetChange() {
-  const preset = $('s_subtitle_lang_preset');
-  const custom = $('s_subtitle_langs');
-  if(preset && custom && preset.value !== 'custom') custom.value = preset.value;
-  updateSubtitleOptions();
-}
-
-function applyToolSubtitleLangsValue(value) {
-  const preset = $('tool_subtitle_lang_preset');
-  const custom = $('tool_subtitle_langs');
-  if(!preset || !custom) return;
-  const langs = normalizeSubtitleLangsValue(value);
-  const matchesPreset = Array.from(preset.options).some(option => option.value === langs && option.value !== 'custom');
-  preset.value = matchesPreset ? langs : 'custom';
-  custom.value = langs;
-  updateToolSubtitleLangOptions();
-}
-
-function getToolSubtitleLangsValue() {
-  const preset = $('tool_subtitle_lang_preset');
-  if(preset && preset.value !== 'custom') return preset.value;
-  const custom = $('tool_subtitle_langs');
-  return custom && custom.value.trim() ? custom.value.trim() : DEFAULT_SUBTITLE_LANGS;
-}
-
-function updateToolSubtitleLangOptions() {
-  const preset = $('tool_subtitle_lang_preset');
-  const custom = $('tool_subtitle_langs');
-  if(!preset || !custom) return;
-  const customMode = preset.value === 'custom';
-  custom.style.display = customMode ? 'block' : 'none';
-  custom.disabled = !customMode;
-}
-
-function onToolSubtitleLangPresetChange() {
-  const preset = $('tool_subtitle_lang_preset');
-  const custom = $('tool_subtitle_langs');
-  if(preset && custom && preset.value !== 'custom') custom.value = preset.value;
-  updateToolSubtitleLangOptions();
-}
-
-function showSubtitleDownloader() {
-  const dlg = $('subtitleDownloadDialog');
-  if(!dlg) return;
-  const type = $('tool_subtitle_type');
-  if(type && $('s_subtitle_type')) type.value = $('s_subtitle_type').value || 'all';
-  applyToolSubtitleLangsValue(getSubtitleLangsValue());
-  const sourceInput = $('urlInput');
-  const targetInput = $('subtitleUrlInput');
-  if(sourceInput && targetInput && !targetInput.value.trim()) {
-    targetInput.value = sourceInput.value.trim();
-  }
-  dlg.classList.add('show');
-  dlg.scrollIntoView({behavior:'smooth', block:'start'});
-  if(targetInput) targetInput.focus();
-}
-
-function hideSubtitleDownloader() {
-  const dlg = $('subtitleDownloadDialog');
-  if(dlg) dlg.classList.remove('show');
-}
-
-async function startSubtitleDownload() {
-  const input = $('subtitleUrlInput');
-  const urls = input ? input.value.split(/\r?\n/).map(cleanOneUrl).filter(Boolean) : [];
-  if(urls.length === 0) { showToolStatus('请输入至少一个视频链接', 'error'); return; }
-  const subtitleLangs = getToolSubtitleLangsValue();
-  if(!subtitleLangs) { showToolStatus('请输入字幕语言，或选择一个预设', 'error'); return; }
-  const body = {
-    urls,
-    subtitle_type: $('tool_subtitle_type').value,
-    subtitle_langs: subtitleLangs,
-  };
-  showToolStatus('正在启动字幕下载...', 'working');
-  try { await saveSettingsNoAlert(); } catch(e) { showToolStatus('设置保存失败: ' + e.message, 'error'); return; }
-  try {
-    const r = await api('/api/download-subtitles', {method:'POST', body:JSON.stringify(body)});
-    if(r.error) { showToolStatus(r.error, 'error'); showToast(r.error, 'error'); return; }
-    const total = r.total || urls.length;
-    const msg = `已提交字幕下载（${total} 个链接），请在日志查看最终结果`;
-    addLog('logBox', {time:new Date().toTimeString().slice(0,8), msg:`[字幕下载] ${msg}`, level:'info'});
-    showToolStatus(msg, '');
-    showToast(msg, 'working');
-  } catch(e) {
-    showToolStatus('字幕下载启动失败: ' + e.message, 'error');
-    showToast(e.message, 'error');
   }
 }
 
@@ -490,9 +338,6 @@ function collectCfg() {
     LIVE_STREAM_METHOD: $('s_live_stream_method').value,
     EMBED_META: isOn('sw_meta')?1:0,
     DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
-    DOWNLOAD_SUBTITLES: isOn('sw_subtitles')?1:0,
-    SUBTITLE_TYPE: $('s_subtitle_type').value,
-    SUBTITLE_LANGS: getSubtitleLangsValue(),
     WIN_FILENAMES: isOn('sw_winfn')?1:0,
     STRICT_FILENAME: isOn('sw_strict')?1:0,
     NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
