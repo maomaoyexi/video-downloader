@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 from video_downloader.web.rendering import SESSION_TOKEN_PLACEHOLDER, render_html_page, serve_static_file
@@ -75,6 +76,23 @@ class WebPageTests(unittest.TestCase):
         # reset-config 使用 POST 在 JS 中
         self.assertIn("api('/api/reset-config', {method:'POST'})", js)
         self.assertIn("api('/api/start-withny-live'", js)
+
+    def test_settings_javascript_only_references_existing_form_controls(self):
+        """设置加载/保存不能读取模板中不存在的控件。"""
+        _skip_if_frozen()
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(base, "resource", "templates", "index.html"), "r", encoding="utf-8") as f:
+            html = f.read()
+        with open(os.path.join(base, "resource", "static", "js", "app.js"), "r", encoding="utf-8") as f:
+            js = f.read()
+
+        settings_js = js[js.index("function applyConfig"):js.index("async function saveSettings()")]
+        referenced_ids = set(
+            re.findall(r"(?:\$|isOn|setSwitch)\('([^']+)'", settings_js)
+        )
+        template_ids = set(re.findall(r'id="([^"]+)"', html))
+
+        self.assertEqual(set(), referenced_ids - template_ids)
 
     def test_only_light_dark_theme_remains(self):
         """配色切换（Everforest ↔ 中性）已整套删除，只剩明暗两态。"""

@@ -276,6 +276,7 @@ function applyConfig(s) {
   $('s_browser').value = s.BROWSER_NAME;
   $('s_profile').value = s.BROWSER_PROFILE;
   $('s_hwaccel').value = s.HWACCEL;
+  if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
   setSwitch('sw_meta', s.EMBED_META);
   setSwitch('sw_thumb', s.DOWNLOAD_THUMB);
   setSwitch('sw_winfn', s.WIN_FILENAMES);
@@ -288,17 +289,6 @@ function applyConfig(s) {
   if(s.AUDIO_OUTPUT_FORMAT !== undefined && $('audioOutFormat')) $('audioOutFormat').value = s.AUDIO_OUTPUT_FORMAT;
   setSwitch('sw_audioDelSrc', s.DEL_SRC_AFTER_CONVERT);
   setSwitch('sw_audioRecursive', s.AUDIO_RECURSIVE);
-  // YouTube 直播设置
-  if (s.YOUTUBE_LIVE_MODE !== undefined) {
-    $('s_youtube_live_mode').value = s.YOUTUBE_LIVE_MODE;
-  } else {
-    $('s_youtube_live_mode').value = 'dvr_from_start';
-  }
-  var liveWait = s.YOUTUBE_LIVE_WAIT_INTERVAL || 60;
-  $('s_youtube_live_wait').value = liveWait;
-  $('live_wait_val').textContent = liveWait + '秒';
-  setSwitch('sw_live_mpegts', s.YOUTUBE_LIVE_USE_MPEGTS !== undefined ? s.YOUTUBE_LIVE_USE_MPEGTS : 1);
-  setSwitch('sw_live_retries', s.YOUTUBE_LIVE_RETRIES_INFINITE !== undefined ? s.YOUTUBE_LIVE_RETRIES_INFINITE : 1);
   toggleCookieMode();
   paintRange($('s_threads'));
   paintRange($('s_speed'));
@@ -345,6 +335,7 @@ function collectCfg() {
     BROWSER_NAME: $('s_browser').value,
     BROWSER_PROFILE: $('s_profile').value,
     HWACCEL: $('s_hwaccel').value,
+    LIVE_STREAM_METHOD: $('s_live_stream_method').value,
     EMBED_META: isOn('sw_meta')?1:0,
     DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
     WIN_FILENAMES: isOn('sw_winfn')?1:0,
@@ -353,10 +344,6 @@ function collectCfg() {
     NICO_RECODE: isOn('sw_nicorec')?1:0,
     ENABLE_LOG: isOn('sw_log')?1:0,
     BILI_MULTIP_POLICY: $('s_bili_policy').value,
-    YOUTUBE_LIVE_MODE: $('s_youtube_live_mode').value,
-    YOUTUBE_LIVE_WAIT_INTERVAL: parseInt($('s_youtube_live_wait').value),
-    YOUTUBE_LIVE_USE_MPEGTS: isOn('sw_live_mpegts') ? 1 : 0,
-    YOUTUBE_LIVE_RETRIES_INFINITE: isOn('sw_live_retries') ? 1 : 0,
   };
 }
 
