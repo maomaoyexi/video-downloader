@@ -11,7 +11,13 @@ class AppState:
     sse_clients: list = field(default_factory=list)
     log_history: list = field(default_factory=list)
     download_thread_context: Any = field(default_factory=threading.local)
-    progress_data: dict = field(default_factory=lambda: {"percent": 0, "status": "就绪", "speed": "", "eta": ""})
+    progress_data: dict = field(default_factory=lambda: {
+        "percent": 0,
+        "status": "就绪",
+        "speed": "",
+        "eta": "",
+        "stage": "video",
+    })
     batch_stats: dict = field(default_factory=lambda: {"ok": 0, "fail": 0, "total": 0, "current": 0})
 
     def replace_config(self, values):

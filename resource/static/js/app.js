@@ -565,7 +565,13 @@ async function doStartBatch(biliPartsMap) {
 async function stopDl() {
   const r = await api('/api/stop', {method:'POST'});
   if(r.error) { showToast(r.error, 'error'); return; }
-  if(r.stopping) {
+  if(r.stopped) {
+    download_running = false;
+    $('btnStart').disabled = false;
+    $('btnStop').disabled = true;
+    $('topline').style.width = '0';
+    setStatus('已停止', 'idle');
+  } else if(r.stopping) {
     download_running = true;
     $('btnStart').disabled = true;
     $('btnStop').disabled = true;
@@ -602,21 +608,26 @@ function blipFor(status) {
 /** 渲染进度：顶部细线 + 进度条 + 百分比。 */
 function renderProgress(d) {
   const fill = $('progressFill');
+  const topline = $('topline');
   const pctText = $('progressText');
+  const stage = d.stage === 'audio' ? 'audio' : 'video';
+  fill.classList.toggle('stage-audio', stage === 'audio');
+  topline.classList.toggle('stage-audio', stage === 'audio');
+  fill.title = stage === 'audio' ? '音频下载 / 处理进度' : '视频下载进度';
   if(d.percent < 0) {
     // 直播模式：无限进度动画
     fill.classList.add('live');
     fill.classList.remove('progressing', 'complete');
     fill.dataset.completed = '';
     pctText.textContent = 'LIVE';
-    $('topline').style.width = '100%';
+    topline.style.width = '100%';
   } else if(d.percent !== undefined) {
     fill.classList.remove('live');
     const pct = Math.max(0, Math.min(100, Math.round(d.percent * 100)));
     fill.style.width = pct + '%';
     fill.classList.toggle('progressing', pct > 0 && pct < 100 && download_running);
     pctText.textContent = pct + '%';
-    $('topline').style.width = download_running ? pct + '%' : '0';
+    topline.style.width = download_running ? pct + '%' : '0';
 
     // 只在首次到达 100% 时播放完成脉冲，后续 SSE 同值不会反复闪烁。
     if(pct >= 100 && fill.dataset.completed !== '1') {
@@ -671,6 +682,31 @@ function toggleConsole(consoleId, boxId, btnId) {
 function clearConsole() { $('logBox').innerHTML = ''; }
 /** 清空工具日志面板内容。 */
 function clearToolConsole() { $('toolLogBox').innerHTML = ''; }
+
+/** 复制最近一次实际传递给 yt-dlp 的下载命令。 */
+async function copyCurrentCommand() {
+  try {
+    const result = await api('/api/current-command');
+    if(result.error) { showToast(result.error, 'error'); return; }
+    const command = result.command || '';
+    if(!command) { showToast('当前还没有可复制的 yt-dlp 下载命令', 'error'); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(command);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = command;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+    showToast(result.redacted ? '命令已复制（密码等敏感参数已隐藏）' : '当前下载命令已复制', 'success');
+  } catch(e) {
+    showToast('复制命令失败: ' + e.message, 'error');
+  }
+}
 
 /** 写入一条日志，两个面板保持同步。 */
 function addLog(entry) {

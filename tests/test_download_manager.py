@@ -49,6 +49,42 @@ class DownloadManagerTests(unittest.TestCase):
         self.assertEqual(first.generation, handle.generation)
         self.assertEqual(second.generation, handle.generation)
 
+    def test_complete_stop_releases_slot_and_stale_finish_is_ignored(self):
+        manager = DownloadManager()
+        old_handle = manager.begin("single")
+        ticket = manager.request_stop()
+        self.assertTrue(manager.complete_stop(ticket.generation))
+        self.assertFalse(manager.snapshot()["running"])
+        new_handle = manager.begin("single")
+        self.assertIsNotNone(new_handle)
+        self.assertFalse(manager.finish(old_handle))
+        self.assertTrue(manager.is_current(new_handle))
+
+    def test_complete_stop_after_background_finish_reports_stopped(self):
+        """停止请求后后台线程抢先 finish()，complete_stop 仍应返回 True。"""
+        manager = DownloadManager()
+        handle = manager.begin("single")
+        ticket = manager.request_stop()
+        # 后台线程先一步收尾，释放槽位
+        self.assertTrue(manager.finish(handle))
+        self.assertFalse(manager.snapshot()["running"])
+        # 此时 complete_stop 不应误报 False（否则前端按钮会卡在置灰）
+        self.assertTrue(manager.complete_stop(ticket.generation))
+        self.assertFalse(manager.snapshot()["running"])
+
+    def test_complete_stop_does_not_clobber_new_task(self):
+        manager = DownloadManager()
+        old_handle = manager.begin("single")
+        ticket = manager.request_stop()
+        # 后台线程 finish 后，新任务紧接着开始（代际号递增）
+        self.assertTrue(manager.finish(old_handle))
+        new_handle = manager.begin("single")
+        self.assertIsNotNone(new_handle)
+        # 旧停止请求的 complete_stop 不得干扰新任务
+        self.assertFalse(manager.complete_stop(ticket.generation))
+        self.assertTrue(manager.snapshot()["running"])
+        self.assertTrue(manager.is_current(new_handle))
+
     def test_stale_handle_cannot_clear_current_process(self):
         manager = DownloadManager()
         old_handle = manager.begin("single")

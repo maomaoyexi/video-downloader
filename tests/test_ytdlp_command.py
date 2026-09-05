@@ -8,6 +8,17 @@ from video_downloader.core.platform import detect_platform
 
 
 class YtdlpCommandTests(unittest.TestCase):
+    def test_progress_template_includes_media_stage_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://youtube.com/watch?v=abc",
+                DEFAULT_CONFIG,
+                Path(directory),
+            )
+        self.assertIn("--progress-template", cmd)
+        template = cmd[cmd.index("--progress-template") + 1]
+        self.assertIn("__VD_STAGE__%(info.vcodec)s|%(info.acodec)s", template)
+
     def test_youtube_live_command_uses_live_options_and_path(self):
         with tempfile.TemporaryDirectory() as directory:
             cmd = build_ytdlp_cmd(
@@ -84,6 +95,40 @@ class YtdlpCommandTests(unittest.TestCase):
                 platform_override="TwitCasting",
             )
         self.assertNotIn("--video-password", cmd)
+
+    def test_twitcasting_hls_uses_ffmpeg_downloader_when_requested(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://twitcasting.tv/someuser/movie/123",
+                DEFAULT_CONFIG,
+                Path(directory),
+                is_live=False,
+                platform_override="TwitCasting",
+                use_ffmpeg_for_hls=True,
+            )
+        self.assertIn("--downloader", cmd)
+        self.assertEqual(cmd[cmd.index("--downloader") + 1], "m3u8:ffmpeg")
+
+    def test_twitcasting_default_uses_native_hls_downloader(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://twitcasting.tv/someuser/movie/123",
+                DEFAULT_CONFIG,
+                Path(directory),
+                is_live=False,
+                platform_override="TwitCasting",
+            )
+        self.assertNotIn("--downloader", cmd)
+
+    def test_other_platforms_keep_default_hls_downloader(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://youtube.com/watch?v=abc",
+                DEFAULT_CONFIG,
+                Path(directory),
+                platform_override="YouTube",
+            )
+        self.assertNotIn("--downloader", cmd)
 
     # ── nicochannel ──────────────────────────────────────────────
 

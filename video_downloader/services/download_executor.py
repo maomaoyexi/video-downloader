@@ -66,6 +66,51 @@ class DownloadExecutor:
         self._password_value: str | None = None
         self._password_lock = threading.Lock()
         self._waiting_for_password = False
+        self._command_lock = threading.Lock()
+        self._current_ytdlp_command = None
+
+    def _remember_ytdlp_command(self, command):
+        with self._command_lock:
+            self._current_ytdlp_command = list(command)
+
+    def get_current_ytdlp_command(self):
+        """返回最近一次实际执行的 yt-dlp 命令，敏感参数值会被遮盖。"""
+        with self._command_lock:
+            command = list(self._current_ytdlp_command or [])
+        if not command:
+            return {"error": "当前还没有可复制的 yt-dlp 下载命令"}
+        sensitive_options = {"--video-password", "--password"}
+        masked = []
+        hide_next = False
+        for value in command:
+            if hide_next:
+                masked.append("***")
+                hide_next = False
+                continue
+            masked.append(str(value))
+            if value in sensitive_options:
+                hide_next = True
+        return {
+            "ok": True,
+            "command": subprocess.list2cmdline(masked),
+            "redacted": masked != [str(value) for value in command],
+        }
+
+    @staticmethod
+    def _with_ffmpeg_downloader(cmd):
+        """为已构建好的 yt-dlp 命令追加 --downloader m3u8:ffmpeg（幂等）。
+
+        TwitCasting 的 fMP4 录像可能在同一 m3u8 播放列表中包含多个初始化片段，
+        原生 hlsnative 下载器会因此报 "Initialization fragment found after media
+        fragments"。此时改用 FFmpeg 下载 m3u8 即可兼容。若命令已带该选项则原样返回。
+        """
+        if not cmd:
+            return list(cmd)
+        if "--downloader" in cmd and "m3u8:ffmpeg" in cmd:
+            return list(cmd)
+        # yt-dlp 允许选项出现在 URL 之后（如本工程末尾追加的 --verbose），
+        # 直接追加到末尾即可生效。
+        return list(cmd) + ["--downloader", "m3u8:ffmpeg"]
 
     def start_download(self, url, bili_parts=None, tc_password=None):
         url = clean_url(url)
@@ -116,7 +161,12 @@ class DownloadExecutor:
         self._app_state.publish({"type": "stats", "data": dict(stats)})
         audio_mode = config_snapshot.get("AUDIO_MODE", "0")
         audio_fmt = config_snapshot.get("AUDIO_FORMAT", "mp3")
-        self._update_progress(0, "正在连接直播..." if is_live_download else "正在下载...")
+        initial_stage = "audio" if audio_mode == "3" else "video"
+        self._update_progress(
+            0,
+            "正在连接直播..." if is_live_download else "正在下载...",
+            stage=initial_stage,
+        )
         self._log(f"[下载] {url}", "info")
         try:
             threading.Thread(
@@ -352,7 +402,13 @@ class DownloadExecutor:
         # 无批量下载在等待 → 当作单链接密码重试，启动新下载任务
         return self.start_download(url, tc_password=password)
 
-    def _wait_for_password(self, url: str, platform: str, timeout: float = 120.0) -> str | None:
+    def _wait_for_password(
+        self,
+        url: str,
+        platform: str,
+        timeout: float = 120.0,
+        reason: str = "retry",
+    ) -> str | None:
         """阻塞等待用户通过前端弹窗提供密码。返回密码或 None（超时/取消）。"""
         with self._password_lock:
             self._waiting_for_password = True
@@ -361,7 +417,7 @@ class DownloadExecutor:
         self._emit_event("password_required", {
             "url": url,
             "platform": platform,
-            "reason": "retry",
+            "reason": reason,
         })
         received = self._password_event.wait(timeout)
         with self._password_lock:
@@ -372,7 +428,48 @@ class DownloadExecutor:
             self._log(f"[{platform}] 等待密码超时，跳过此链接", "warn")
         return pw if received else None
 
-    def _extract_audio_from_video(self, video_path, audio_fmt):
+    @staticmethod
+    def _media_stage_from_line(line, fallback="video"):
+        """从自定义 yt-dlp 进度标记中识别当前下载的是视频还是音频。"""
+        match = re.search(r"__VD_STAGE__([^|\s]+)\|([^\s]+)", line)
+        if not match:
+            return fallback
+        video_codec, audio_codec = (value.lower() for value in match.groups())
+        empty_values = {"none", "null", "na", "n/a", "unknown"}
+        if video_codec in empty_values and audio_codec not in empty_values:
+            return "audio"
+        if video_codec not in empty_values:
+            return "video"
+        return fallback
+
+    @staticmethod
+    def _progress_metrics_from_line(line):
+        """兼容自定义模板和 yt-dlp 默认输出，提取速度与剩余时间。"""
+        speed = ""
+        eta = ""
+        speed_match = re.search(r"\bat\s+(.+?)\s+ETA(?:\s|$)", line)
+        if speed_match:
+            speed = speed_match.group(1).strip().replace(" ", "")
+        else:
+            legacy_speed = re.search(r"(\d+(?:\.\d+)?\s*[KMGT]?i?B/s)", line)
+            if legacy_speed:
+                speed = legacy_speed.group(1).replace(" ", "")
+        eta_match = re.search(r"\bETA\s+(.+?)(?:\s+__VD_STAGE__|$)", line)
+        if eta_match:
+            eta = eta_match.group(1).strip()
+        # yt-dlp 未知速度/剩余时间会带单位后缀，如 "Unknown B/s"；归一化后再判断，
+        # 避免把 "UnknownB/s" 这类垃圾值显示到前端速度指示器上。
+        def _is_placeholder(value):
+            lowered = value.lower()
+            return lowered in {"", "unknown", "n/a", "na", "none"} or lowered.startswith("unknown")
+
+        if _is_placeholder(speed):
+            speed = ""
+        if _is_placeholder(eta):
+            eta = ""
+        return speed, eta
+
+    def _extract_audio_from_video(self, video_path, audio_fmt, handle=None, status="正在提取音频..."):
         """用 ffmpeg 从视频文件中提取指定格式的纯音频。
 
         仅用于音频模式 2（同时输出音频），从合并后的视频文件中提取音频轨。
@@ -397,31 +494,72 @@ class DownloadExecutor:
             "wav": "pcm_s16le",
         }
         codec = codec_map.get(audio_fmt, "libmp3lame")
-        extract_cmd = [ffmpeg, "-y", "-i", video_path, "-vn", "-c:a", codec]
+        extract_cmd = [
+            ffmpeg, "-y", "-i", video_path, "-vn", "-c:a", codec,
+            "-progress", "pipe:1", "-nostats",
+        ]
         if audio_fmt == "mp3":
             extract_cmd += ["-q:a", "2"]
         extract_cmd.append(audio_path)
+        proc = None
+        succeeded = False
+        duration = 0.0
         try:
+            self._update_progress(0, status, "", "", stage="audio")
             startupinfo, creationflags = _win_startup_info()
             proc = subprocess.Popen(
                 extract_cmd, cwd=self._tool_dir,
-                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 startupinfo=startupinfo, creationflags=creationflags,
             )
-            # 根据视频文件大小动态估算超时（每 GB 最多 120 秒，最少 120 秒，最多 1800 秒）
-            try:
-                file_size = os.path.getsize(video_path)
-            except OSError:
-                file_size = 0
-            dynamic_timeout = max(120, min(int(file_size / (1024 * 1024 * 1024) * 120), 1800)) if file_size > 0 else 300
-            _, stderr = proc.communicate(timeout=dynamic_timeout)
-            if proc.returncode == 0 and os.path.isfile(audio_path):
+            if handle is not None and not self._download_manager.publish_process(handle, proc):
+                self.kill_process_tree(proc)
+                return False
+            line_q, read_done = self._start_reader(proc)
+            while not read_done.is_set() or not line_q.empty():
+                if handle is not None and handle.cancel_event.is_set():
+                    self.kill_process_tree(proc)
+                    break
+                try:
+                    line = line_q.get(timeout=0.1).strip()
+                except queue.Empty:
+                    continue
+                duration_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", line)
+                if duration_match:
+                    hours, minutes, seconds = duration_match.groups()
+                    duration = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+                    continue
+                time_match = re.match(r"out_time_(?:ms|us)=(\d+)", line)
+                if time_match and duration > 0:
+                    elapsed = int(time_match.group(1)) / 1_000_000
+                    self._update_progress(
+                        min(elapsed / duration, 0.99),
+                        status,
+                        "",
+                        "",
+                        stage="audio",
+                    )
+            self._close_process(proc)
+            if handle is not None and handle.cancel_event.is_set():
+                self._log("[音频提取] 已取消", "warn")
+                return False
+            succeeded = proc.returncode == 0 and os.path.isfile(audio_path)
+            if succeeded:
                 self._log(f"[音频提取] 已生成: {os.path.basename(audio_path)}", "success")
             else:
-                err = stderr.decode("utf-8", errors="replace").strip()[-200:] if stderr else ""
-                self._log(f"[音频提取] 失败: {err}", "warn")
+                self._log(f"[音频提取] 失败，退出码: {proc.returncode}", "warn")
         except Exception as exc:
             self._log(f"[音频提取] 异常: {exc}", "warn")
+            self.kill_process_tree(proc)
+        finally:
+            if handle is not None and proc is not None:
+                self._download_manager.clear_process(handle, proc)
+            if not succeeded and os.path.isfile(audio_path):
+                try:
+                    os.unlink(audio_path)
+                except OSError:
+                    pass
+        return succeeded
 
     def fetch_bili_playlist(self, url):
         """获取 Bilibili 视频的分P列表。
@@ -508,6 +646,7 @@ class DownloadExecutor:
         video_title = ""
         output_path = ""
         proc = None
+        current_stage = "audio" if audio_mode == "3" else "video"
         try:
             # 弹窗重试时记录完整命令，方便我debug。
             if verbose:
@@ -518,6 +657,7 @@ class DownloadExecutor:
                 except (ValueError, IndexError):
                     pass
                 self._log(f"[调试] yt-dlp 命令: {' '.join(masked)}", "info")
+            self._remember_ytdlp_command(cmd)
             proc = self._spawn(cmd)
             if not self._download_manager.publish_process(handle, proc):
                 self.kill_process_tree(proc)
@@ -530,6 +670,7 @@ class DownloadExecutor:
             live_frag = ""
             password_required = False
             password_retry = False
+            init_fragment_error = False
 
             def fmt_live_status():
                 elapsed = int(time.time() - live_start_time)
@@ -548,7 +689,7 @@ class DownloadExecutor:
                 except queue.Empty:
                     if live_connected:
                         status_text, speed = fmt_live_status()
-                        self._update_progress(-1, status_text, speed=speed, eta="")
+                        self._update_progress(-1, status_text, speed=speed, eta="", stage=current_stage)
                     continue
                 line = line.strip()
                 if not line:
@@ -557,7 +698,7 @@ class DownloadExecutor:
                 if is_live_download and not live_connected and ("Connecting to WebSocket" in line or "Downloading m3u8" in line):
                     live_connected = True
                     live_start_time = time.time()
-                    self._update_progress(-1, "直播录制中...")
+                    self._update_progress(-1, "直播录制中...", stage=current_stage)
 
                 is_error = "ERROR" in line
                 is_warning = "WARNING" in line
@@ -570,6 +711,10 @@ class DownloadExecutor:
                 # 限定 TwitCasting 平台，避免其他平台因格式不匹配误触发密码弹窗。
                 if is_error and "format is not available" in line.lower() and effective_platform == "TwitCasting":
                     password_retry = True
+                # TwitCasting fMP4 播放列表含多个初始化片段时原生下载器会失败，
+                # 标记后改用 FFmpeg 下载 m3u8 重试。
+                if is_error and "Initialization fragment found after media fragments" in line and effective_platform == "TwitCasting":
+                    init_fragment_error = True
                 has_pct = bool(re.search(r"\d+(?:\.\d+)?%", line))
                 has_ffmpeg_progress = is_live_download and (
                     re.search(r"(?:size|Lsize)=\s*\S+", line)
@@ -607,12 +752,13 @@ class DownloadExecutor:
 
                 progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
                 if progress_match:
-                    speed_match = re.search(r"(\d+(?:\.\d+)?\s*[KMG]iB/s)", line)
-                    eta_match = re.search(r"ETA (\d+:\d+)", line)
+                    current_stage = self._media_stage_from_line(line, current_stage)
+                    speed, eta = self._progress_metrics_from_line(line)
                     self._update_progress(
                         float(progress_match.group(1)) / 100,
-                        speed=speed_match.group(1).replace(" ", "") if speed_match else "",
-                        eta=eta_match.group(1) if eta_match else "",
+                        speed=speed,
+                        eta=eta,
+                        stage=current_stage,
                     )
                 elif is_live_progress:
                     if has_ytdlp_live:
@@ -645,7 +791,7 @@ class DownloadExecutor:
                         if fragment_match:
                             live_frag = f"分片 {fragment_match.group(1)}"
                     status_text, speed = fmt_live_status()
-                    self._update_progress(-1, status_text, speed=speed, eta="")
+                    self._update_progress(-1, status_text, speed=speed, eta="", stage=current_stage)
 
             self._close_process(proc)
             rc = proc.returncode if proc.returncode is not None else -1
@@ -655,13 +801,31 @@ class DownloadExecutor:
             elif rc == 0:
                 # 模式 2（同时输出音频）：下载完成后用 ffmpeg 从合并文件提取音频
                 if audio_mode == "2" and output_path and os.path.isfile(output_path):
-                    self._extract_audio_from_video(output_path, audio_fmt)
+                    self._extract_audio_from_video(output_path, audio_fmt, handle=handle)
+                if handle.cancel_event.is_set():
+                    self._log("[停止] 下载已取消", "warn")
+                    self._update_progress(0, "已停止", "", "", stage="audio" if audio_mode == "2" else current_stage)
+                    return
                 stats["ok"] = 1
                 self._log("[完成] 下载成功！", "success")
                 self._update_progress(1, "下载完成", "", "")
                 self._add_history(url, video_title, effective_platform, "success", output_path)
                 update_stats()
             else:
+                # TwitCasting 多初始化片段：原生下载器失败，改用 FFmpeg 重试一次。
+                if init_fragment_error and effective_platform == "TwitCasting" and "--downloader" not in cmd:
+                    self._log(f"[{effective_platform}] 检测到多初始化片段，改用 FFmpeg 下载器重试", "warn")
+                    self._run_single(
+                        handle,
+                        self._with_ffmpeg_downloader(cmd),
+                        url,
+                        effective_platform,
+                        is_live_download,
+                        audio_mode,
+                        audio_fmt,
+                        verbose,
+                    )
+                    return
                 stats["fail"] = 1
                 self._log(f"[错误] 下载结束，退出码: {rc}", "error")
                 self._update_progress(0, f"失败 (退出码 {rc})", "", "")
@@ -722,6 +886,9 @@ class DownloadExecutor:
         # 批量统计与进度共用任务代际，避免停止后迟到事件污染下一任务。
         self._app_state.download_thread_context.task_id = handle.generation
         stopped = False
+        # 只在本次批量任务的内存中保存最近一次有效的 TwitCasting 密码。
+        # 不写回配置，也不会跨任务保留。
+        last_tc_password = None
 
         def update_stats():
             if getattr(self._app_state.download_thread_context, "task_id", handle.generation) != self._download_manager.snapshot()["generation"]:
@@ -745,14 +912,23 @@ class DownloadExecutor:
                 else:
                     self._log(f"[{index}/{len(urls)}] 未识别平台，使用: {config_snapshot['PLATFORM']}", "warn")
                 self._log(f"[{index}/{len(urls)}] 下载: {url}", "info")
-                self._update_progress(0, f"批量下载 {index}/{len(urls)}")
+                current_stage = "audio" if audio_mode == "3" else "video"
+                self._update_progress(
+                    0,
+                    f"批量下载 {index}/{len(urls)}",
+                    stage=current_stage,
+                )
                 bili_parts_for_url = (bili_parts_map or {}).get(url)
 
                 # 密码重试循环（最多 2 次额外尝试）
-                tc_password = config_snapshot.get("TC_PASSWORD")
+                tc_password = last_tc_password if effective_platform == "TwitCasting" else None
+                if tc_password:
+                    self._log(f"[{effective_platform}] 自动尝试上一个已输入的密码", "info")
                 max_password_attempts = 3  # 初始 + 2 次重试
                 pw_attempt = 0
                 url_done = False
+                # TwitCasting fMP4 多初始化片段时切换到 FFmpeg 下载 m3u8 的标记。
+                use_ffmpeg_for_hls = False
 
                 while pw_attempt < max_password_attempts and not url_done:
                     if handle.cancel_event.is_set():
@@ -762,9 +938,12 @@ class DownloadExecutor:
                     output_path = ""
                     password_required = False
                     password_retry = False
+                    init_fragment_error = False
                     try:
                         cmd_config = dict(config_snapshot)
-                        if pw_attempt > 0 and tc_password:
+                        # 避免基础配置中的旧密码绕过本次任务的失效处理。
+                        cmd_config.pop("TC_PASSWORD", None)
+                        if effective_platform == "TwitCasting" and tc_password:
                             cmd_config["TC_PASSWORD"] = tc_password
                         cmd = self._build_command(
                             url,
@@ -772,7 +951,9 @@ class DownloadExecutor:
                             platform_override=effective_platform,
                             config_override=cmd_config,
                             bili_parts=bili_parts_for_url,
+                            use_ffmpeg_for_hls=use_ffmpeg_for_hls,
                         )
+                        self._remember_ytdlp_command(cmd)
                         proc = self._spawn(cmd)
                         if not self._download_manager.publish_process(handle, proc):
                             stopped = True
@@ -813,7 +994,7 @@ class DownloadExecutor:
                                         frag_info = f" | {batch_live_frag}" if batch_live_frag else ""
                                         size_info = f" | {batch_live_size}" if batch_live_size else ""
                                         spd_info = f" | {batch_live_speed}" if batch_live_speed else ""
-                                        self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}")
+                                        self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}", stage=current_stage)
                                 continue
                             if not line:
                                 continue
@@ -825,6 +1006,8 @@ class DownloadExecutor:
                                     password_required = True
                                 if "format is not available" in line.lower() and effective_platform == "TwitCasting":
                                     password_retry = True
+                                if "Initialization fragment found after media fragments" in line and effective_platform == "TwitCasting":
+                                    init_fragment_error = True
                             elif "WARNING" in line:
                                 self._log(f"  {line}", "warn")
                             else:
@@ -866,19 +1049,22 @@ class DownloadExecutor:
                                 self._log(f"  → {os.path.basename(output_path)}", "info")
                             progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
                             if progress_match:
-                                overall = ((index - 1) + float(progress_match.group(1)) / 100) / len(urls)
-                                speed_match = re.search(r"(\d+(?:\.\d+)?\s*[KMG]iB/s)", line)
-                                eta_match = re.search(r"ETA (\d+:\d+)", line)
-                                self._update_progress(overall, f"批量下载 {index}/{len(urls)}",
-                                    speed=speed_match.group(1).replace(" ", "") if speed_match else "",
-                                    eta=eta_match.group(1) if eta_match else "")
+                                # 批量统计由下方计数器单独展示；主进度条只反映
+                                # 当前这一条视频/音频流，切到下一条时从 0 重新开始。
+                                current_progress = float(progress_match.group(1)) / 100
+                                current_stage = self._media_stage_from_line(line, current_stage)
+                                speed, eta = self._progress_metrics_from_line(line)
+                                self._update_progress(current_progress, f"批量下载 {index}/{len(urls)}",
+                                    speed=speed,
+                                    eta=eta,
+                                    stage=current_stage)
                             elif nico_live_dl and (batch_live_frag or batch_live_size):
                                 # Niconico 直播无百分比输出：用数据量/分片数显示活动状态
                                 frag_info = f" | {batch_live_frag}" if batch_live_frag else ""
                                 size_info = f" | {batch_live_size}" if batch_live_size else ""
                                 spd_info = f" | {batch_live_speed}" if batch_live_speed else ""
                                 elapsed = int(time.time() - batch_live_start)
-                                self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}")
+                                self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}", stage=current_stage)
                         self._close_process(proc)
                         self._download_manager.clear_process(handle, proc)
                         if download_timed_out:
@@ -896,20 +1082,56 @@ class DownloadExecutor:
                         rc = proc.returncode if proc.returncode is not None else -1
                         if rc == 0:
                             if audio_mode == "2" and output_path and os.path.isfile(output_path):
-                                self._extract_audio_from_video(output_path, audio_fmt)
+                                self._extract_audio_from_video(
+                                    output_path,
+                                    audio_fmt,
+                                    handle=handle,
+                                    status=f"批量下载 {index}/{len(urls)} · 正在提取音频",
+                                )
+                            if handle.cancel_event.is_set():
+                                stopped = True
+                                self._log(f"[{index}/{len(urls)}] ✗ 已取消", "warn")
+                                break
                             stats["ok"] += 1
                             self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
                             self._add_history(url, "", effective_platform, "success", output_path)
                             url_done = True
                         else:
+                            # TwitCasting fMP4 播放列表含多个初始化片段：原生下载器
+                            # 失败，切换 FFmpeg 下载 m3u8 后重试一次（不消耗密码重试次数）。
+                            if init_fragment_error and effective_platform == "TwitCasting" and not use_ffmpeg_for_hls:
+                                use_ffmpeg_for_hls = True
+                                self._log(f"[{effective_platform}] 检测到多初始化片段，改用 FFmpeg 下载器重试", "warn")
+                                continue
                             # TwitCasting 密码保护：阻塞等待密码后重试
                             if (password_required or password_retry) and effective_platform == "TwitCasting":
                                 pw_attempt += 1
                                 if pw_attempt < max_password_attempts:
-                                    self._log(f"[{effective_platform}] 需要密码，等待用户输入... ({pw_attempt}/{max_password_attempts - 1})", "warn")
-                                    pw = self._wait_for_password(url, effective_platform)
+                                    reused_password_failed = bool(tc_password)
+                                    if reused_password_failed:
+                                        # 上一个链接的密码不适用于当前链接，失效后不得继续传播。
+                                        last_tc_password = None
+                                        tc_password = None
+                                        self._log(
+                                            f"[{effective_platform}] 上一个密码不适用于此链接，等待输入新密码... "
+                                            f"({pw_attempt}/{max_password_attempts - 1})",
+                                            "warn",
+                                        )
+                                    else:
+                                        self._log(
+                                            f"[{effective_platform}] 需要密码，等待用户输入... "
+                                            f"({pw_attempt}/{max_password_attempts - 1})",
+                                            "warn",
+                                        )
+                                    reason = "retry" if password_retry or reused_password_failed else "missing"
+                                    pw = self._wait_for_password(
+                                        url,
+                                        effective_platform,
+                                        reason=reason,
+                                    )
                                     if pw:
                                         tc_password = pw
+                                        last_tc_password = pw
                                         continue  # 用新密码重试
                                 # 超时或达到最大重试次数
                                 stats["fail"] += 1
@@ -954,42 +1176,52 @@ class DownloadExecutor:
         ticket = self._download_manager.request_stop()
         if not ticket.active:
             return {"ok": True, "stopping": False}
-        self._broadcast_download_state()
+        # 密码输入等待没有子进程可杀，必须主动唤醒，否则批量线程会卡到 120 秒超时。
+        with self._password_lock:
+            if self._waiting_for_password:
+                self._password_value = None
+                self._password_event.set()
+        self._update_progress(0, "正在停止...", "", "")
         if ticket.process is not None:
             self.kill_process_tree(ticket.process)
-            self._log("[停止] 正在停止下载...", "warn")
+            self._log("[停止] 下载进程已终止", "warn")
         else:
-            self._log("[停止] 正在取消...", "warn")
-        return {"ok": True, "stopping": True}
+            self._log("[停止] 下载任务已取消", "warn")
+        # 进程终止后立即释放任务槽位。旧线程仍会在后台做极短的清理，
+        # 但代际检查会阻止它覆盖随后启动的新任务。
+        stopped = self._download_manager.complete_stop(ticket.generation)
+        if stopped:
+            self._update_progress(0, "已停止", "", "")
+        self._broadcast_download_state()
+        return {"ok": True, "stopping": not stopped, "stopped": stopped}
 
     def kill_process_tree(self, process):
         if process is None:
-            return
+            return True
         try:
             if process.poll() is None:
                 if os.name == "nt":
                     startupinfo, creationflags = _win_startup_info()
                     try:
-                        subprocess.run(["taskkill", "/T", "/PID", str(process.pid)], capture_output=True, timeout=2, startupinfo=startupinfo, creationflags=creationflags)
+                        # 下载器没有需要保存的交互状态，直接强制结束整棵进程树。
+                        # 原先先温和等待再强制终止，最坏会额外阻塞十余秒。
+                        subprocess.run(
+                            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                            capture_output=True,
+                            timeout=1,
+                            startupinfo=startupinfo,
+                            creationflags=creationflags,
+                        )
                     except Exception:
                         pass
                     try:
-                        process.wait(timeout=1)
+                        process.wait(timeout=0.25)
                     except Exception:
                         pass
-                    if process.poll() is None:
-                        try:
-                            subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, timeout=5, startupinfo=startupinfo, creationflags=creationflags)
-                        except Exception:
-                            pass
-                        try:
-                            process.wait(timeout=3)
-                        except Exception:
-                            pass
                 if process.poll() is None:
                     try:
                         process.kill()
-                        process.wait(timeout=2)
+                        process.wait(timeout=0.25)
                     except Exception:
                         pass
         except Exception:
@@ -999,6 +1231,10 @@ class DownloadExecutor:
                 process.stdout.close()
         except Exception:
             pass
+        try:
+            return process.poll() is not None
+        except Exception:
+            return False
 
     def _missing_dependency(self, platform=None, config=None, is_live=False):
         """检查必需的依赖可执行文件是否存在。

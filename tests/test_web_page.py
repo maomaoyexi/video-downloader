@@ -66,6 +66,8 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("__SESSION_TOKEN__", html)
         self.assertIn('id="btnWithnyLive"', html)
         self.assertIn('id="nicochannelHint"', html)
+        self.assertIn('id="btnCopyCommand"', html)
+        self.assertIn('id="speedText"', html)
 
     def test_reset_config_uses_post(self):
         _skip_if_frozen()
@@ -124,6 +126,7 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("/api/events?token=", js)
         self.assertIn("/api/start", js)
         self.assertIn("/api/start-withny-archive", js)
+        self.assertIn("/api/current-command", js)
         self.assertIn('{name:"Withny",color:"#22C55E"}', js)
         self.assertIn("/api/do-update", js)
 

@@ -1,4 +1,4 @@
-def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None):
+def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, use_ffmpeg_for_hls=False):
     """构建 yt-dlp 下载命令行参数。
 
     根据配置项组装完整的 yt-dlp 命令行参数列表，包括输出模板、格式选择、
@@ -14,14 +14,34 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
         cookie_file: Cookie 文件路径，用于文件模式 Cookie 鉴权。
         bili_parts: Bilibili 分P 选择参数，如 "1,3,5" 或 "all"，通过 -I 传递给 yt-dlp。
         nicochannel_auth_token: NicoChannel 的 JWT 鉴权令牌，通过 --extractor-args 注入。
+        use_ffmpeg_for_hls: TwitCasting 遇到多初始化片段的 fMP4 播放列表时，由
+            执行器重试阶段置 True，强制改用 FFmpeg 下载 m3u8，绕过 hlsnative 限制。
 
     Returns:
         list[str]: 完整的 yt-dlp 命令行参数列表。
     """
     cfg = config
     ytdlp = str(tool_dir / f"yt-dlp{exe_suffix}")
-    cmd = [ytdlp, "--newline", "--continue", "--encoding", "utf-8",
-           "--socket-timeout", "30", "--plugin-dirs", str(tool_dir)]
+    cmd = [
+        ytdlp,
+        "--newline",
+        "--continue",
+        "--encoding",
+        "utf-8",
+        "--socket-timeout",
+        "30",
+        "--plugin-dirs",
+        str(tool_dir),
+        # 给每条下载进度附加当前格式的音视频编码信息。执行器据此识别
+        # 分离流中的视频/音频阶段，前端即可切换进度条颜色。
+        "--progress-template",
+        (
+            "download:[download] %(progress._percent_str)s of "
+            "%(progress._total_bytes_str)s at %(progress._speed_str)s "
+            "ETA %(progress._eta_str)s "
+            "__VD_STAGE__%(info.vcodec)s|%(info.acodec)s"
+        ),
+    ]
     platform_name = platform_override if platform_override else cfg["PLATFORM"]
     is_nico_live = "live.nicovideo.jp" in url.lower() or "live2.nicovideo.jp" in url.lower()
 
@@ -125,6 +145,13 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     if cfg["HWACCEL"] != "cpu":
         cmd += ["--postprocessor-args", f"Merger+ffmpeg_o:-c:v {cfg['HWACCEL']}"]
     cmd += ["--ffmpeg-location", str(tool_dir)]
+    # TwitCasting 的部分 fMP4 HLS 录像会在播放列表中途切换初始化片段，
+    # yt-dlp 原生 hlsnative 下载器会因此报
+    # "Initialization fragment found after media fragments"。默认仍用原生
+    # 下载器（可并发 -N 个分片，速度更快）；仅在检测到该错误后由执行器重试
+    # 时置 use_ffmpeg_for_hls，让 FFmpeg 接管 m3u8 下载以兼容这类播放列表。
+    if platform_name == "TwitCasting" and use_ffmpeg_for_hls:
+        cmd += ["--downloader", "m3u8:ffmpeg"]
     # TwitCasting 密码保护/会员限定直播与录播需要通过 --video-password 解锁。
     if platform_name == "TwitCasting" and cfg.get("TC_PASSWORD"):
         cmd += ["--video-password", cfg["TC_PASSWORD"]]

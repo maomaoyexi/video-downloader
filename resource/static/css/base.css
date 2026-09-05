@@ -10,6 +10,7 @@
   --line:#E4E4DF; --line2:#D2D2CB;
   --fg:#16161A; --fg2:#55555C; --fg3:#8C8C93;
   --ok:#2E7D5B; --err:#C2453B; --warn:#9A6414; --live:#2F6FED;
+  --progress-video:#2F6FED; --progress-audio:#8B5CF6;
   --r:6px;
   --nav-w:224px;
   --ui:'IBM Plex Sans','Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
@@ -73,7 +74,8 @@ button{font-family:inherit}
 [data-theme="light"] .ico-sun{display:none}
 
 .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
-.topline{position:absolute;top:0;left:0;height:2px;width:0;background:var(--fg);z-index:5;transition:width .25s ease}
+.topline{position:absolute;top:0;left:0;height:2px;width:0;background:var(--progress-video);z-index:5;transition:width .25s ease,background-color .2s ease}
+.topline.stage-audio{background:var(--progress-audio)}
 .top{height:54px;flex:none;display:flex;align-items:center;gap:10px;padding:0 28px;border-bottom:1px solid var(--line)}
 .top h1{font-size:14.5px;font-weight:600;letter-spacing:-.005em}
 .top .sub{font-size:12.5px;color:var(--fg3)}
@@ -161,11 +163,13 @@ textarea.ta:disabled{color:var(--fg3)}
 .status{display:flex;flex-direction:column;gap:9px;flex:none}
 .srow{display:flex;align-items:center;gap:10px;font-size:12.5px;min-width:0}
 .srow .st{display:flex;align-items:center;gap:7px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.srow .pct{margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:500;flex:none}
+.srow .progress-metrics{margin-left:auto;display:flex;align-items:center;gap:9px;flex:none}
+.srow .pct{font-family:var(--mono);font-size:13px;font-weight:500;flex:none}
 .srow .metric{font-family:var(--mono);color:var(--fg2);flex:none}
 .srow.batch{font-size:12px}
 .bar{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--fg);transition:width .25s ease}
+.bar i{display:block;height:100%;background:var(--progress-video);transition:width .25s ease,background-color .2s ease}
+.bar i.stage-audio{background:var(--progress-audio)}
 .bar i.live{width:34%!important;animation:slide 1.3s linear infinite;transition:none}
 @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(294%)}}
 .blip{width:7px;height:7px;border-radius:50%;background:var(--live);flex:none}

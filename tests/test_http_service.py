@@ -1,9 +1,11 @@
 import json
+import io
 import queue
 import threading
 import time
 import unittest
 from dataclasses import replace
+from contextlib import redirect_stderr
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import Mock
@@ -56,6 +58,7 @@ def make_dependencies(exit_event):
         batch_txt_download=value,
         start_urls_download=lambda urls: {"urls": urls},
         stop_download=value,
+        get_current_command=lambda: {"ok": True, "command": "yt-dlp https://example.com"},
         submit_password=lambda url, password: {"ok": True},
         fetch_bili_playlist=lambda url: {"parts": [], "total": 0},
         save_preset=named_value,
@@ -114,6 +117,30 @@ class HttpServiceTests(unittest.TestCase):
             "version": "1.9.5",
             "config": {"output_dir": "downloads"},
         })
+
+    def test_current_command_route_uses_injected_dependency(self):
+        status, body, headers = self.request("/api/current-command")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["command"], "yt-dlp https://example.com")
+        self.assertEqual(headers["Cache-Control"], "no-store")
+
+    def test_expected_browser_disconnect_does_not_print_traceback(self):
+        stderr = io.StringIO()
+        try:
+            raise ConnectionAbortedError(10053, "client disconnected")
+        except ConnectionAbortedError:
+            with redirect_stderr(stderr):
+                self.service._server.handle_error(None, ("127.0.0.1", 12345))
+        self.assertEqual(stderr.getvalue(), "")
+
+    def test_unexpected_server_error_is_still_reported(self):
+        stderr = io.StringIO()
+        try:
+            raise RuntimeError("unexpected")
+        except RuntimeError:
+            with redirect_stderr(stderr):
+                self.service._server.handle_error(None, ("127.0.0.1", 12345))
+        self.assertIn("unexpected", stderr.getvalue())
 
     def test_api_rejects_missing_token(self):
         with self.assertRaises(HTTPError) as raised:

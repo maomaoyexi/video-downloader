@@ -1,6 +1,7 @@
 import json
 import queue
 import secrets
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -30,6 +31,7 @@ class HttpHandlerDependencies:
     batch_txt_download: object
     start_urls_download: object
     stop_download: object
+    get_current_command: object
     submit_password: object
     fetch_bili_playlist: object
     save_preset: object
@@ -114,6 +116,8 @@ def create_handler(dependencies):
                 self._json({"checking": True})
             elif path == "/api/update-status":
                 self._json(dependencies.updater.snapshot())
+            elif path == "/api/current-command":
+                self._json(dependencies.get_current_command())
             elif path.startswith("/static/"):
                 if not self._is_local_request():
                     self._forbidden()
@@ -407,6 +411,16 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     def __init__(self, *args, **kwargs):
         self.stop_event = threading.Event()
         super().__init__(*args, **kwargs)
+
+    def handle_error(self, request, client_address):
+        """忽略浏览器刷新/关闭 SSE 时产生的正常本地连接中断。"""
+        error = sys.exc_info()[1]
+        ignored_socket_errors = (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)
+        if isinstance(error, ignored_socket_errors):
+            return
+        if isinstance(error, OSError) and getattr(error, "winerror", None) in {10053, 10054}:
+            return
+        super().handle_error(request, client_address)
 
 
 class HttpService:

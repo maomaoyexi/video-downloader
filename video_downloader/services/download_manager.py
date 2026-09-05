@@ -93,6 +93,28 @@ class DownloadManager:
             self._phase = "idle" if self._accepting else "suspended"
             return True
 
+    def complete_stop(self, generation):
+        """停止命令完成后立即释放任务槽位，旧线程由代际检查自行收尾。
+
+        与 request_stop 之间存在竞态：杀进程后，后台线程可能抢先调用
+        finish() 把 _handle 置空。此时任务确已结束，应同样视为停止完成，
+        否则 stop_download 会误报 stopping=True，导致前端开始按钮卡在置灰。
+        """
+        with self._lock:
+            # 新任务已启动（代际号递增），本次停止请求已过期，不得干扰其状态。
+            if self._generation != generation:
+                return False
+            # 后台线程已先一步 finish()，槽位已空 —— 同样视为停止完成。
+            if self._handle is None:
+                self._phase = "idle" if self._accepting else "suspended"
+                return True
+            if self._phase != "stopping":
+                return False
+            self._handle = None
+            self._process = None
+            self._phase = "idle" if self._accepting else "suspended"
+            return True
+
     def snapshot(self):
         with self._lock:
             return {

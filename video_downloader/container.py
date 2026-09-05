@@ -123,7 +123,8 @@ class AppContainer:
 
         # ---- 进度回调 ----
         def update_progress(percent: float, status: str | None = None,
-                            speed: str = "", eta: str = "") -> None:
+                            speed: str = "", eta: str = "",
+                            stage: str | None = None) -> None:
             dc = app_state.download_thread_context
             context_task_id = getattr(dc, "task_id", None)
             if context_task_id is not None and context_task_id != download_manager.snapshot()["generation"]:
@@ -133,6 +134,8 @@ class AppContainer:
                 app_state.progress_data["status"] = status
             app_state.progress_data["speed"] = speed
             app_state.progress_data["eta"] = eta
+            if stage in {"video", "audio"}:
+                app_state.progress_data["stage"] = stage
             app_state.publish({"type": "progress", "data": dict(app_state.progress_data)})
 
         def broadcast_download_state() -> None:
@@ -151,7 +154,8 @@ class AppContainer:
         def build_command(url: str, *, is_live: bool = False,
                           platform_override: str | None = None,
                           config_override: dict | None = None,
-                          bili_parts: str | None = None) -> list[str]:
+                          bili_parts: str | None = None,
+                          use_ffmpeg_for_hls: bool = False) -> list[str]:
             cfg = config_override if config_override is not None else app_state.config_snapshot()
             cookie_file = tool_dir / "cookies.txt"
             effective_platform = platform_override if platform_override else cfg["PLATFORM"]
@@ -170,6 +174,7 @@ class AppContainer:
                 cookie_file=cookie_file if cookie_file.exists() else None,
                 bili_parts=bili_parts,
                 nicochannel_auth_token=nicochannel_token,
+                use_ffmpeg_for_hls=use_ffmpeg_for_hls,
             )
 
         # ---- 工具服务 ----
@@ -213,6 +218,9 @@ class AppContainer:
 
         def stop_download() -> dict:
             return download_executor.stop_download()
+
+        def get_current_command() -> dict:
+            return download_executor.get_current_ytdlp_command()
 
         def fetch_bili_playlist(url: str) -> dict:
             return download_executor.fetch_bili_playlist(url)
@@ -281,6 +289,7 @@ class AppContainer:
                 batch_txt_download=batch_txt_download,
                 start_urls_download=start_urls_download,
                 stop_download=stop_download,
+                get_current_command=get_current_command,
                 submit_password=submit_password,
                 fetch_bili_playlist=fetch_bili_playlist,
                 save_preset=save_preset,

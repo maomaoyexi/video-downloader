@@ -9,6 +9,7 @@
   --line:#242428; --line2:#35353B;
   --fg:#EDEDEA; --fg2:#A3A39F; --fg3:#6C6C72;
   --ok:#5FBF92; --err:#E4776C; --warn:#D4A03F; --live:#6C9BFF;
+  --progress-video:#6C9BFF; --progress-audio:#B794F6;
 }
 [data-theme="dark"] .dlg{box-shadow:0 24px 60px -18px rgba(0,0,0,.8)}
 [data-theme="dark"] .scrim{background:rgba(4,4,6,.62)}

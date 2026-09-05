@@ -29,6 +29,7 @@
   <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"></circle><path d="M8.1 8.1a5.5 5.5 0 0 0 0 7.8M15.9 15.9a5.5 5.5 0 0 0 0-7.8"></path><path d="M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 18.8a9.6 9.6 0 0 0 0-13.6"></path></symbol>
   <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M8 9.8l2.6 2.4L8 14.6"></path><path d="M13.2 15h3.6"></path></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15"></path><path d="M9.8 7V4.8h4.4V7"></path><path d="M6.8 7l.9 12.2h8.6L17.2 7"></path></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="1.7"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-10A1.5 1.5 0 0 0 3 5.5v10A1.5 1.5 0 0 0 4.5 17H8"></path></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 6.8a1 1 0 0 1 1-1h4.3l2 2h8.7a1 1 0 0 1 1 1v8.6a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6.8z"></path></symbol>
   <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.4 18.6V6.4a1 1 0 0 1 1-1h4.2l2 2h7.4a1 1 0 0 1 1 1v2.2"></path><path d="M3.4 18.6l2.4-7.3h15.4l-2.4 7.3H3.4z"></path></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4l2.2 2.1"></path><path d="M20.2 4.3v4.6h-4.6"></path><path d="M19.8 12a7.8 7.8 0 0 1-13.4 5.4l-2.2-2.1"></path><path d="M3.8 19.7v-4.6h4.6"></path></symbol>
@@ -161,9 +162,11 @@
           <div class="srow">
             <span class="st"><span class="blip idle" id="statusBlip"></span><span id="statusText">就绪</span></span>
             <span class="dim" id="idleText">等待任务</span>
-            <span class="metric" id="speedText"></span>
             <span class="dim" id="etaText"></span>
-            <span class="pct dim" id="progressText">0%</span>
+            <span class="progress-metrics">
+              <span class="pct dim" id="progressText">0%</span>
+              <span class="metric" id="speedText"></span>
+            </span>
           </div>
           <div class="bar"><i id="progressFill" style="width:0%"></i></div>
           <div class="srow batch" id="taskStatsWrap" style="display:none">
@@ -181,6 +184,7 @@
             <b>运行日志</b>
             <div class="cacts">
               <button class="btn sm gh" onclick="toggleLogBox()" id="btnLogToggle" title="折叠/展开"><svg class="ico s14"><use href="#i-chevron"></use></svg>折叠</button>
+              <button class="btn sm gh" onclick="copyCurrentCommand()" id="btnCopyCommand" title="复制最近一次传递给 yt-dlp 的下载命令"><svg class="ico s14"><use href="#i-copy"></use></svg>复制当前下载命令</button>
               <button class="btn sm gh" onclick="clearConsole()"><svg class="ico s14"><use href="#i-trash"></use></svg>清空</button>
             </div>
           </div>
