@@ -13,6 +13,7 @@ from .constants import (
     PLATFORM_INFO,
     PROXY_TYPE_OPTIONS,
     RESOLUTION_OPTIONS,
+    SUBTITLE_TYPE_OPTIONS,
 )
 
 # 校验错误的中文说明（key → 错误详情映射）
@@ -40,6 +41,9 @@ _ERROR_REASONS = {
     "USE_COOKIES": "Cookie开关仅支持 0 或 1",
     "EMBED_META": "嵌入元数据仅支持 0 或 1",
     "DOWNLOAD_THUMB": "下载封面仅支持 0 或 1",
+    "DOWNLOAD_SUBTITLES": "字幕下载开关仅支持 0 或 1",
+    "SUBTITLE_TYPE": "字幕类型选项无效",
+    "SUBTITLE_LANGS": "字幕语言设置长度不能超过 200 字符",
     "WIN_FILENAMES": "Win文件名兼容仅支持 0 或 1",
     "STRICT_FILENAME": "严格文件名仅支持 0 或 1",
     "NICO_COMMENTS": "Niconico弹幕仅支持 0 或 1",
@@ -78,6 +82,7 @@ def validate_config(values, base=None):
         "AUDIO_MODE": AUDIO_MODE_OPTIONS,
         "AUDIO_FORMAT": AUDIO_FORMAT_OPTIONS,
         "LIVE_STREAM_METHOD": LIVE_STREAM_METHOD_OPTIONS,
+        "SUBTITLE_TYPE": SUBTITLE_TYPE_OPTIONS,
     }
     integer_ranges = {
         "THREADS": (1, 32),
@@ -88,7 +93,7 @@ def validate_config(values, base=None):
     }
     booleans = {
         "MERGE_MODE", "PROXY_ENABLED", "USE_COOKIES", "EMBED_META",
-        "DOWNLOAD_THUMB", "WIN_FILENAMES", "STRICT_FILENAME",
+        "DOWNLOAD_THUMB", "DOWNLOAD_SUBTITLES", "WIN_FILENAMES", "STRICT_FILENAME",
         "NICO_COMMENTS", "NICO_RECODE", "ENABLE_LOG", "DEL_WAV_AFTER_CONVERT",
     }
     for key, value in values.items():

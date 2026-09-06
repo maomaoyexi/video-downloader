@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from video_downloader.services.download_manager import DownloadManager
 from video_downloader.services.tools import ToolService
 
 
@@ -14,14 +15,42 @@ class FakeAppState:
         self.updates.append(values)
 
 
-def create_service(tool_dir):
+def create_service(tool_dir, build_subtitle_command=None, download_manager=None, log=None):
     return ToolService(
         tool_dir=tool_dir,
         exe_suffix=".exe",
         app_state=FakeAppState(),
         save_config=lambda: None,
-        log=lambda message, level="info": None,
+        log=log or (lambda message, level="info": None),
+        build_subtitle_command=build_subtitle_command,
+        download_manager=download_manager,
     )
+
+
+class ImmediateThread:
+    def __init__(self, target, args=(), kwargs=None, daemon=None):
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs or {}
+
+    def start(self):
+        self.target(*self.args, **self.kwargs)
+
+
+class FakePopen:
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self._stdout = stdout
+        self._stderr = stderr
+
+    def communicate(self, timeout=None):
+        return self._stdout, self._stderr
+
+    def kill(self):
+        pass
+
+    def wait(self):
+        return self.returncode
 
 
 class ToolServiceTests(unittest.TestCase):
@@ -114,6 +143,46 @@ class ToolServiceTests(unittest.TestCase):
                 service.handle_tool_action("missing"),
                 {"error": "未知工具操作: missing"},
             )
+
+    def test_download_subtitles_rejects_concurrent_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tool_dir = Path(directory)
+            (tool_dir / "yt-dlp.exe").touch()
+            manager = DownloadManager()
+            handle = manager.begin("video")
+            service = create_service(
+                tool_dir,
+                build_subtitle_command=lambda *args, **kwargs: [],
+                download_manager=manager,
+            )
+            result = service.download_subtitles(
+                ["https://youtube.com/watch?v=abc"], "manual", "zh.*"
+            )
+            self.assertEqual(result, {"error": "已有下载任务正在运行"})
+            manager.finish(handle)
+
+    def test_download_subtitles_runs_and_releases_task(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tool_dir = Path(directory)
+            (tool_dir / "yt-dlp.exe").touch()
+            manager = DownloadManager()
+            calls = []
+            service = create_service(
+                tool_dir,
+                build_subtitle_command=lambda *args, **kwargs: calls.append((args, kwargs)) or ["yt-dlp.exe"],
+                download_manager=manager,
+            )
+            with patch("video_downloader.services.tools.threading.Thread", ImmediateThread), \
+                 patch("video_downloader.services.tools.subprocess.Popen", return_value=FakePopen(
+                     stdout="[info] Writing video subtitles to: subtitles/video.zh.vtt"
+                 )):
+                result = service.download_subtitles(
+                    ["https://youtube.com/watch?v=abc"], "all", "zh.*"
+                )
+            self.assertEqual(result, {"ok": True, "total": 1})
+            self.assertFalse(manager.snapshot()["running"])
+            self.assertEqual(calls[0][1]["subtitle_type"], "all")
+            self.assertEqual(calls[0][1]["subtitle_langs"], "zh.*")
 
 
 if __name__ == "__main__":

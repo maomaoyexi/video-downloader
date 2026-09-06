@@ -289,18 +289,18 @@ ul.compact li::before {
 <body>
 <div class="container">
 
-  <!-- v2.3.0 WebUI 更新 -->
+  <!-- v2.4.0 WebUI 更新 -->
   <div class="hero">
-    <div class="version-badge">v2.3.0 WebUI</div>
+    <div class="version-badge">v2.4.0 WebUI</div>
     <h1>多平台视频下载工具</h1>
-    <div class="subtitle">Twitter/X · TwitCasting · NicoChannel · Withny · 音频工具 · 双配色 UI</div>
-    <div class="date">发布日期：2026-08-16 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
+    <div class="subtitle">WebUI 重构 · 字幕下载 · 任务管理 · 下载稳定性</div>
+    <div class="date">发布日期：2026-09-05 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
   </div>
 
   <div class="notice-box info">
     <div class="notice-title">ℹ️ 更新说明</div>
-    <p>v2.3.0 新增 Twitter/X、TwitCasting 与 NicoChannel 支持、Withny 已授权历史存档 HAR 下载和直播监控录制、音频格式转换、响度统一和音量调整，并完成模块化 UI 与正常中性配色。</p>
-    <p><strong>本次贡献者：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 制作 NicoChannel、Twitter/X、TwitCasting、UI 改版与音频工具；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 制作 Withny 历史存档、直播录制、中性配色及本版 UI 调整。</p>
+    <p>v2.4.0 以重构后的 WebUI 为基础，新增普通下载附带字幕和独立字幕下载工具，并完善停止流程、下载进度、命令诊断、音频提取与 TwitCasting 兼容性。</p>
+    <p><strong>本次贡献者：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a> 提供 UI 重构；<a href="https://github.com/ZheYi101">ZheYi101</a> 提供字幕下载；<a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 提供其他更新与修复；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 完成字幕功能修复与合并适配。</p>
   </div>
 
   <div class="summary-grid">
@@ -316,7 +316,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v2.3.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。</p>
+    <p>v2.4.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。字幕下载默认关闭，开启后默认选择中文。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -329,69 +329,82 @@ ul.compact li::before {
     <div class="bug-card fix">
       <div class="header">
         <span class="tag critical">安全</span>
-        <span class="title">Twitter/X 与 TwitCasting</span>
-        <span class="severity">平台扩展</span>
+        <span class="title">字幕任务生命周期修复</span>
+        <span class="severity">可靠性</span>
       </div>
       <div class="desc">
-        支持推文视频、Twitter Space、TwitCasting 直播、录播、历史列表和密码保护内容。
+        字幕任务接入统一任务管理，支持停止、退出清理、任务互斥和超时终止；字幕失败不会影响已完成的视频。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag minor">新增</span>
-        <span class="title">NicoChannel 下载支持</span>
-        <span class="severity">平台扩展</span>
+        <span class="title">普通下载附带字幕</span>
+        <span class="severity">字幕功能</span>
       </div>
       <div class="desc">
-        新增 <strong>nicochannel.jp</strong>（ニコニコチャンネルプラス）下载支持。通过 yt-dlp 插件 + Firefox localStorage JWT 自动提取实现鉴权，支持频道内的视频与直播下载。首次下载需在 Firefox 中登录 nicochannel.jp，后续由插件通过 Cookie 文件自动刷新令牌。
-        <br><strong>制作：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>
+        视频下载和字幕下载使用独立命令。支持人工字幕、自动字幕、语言预设与自定义语言，字幕保存到对应平台的 <code>subtitles</code> 目录。
+        <br><strong>提供：</strong><a href="https://github.com/ZheYi101">ZheYi101</a>　<strong>修复与适配：</strong><a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a>
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag critical">安全</span>
-        <span class="title">Withny 已授权历史存档</span>
-        <span class="severity">HAR 工作流</span>
+        <span class="title">独立字幕下载工具</span>
+        <span class="severity">工具箱</span>
       </div>
       <div class="desc">
-        从包含内容的 HAR 验证并保存普通未加密 HLS，强制检查来源、媒体清单和签名 Cookie，并拒绝 DRM 与加密内容。
+        支持一次提交多个链接并仅下载字幕。默认关闭全局字幕，开启后默认中文；全部字幕遇到 HTTP 429 时自动缩小语言范围重试。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag minor">新增</span>
-        <span class="title">Withny 直播监控与录制</span>
-        <span class="severity">直播工作流</span>
+        <span class="title">WebUI 重构</span>
+        <span class="severity">界面</span>
       </div>
       <div class="desc">
-        支持选择 withny-dl YAML 配置持续监控频道并自动录制直播，统一接入任务停止、运行状态和敏感日志过滤。
-        <br><strong>制作：</strong><a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a>
+        重构下载、设置、工具箱、历史记录和响应式布局，并将字幕控件适配到统一设计体系。
+        <br><strong>提供：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a>
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag major">加固</span>
-        <span class="title">音频处理工具扩展</span>
-        <span class="severity">媒体工具</span>
+        <span class="title">停止、进度与命令诊断</span>
+        <span class="severity">稳定性</span>
       </div>
       <div class="desc">
-        新增批量音频格式转换、EBU R128 单次/双次响度统一、增益调节和前瞻限幅器保护。
+        改进媒体阶段进度、即时停止、可取消音频提取和当前命令复制；复制命令时自动遮盖密码等敏感参数。
       </div>
     </div>
 
     <div class="bug-card improve">
       <div class="header">
         <span class="tag minor">优化</span>
-        <span class="title">双配色 UI 与回归保护</span>
-        <span class="severity">界面与可靠性</span>
+        <span class="title">TwitCasting 兼容与回归保护</span>
+        <span class="severity">下载可靠性</span>
       </div>
       <div class="desc">
-        提供正常蓝灰中性配色与原始暖色配色切换，优化音频工具文字对齐；自动化测试扩展至 129 项。
+        遇到多初始化片段错误时自动切换 FFmpeg HLS 下载器重试，并保留字幕任务；自动化测试扩展至 162 项。
+        <br><strong>其他更新与修复：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>
       </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">
+      <span class="icon">📋</span>
+      <span>历史版本</span>
+    </div>
+    <div class="notice-box info">
+      <div class="notice-title">v2.3.0 WebUI · 2026-08-16</div>
+      <p>新增 Twitter/X、TwitCasting、NicoChannel、Withny 已授权历史存档与直播录制，以及音频格式转换、响度统一和音量调整工具。</p>
+      <p><strong>贡献者：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 提供平台扩展、UI 改版与音频工具；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 提供 Withny、直播录制与界面调整。</p>
     </div>
   </div>
 
@@ -406,8 +419,8 @@ ul.compact li::before {
       <div class="notice-title">📦 Release 附件说明</div>
       <p>本次发布分为两个附件：</p>
       <ul class="compact" style="margin-top: 0.8rem;">
-        <li><strong>主程序</strong>：<code>视频下载工具v2.3.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
-        <li><strong>通用依赖包</strong>：<code>视频下载工具v2.3.0-依赖包.zip</code> - 包含 yt-dlp、ffmpeg、ffprobe、deno、fantiadl、withny-dl 与帮助文档</li>
+        <li><strong>主程序</strong>：<code>视频下载工具v2.4.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
+        <li><strong>通用依赖包</strong>：<code>视频下载工具v2.4.0-依赖包.zip</code> - 包含 yt-dlp、ffmpeg、ffprobe、deno、fantiadl、withny-dl 与帮助文档</li>
       </ul>
     </div>
   </div>
@@ -422,10 +435,10 @@ ul.compact li::before {
     <div class="notice-box success">
       <div class="notice-title">✅ 安装步骤（超简单，4步搞定）</div>
       <ul class="compact">
-        <li>下载 <code>视频下载工具v2.3.0-GUI.exe</code> 和 <code>视频下载工具v2.3.0-依赖包.zip</code> 两个文件</li>
-        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.3.0-GUI.exe</code> 放入其中</li>
+        <li>下载 <code>视频下载工具v2.4.0-GUI.exe</code> 和 <code>视频下载工具v2.4.0-依赖包.zip</code> 两个文件</li>
+        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.4.0-GUI.exe</code> 放入其中</li>
         <li>解压依赖包，将里面的<strong>全部内容</strong>（所有 exe 文件 + <code>docs</code> 文件夹 + <code>changelog.html</code> 等）解压到 exe 同一目录</li>
-        <li>双击 <code>视频下载工具v2.3.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
+        <li>双击 <code>视频下载工具v2.4.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
       <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：NicoChannel 还需要单独准备 <code>nicochannel.zip</code> 并放在主程序同一目录。</p>
     </div>
@@ -442,7 +455,7 @@ ul.compact li::before {
       <div class="notice-title">✅ 升级步骤（超简单）</div>
       <ul class="compact">
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
-        <li>只需下载新版 <code>视频下载工具v2.3.0-GUI.exe</code>，替换旧版 exe 即可</li>
+        <li>只需下载新版 <code>视频下载工具v2.4.0-GUI.exe</code>，替换旧版 exe 即可</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
         <li>原有依赖文件（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code> 等）<strong>无需重新下载</strong>，继续使用即可</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
@@ -451,8 +464,8 @@ ul.compact li::before {
   </div>
 
   <div class="footer">
-    多平台视频下载工具 v2.3.0 WebUI <br>
-    2026-08-16 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny HAR 保存与直播监控录制
+    多平台视频下载工具 v2.4.0 WebUI <br>
+    2026-09-05 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny 与字幕下载工具
   </div>
 
 </div>

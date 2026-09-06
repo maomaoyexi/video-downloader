@@ -68,6 +68,10 @@ class WebPageTests(unittest.TestCase):
         self.assertIn('id="nicochannelHint"', html)
         self.assertIn('id="btnCopyCommand"', html)
         self.assertIn('id="speedText"', html)
+        self.assertIn('id="sw_subtitles"', html)
+        self.assertIn('id="s_subtitle_type"', html)
+        self.assertIn('id="subtitleDownloadDialog"', html)
+        self.assertIn('id="btnSubtitleDownload"', html)
 
     def test_reset_config_uses_post(self):
         _skip_if_frozen()
@@ -127,6 +131,9 @@ class WebPageTests(unittest.TestCase):
         self.assertIn("/api/start", js)
         self.assertIn("/api/start-withny-archive", js)
         self.assertIn("/api/current-command", js)
+        self.assertIn("/api/download-subtitles", js)
+        self.assertIn("[LEGACY_ALL_SUBTITLE_LANGS, '全部字幕']", js)
+        self.assertIn("[DEFAULT_SUBTITLE_LANGS, '中文（默认）']", js)
         self.assertIn('{name:"Withny",color:"#22C55E"}', js)
         self.assertIn("/api/do-update", js)
 

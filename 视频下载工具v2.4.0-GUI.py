@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-多平台视频下载工具 v2.3.0 WebUI版
+多平台视频下载工具 v2.4.0 WebUI版
 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter
 提供 Withny 已授权历史存档 HAR 保存和直播监控录制功能
 使用内置HTTP服务器 + 浏览器界面，无需额外GUI库

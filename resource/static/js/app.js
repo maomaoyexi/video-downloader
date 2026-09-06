@@ -31,6 +31,16 @@ const PAGE_TITLES = {
 
 // 后端日志级别 → .ln 修饰类
 const LOG_LEVEL_CLASS = {success:'s', warn:'w', error:'e', info:''};
+const LEGACY_ALL_SUBTITLE_LANGS = 'all,-live_chat';
+const DEFAULT_SUBTITLE_LANGS = 'zh.*,zh-Hans,zh-Hant';
+const SUBTITLE_LANG_PRESETS = [
+  [LEGACY_ALL_SUBTITLE_LANGS, '全部字幕'],
+  [DEFAULT_SUBTITLE_LANGS, '中文（默认）'],
+  ['ja.*', '日语'],
+  ['en.*', '英语'],
+  ['ko.*', '韩语'],
+  ['custom', '自定义']
+];
 
 const HISTORY_VIEW_KEY = 'video-dl-history-view';
 let historyView = 'list';
@@ -127,6 +137,8 @@ function init() {
   fillSelect('s_audiofmt', [['m4a','m4a(原生)'],['mp3','MP3'],['wav','WAV']]);
   fillSelect('s_hwaccel', [['cpu','CPU软编码'],['h264_nvenc','N卡 NVENC'],['h264_qsv','Intel QSV'],['h264_amf','AMD AMF']]);
   fillSelect('s_browser', [['chrome','Chrome'],['edge','Edge'],['firefox','Firefox'],['brave','Brave'],['opera','Opera']]);
+  fillSelect('s_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
+  fillSelect('tool_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
 
   // 导航切换
   document.querySelectorAll('.ni').forEach(t => { t.onclick = () => setActivePage(t.dataset.page); });
@@ -279,6 +291,10 @@ function applyConfig(s) {
   if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
   setSwitch('sw_meta', s.EMBED_META);
   setSwitch('sw_thumb', s.DOWNLOAD_THUMB);
+  setSwitch('sw_subtitles', s.DOWNLOAD_SUBTITLES);
+  $('s_subtitle_type').value = s.SUBTITLE_TYPE || 'all';
+  applySubtitleLanguageValue('s', s.SUBTITLE_LANGS || DEFAULT_SUBTITLE_LANGS);
+  onSubtitleToggle();
   setSwitch('sw_winfn', s.WIN_FILENAMES);
   setSwitch('sw_strict', s.STRICT_FILENAME);
   setSwitch('sw_nicocmt', s.NICO_COMMENTS);
@@ -304,6 +320,38 @@ function onAudioModeChange() {
   const mode = $('s_audiomode').value;
   // 模式 0（不处理音频）和模式 1（分离音画）不需要音频输出格式选择
   $('s_audiofmt').disabled = (mode === '0' || mode === '1');
+}
+
+function applySubtitleLanguageValue(scope, value) {
+  const select = $(scope === 's' ? 's_subtitle_lang_preset' : 'tool_subtitle_lang_preset');
+  const input = $(scope === 's' ? 's_subtitle_langs' : 'tool_subtitle_langs');
+  const normalized = (value || DEFAULT_SUBTITLE_LANGS).trim() || DEFAULT_SUBTITLE_LANGS;
+  const preset = SUBTITLE_LANG_PRESETS.find(item => item[0] === normalized);
+  select.value = preset ? normalized : 'custom';
+  input.value = normalized;
+  onSubtitleLanguagePresetChange(scope);
+}
+
+function onSubtitleLanguagePresetChange(scope) {
+  const select = $(scope === 's' ? 's_subtitle_lang_preset' : 'tool_subtitle_lang_preset');
+  const input = $(scope === 's' ? 's_subtitle_langs' : 'tool_subtitle_langs');
+  const row = $(scope === 's' ? 'row_subtitle_custom' : 'tool_subtitle_custom_row');
+  const custom = select.value === 'custom';
+  row.style.display = custom ? 'flex' : 'none';
+  if(!custom) input.value = select.value;
+}
+
+function getSubtitleLanguageValue(scope) {
+  const select = $(scope === 's' ? 's_subtitle_lang_preset' : 'tool_subtitle_lang_preset');
+  const input = $(scope === 's' ? 's_subtitle_langs' : 'tool_subtitle_langs');
+  return select.value === 'custom' ? input.value.trim() : select.value;
+}
+
+function onSubtitleToggle() {
+  const enabled = isOn('sw_subtitles');
+  $('s_subtitle_type').disabled = !enabled;
+  $('s_subtitle_lang_preset').disabled = !enabled;
+  $('s_subtitle_langs').disabled = !enabled;
 }
 
 /** Cookie 模式切换时显示/隐藏浏览器相关设置行。 */
@@ -338,6 +386,9 @@ function collectCfg() {
     LIVE_STREAM_METHOD: $('s_live_stream_method').value,
     EMBED_META: isOn('sw_meta')?1:0,
     DOWNLOAD_THUMB: isOn('sw_thumb')?1:0,
+    DOWNLOAD_SUBTITLES: isOn('sw_subtitles')?1:0,
+    SUBTITLE_TYPE: $('s_subtitle_type').value,
+    SUBTITLE_LANGS: getSubtitleLanguageValue('s') || DEFAULT_SUBTITLE_LANGS,
     WIN_FILENAMES: isOn('sw_winfn')?1:0,
     STRICT_FILENAME: isOn('sw_strict')?1:0,
     NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
@@ -766,6 +817,50 @@ function showToolStatus(msg, type) {
   if(type !== 'working') setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
+function showSubtitleDownloader() {
+  const panel = $('subtitleDownloadDialog');
+  panel.classList.add('show');
+  const source = $('urlInput').value.trim();
+  if(source && !$('subtitleUrlInput').value.trim()) $('subtitleUrlInput').value = source;
+  $('tool_subtitle_type').value = $('s_subtitle_type').value || 'all';
+  applySubtitleLanguageValue('tool', getSubtitleLanguageValue('s'));
+  syncToolTiles();
+}
+
+function hideSubtitleDownloader() {
+  $('subtitleDownloadDialog').classList.remove('show');
+  syncToolTiles();
+}
+
+async function startSubtitleDownload() {
+  const button = $('btnSubtitleDownload');
+  if(button.disabled) return;
+  const urls = $('subtitleUrlInput').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+  if(!urls.length) {
+    showToolStatus('请输入至少一个视频链接', 'error');
+    return;
+  }
+  const langs = getSubtitleLanguageValue('tool') || DEFAULT_SUBTITLE_LANGS;
+  let submitted = false;
+  button.disabled = true;
+  showToolStatus('正在启动字幕下载...', 'working');
+  try {
+    await saveSettingsNoAlert();
+    const result = await api('/api/download-subtitles', {method:'POST', body:JSON.stringify({
+      urls: urls,
+      subtitle_type: $('tool_subtitle_type').value,
+      subtitle_langs: langs
+    })});
+    submitted = true;
+    showToolStatus(`已提交字幕下载（${result.total || urls.length} 个链接）`, 'success');
+  } catch(e) {
+    showToolStatus('字幕下载启动失败: ' + e.message, 'error');
+    showToast(e.message, 'error');
+  } finally {
+    if(!submitted) button.disabled = false;
+  }
+}
+
 // ========== SSE ==========
 let sseRetryDelay = 1000;
 const SSE_MAX_RETRY = 16000;
@@ -789,6 +884,7 @@ function connectSSE() {
       $('btnStart').disabled = download_running || d.phase === 'suspended';
       $('btnWithnyLive').disabled = download_running || d.phase === 'suspended';
       $('btnStop').disabled = !download_running || d.phase === 'stopping';
+      if($('btnSubtitleDownload')) $('btnSubtitleDownload').disabled = download_running || d.phase === 'suspended';
       if(!download_running) $('topline').style.width = '0';
     } else if(evt.type === 'stats') {
       const d = evt.data;
@@ -811,6 +907,7 @@ function connectSSE() {
       download_running = Boolean(readyData.running);
       $('btnStart').disabled = download_running || readyData.phase === 'suspended';
       $('btnStop').disabled = !download_running || readyData.phase === 'stopping';
+      if($('btnSubtitleDownload')) $('btnSubtitleDownload').disabled = download_running || readyData.phase === 'suspended';
       if(readyData.progress) renderProgress(readyData.progress);
       if(readyData.stats) {
         $('statOk').textContent = readyData.stats.ok || 0;

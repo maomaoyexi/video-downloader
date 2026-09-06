@@ -242,6 +242,7 @@ class DownloadExecutorTests(unittest.TestCase):
                 platform_override="YouTube",
                 config_override=executor._app_state.config_snapshot(),
                 bili_parts=None,
+                include_subtitles=False,
             )
 
     def test_non_live_url_text_does_not_enable_live_mode(self):
@@ -254,6 +255,32 @@ class DownloadExecutorTests(unittest.TestCase):
                 result = executor.start_download("https://youtube.com/watch?v=live-recording")
             self.assertEqual(result, {"ok": True})
             self.assertFalse(callbacks["build_command"].call_args.kwargs["is_live"])
+
+    def test_twitcasting_retry_keeps_subtitle_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executor, _ = create_executor(Path(directory))
+            handle = executor._download_manager.begin("single")
+            executor._app_state.batch_stats.update({"ok": 0, "fail": 0, "total": 1, "current": 1})
+            process = Mock(returncode=1)
+            process.stdout = None
+            process.poll.return_value = 1
+            executor._spawn = Mock(return_value=process)
+            executor._start_reader = Mock(return_value=(
+                Queue(), threading.Event()
+            ))
+            executor._start_reader.return_value[0].put(
+                "ERROR: Initialization fragment found after media fragments"
+            )
+            executor._start_reader.return_value[1].set()
+            executor._close_process = Mock()
+            executor._finish = Mock()
+            subtitle_cmd = ["yt-dlp", "--skip-download", "url"]
+            with patch.object(executor, "_run_single") as retry:
+                DownloadExecutor._run_single(
+                    executor, handle, ["yt-dlp", "url"], "url", "TwitCasting",
+                    False, "0", "mp3", False, subtitle_cmd,
+                )
+            self.assertIs(retry.call_args.args[-1], subtitle_cmd)
 
     def test_single_thread_start_failure_rolls_back_manager(self):
         with tempfile.TemporaryDirectory() as directory:

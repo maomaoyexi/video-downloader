@@ -9,11 +9,17 @@ DarkKandaoMaster（强壮的砍刀，GitHub：@DarkKandaoMaster）
 https://github.com/DarkKandaoMaster
 ErgouTree（GitHub：@ergou10086）
 https://github.com/ergou10086
+ZheYi101（GitHub：@ZheYi101）
+https://github.com/ZheYi101
 
 主要贡献
 - DarkKandaoMaster：WebUI 界面与交互重构
 - ErgouTree：MP3 音频单独下载；v2.3.0 NicoChannel、Twitter/X 与 TwitCasting 直播支持、UI 改版、音频格式转换、响度统一和音量调整工具
 - 猫猫葉汐A_spy：项目原版与维护；v2.3.0 Withny 已授权历史存档下载、直播监控录制、中性配色切换及音频工具界面对齐调整
+- DarkKandaoMaster：v2.4.0 UI 重构
+- ErgouTree：v2.4.0 其他更新与修复
+- ZheYi101：v2.4.0 字幕下载功能
+- 猫猫葉汐A_spy：v2.4.0 字幕功能修复、生命周期修复及合并适配
 
 项目仓库
 https://github.com/maomaoyexi/video-downloader

@@ -9,6 +9,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from urllib.parse import parse_qs, urlparse
 
+from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS
+
 
 @dataclass(frozen=True)
 class HttpHandlerDependencies:
@@ -30,6 +32,7 @@ class HttpHandlerDependencies:
     start_withny_live: object
     batch_txt_download: object
     start_urls_download: object
+    download_subtitles: object
     stop_download: object
     get_current_command: object
     submit_password: object
@@ -241,6 +244,20 @@ def create_handler(dependencies):
                     self._json({"error": "字段 urls 必须是字符串数组"}, status=400)
                     return
                 self._json(dependencies.start_urls_download(urls))
+            elif path == "/api/download-subtitles":
+                urls = self._field(data, "urls", list, [])
+                if urls is None:
+                    return
+                if not all(isinstance(url, str) for url in urls):
+                    self._json({"error": "字段 urls 必须是字符串数组"}, status=400)
+                    return
+                subtitle_type = self._field(data, "subtitle_type", str, "all")
+                if subtitle_type is None:
+                    return
+                subtitle_langs = self._field(data, "subtitle_langs", str, DEFAULT_SUBTITLE_LANGS)
+                if subtitle_langs is None:
+                    return
+                self._json(dependencies.download_subtitles(urls, subtitle_type, subtitle_langs))
             elif path == "/api/batch-txt":
                 bili_parts_map = data.get("bili_parts_map") or None
                 self._json(dependencies.batch_txt_download(bili_parts_map=bili_parts_map))

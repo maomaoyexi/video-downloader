@@ -1,9 +1,9 @@
-VERSION = "v2.3.0 WebUI"
-VERSION_NUM = 20300
+VERSION = "v2.4.0 WebUI"
+VERSION_NUM = 20400
 
 GITHUB_OWNER = "maomaoyexi"
 GITHUB_REPO = "video-downloader"
-EXE_NAME = "视频下载工具v2.3.0-GUI.exe"
+EXE_NAME = "视频下载工具v2.4.0-GUI.exe"
 UPDATE_HOSTS = {
     "github.com",
     "api.github.com",
@@ -11,6 +11,10 @@ UPDATE_HOSTS = {
 }
 MAX_UPDATE_SIZE = 512 * 1024 * 1024
 IDLE_TIMEOUT = 30
+
+LEGACY_ALL_SUBTITLE_LANGS = "all,-live_chat"
+RECOMMENDED_SUBTITLE_LANGS = "ja.*,zh.*,zh-Hans,zh-Hant,en.*,ko.*"
+DEFAULT_SUBTITLE_LANGS = "zh.*,zh-Hans,zh-Hant"
 
 DEFAULT_CONFIG = {
     "PLATFORM": "YouTube",
@@ -34,6 +38,9 @@ DEFAULT_CONFIG = {
     "HWACCEL": "cpu",
     "EMBED_META": 1,
     "DOWNLOAD_THUMB": 1,
+    "DOWNLOAD_SUBTITLES": 0,
+    "SUBTITLE_TYPE": "all",
+    "SUBTITLE_LANGS": DEFAULT_SUBTITLE_LANGS,
     "WIN_FILENAMES": 1,
     "STRICT_FILENAME": 0,
     "NICO_COMMENTS": 0,
@@ -64,6 +71,7 @@ MP3_BITRATE_OPTIONS = [128, 192, 256, 320]
 BILI_POLICY_OPTIONS = ["all", "select"]
 LIVE_STREAM_METHOD_OPTIONS = ["yt-dlp"]
 LIVE_STREAM_METHOD_LABELS = ["yt-dlp (默认)"]
+SUBTITLE_TYPE_OPTIONS = ["all", "manual", "auto"]
 
 PLATFORM_INFO = [
     {"name": "YouTube", "color": "#FF0000", "domains": ["youtube.com", "youtu.be"]},

@@ -1,4 +1,24 @@
-def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, use_ffmpeg_for_hls=False):
+from .constants import DEFAULT_SUBTITLE_LANGS
+
+
+def _append_subtitle_options(cmd, cfg, tool_dir, platform_name, also_set_default_output=False):
+    if not cfg.get("DOWNLOAD_SUBTITLES", 0):
+        return False
+    subtitle_type = cfg.get("SUBTITLE_TYPE", "all")
+    subtitle_langs = cfg.get("SUBTITLE_LANGS") or DEFAULT_SUBTITLE_LANGS
+    subtitle_tmpl = tool_dir / platform_name / "subtitles" / "%(title)s [%(id)s].%(ext)s"
+    if also_set_default_output:
+        cmd += ["-o", str(subtitle_tmpl)]
+    cmd += ["-o", f"subtitle:{subtitle_tmpl}"]
+    if subtitle_type in {"all", "manual"}:
+        cmd.append("--write-subs")
+    if subtitle_type in {"all", "auto"}:
+        cmd.append("--write-auto-subs")
+    cmd += ["--sub-langs", subtitle_langs]
+    return True
+
+
+def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, use_ffmpeg_for_hls=False, include_subtitles=True, subtitle_only=False):
     """构建 yt-dlp 下载命令行参数。
 
     根据配置项组装完整的 yt-dlp 命令行参数列表，包括输出模板、格式选择、
@@ -45,6 +65,30 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     platform_name = platform_override if platform_override else cfg["PLATFORM"]
     is_nico_live = "live.nicovideo.jp" in url.lower() or "live2.nicovideo.jp" in url.lower()
 
+    if subtitle_only:
+        cmd += ["--skip-download"]
+        if not _append_subtitle_options(cmd, cfg, tool_dir, platform_name, also_set_default_output=True):
+            return cmd + [url]
+        if cfg["SPEED_LIMIT"] > 0:
+            cmd += ["-r", f"{cfg['SPEED_LIMIT']}M"]
+        if cfg["PROXY_ENABLED"]:
+            cmd += ["--proxy", f"{cfg['PROXY_TYPE']}://{cfg['PROXY_ADDR']}:{cfg['PROXY_PORT']}"]
+        if cfg["USE_COOKIES"]:
+            if cfg["COOKIE_MODE"] == 1 and cookie_file is not None:
+                cmd += ["--cookies", str(cookie_file)]
+            elif cfg["COOKIE_MODE"] != 1:
+                cmd += ["--cookies-from-browser", f"{cfg['BROWSER_NAME']}:{cfg['BROWSER_PROFILE']}"]
+        if cfg["WIN_FILENAMES"]:
+            cmd += ["--windows-filenames"]
+        if cfg["STRICT_FILENAME"]:
+            cmd += ["--restrict-filenames"]
+        if platform_name == "TwitCasting" and cfg.get("TC_PASSWORD"):
+            cmd += ["--video-password", cfg["TC_PASSWORD"]]
+        if platform_name == "NicoChannel" and nicochannel_auth_token:
+            cmd += ["--username", "jwt_token", "--password", nicochannel_auth_token]
+        cmd.append(url)
+        return cmd
+
     # VOD 模板：开启嵌入元数据时，在文件名前追加 [YYYYMMDD] 发布日期，便于按时间排序
     vod_date_prefix = "[%(upload_date)s] " if cfg["EMBED_META"] else ""
 
@@ -75,6 +119,9 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, plat
     cmd += ["-o", out_tmpl]
     archive = tool_dir / f"{platform_name.lower()}_archive.txt"
     cmd += ["--download-archive", str(archive)]
+
+    if include_subtitles:
+        _append_subtitle_options(cmd, cfg, tool_dir, platform_name)
 
     res = cfg["RESOLUTION"]
     codec = cfg["CODEC"]

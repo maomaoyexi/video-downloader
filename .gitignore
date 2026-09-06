@@ -52,6 +52,8 @@ nicochannel.zip
 
 # 主程序exe（通过Release发布，不放入源码仓库）
 *.exe
+视频下载工具v*-依赖包.zip
+视频下载工具v*-源码版.zip
 
 # OS
 Thumbs.db

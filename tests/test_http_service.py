@@ -57,6 +57,7 @@ def make_dependencies(exit_event):
         start_withny_live=lambda: {"ok": True, "kind": "withny-live"},
         batch_txt_download=value,
         start_urls_download=lambda urls: {"urls": urls},
+        download_subtitles=lambda *args: {"args": list(args)},
         stop_download=value,
         get_current_command=lambda: {"ok": True, "command": "yt-dlp https://example.com"},
         submit_password=lambda url, password: {"ok": True},
@@ -164,6 +165,22 @@ class HttpServiceTests(unittest.TestCase):
         self.assertEqual(json.loads(body), {"url": "https://example.com"})
         self.request("/api/exit", method="POST", payload={})
         self.assertTrue(self.exit_event.wait(1))
+
+    def test_download_subtitles_route_uses_injected_dependency(self):
+        status, body, _ = self.request("/api/download-subtitles", method="POST", payload={
+            "urls": ["https://youtube.com/watch?v=abc"],
+            "subtitle_type": "manual",
+            "subtitle_langs": "zh.*",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {
+            "args": [["https://youtube.com/watch?v=abc"], "manual", "zh.*"]
+        })
+
+    def test_download_subtitles_route_rejects_non_string_urls(self):
+        with self.assertRaises(HTTPError) as raised:
+            self.request("/api/download-subtitles", method="POST", payload={"urls": [123]})
+        self.assertEqual(raised.exception.code, 400)
 
     def test_withny_archive_route_uses_injected_dependency(self):
         status, body, _ = self.request("/api/start-withny-archive", method="POST", payload={})

@@ -4,6 +4,11 @@ import re
 import subprocess
 import threading
 from pathlib import Path
+from typing import Callable
+
+from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS, LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS, SUBTITLE_TYPE_OPTIONS
+from video_downloader.core.platform import clean_url
+from video_downloader.core.subtitles import classify_subtitle_result
 
 AUDIO_EXTENSIONS = {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.opus', '.wma', '.ac3', '.aiff', '.aif', '.wv', '.ape'}
 
@@ -20,13 +25,27 @@ AUDIO_CODEC_CONFIG = {
 
 
 class ToolService:
-    def __init__(self, tool_dir, exe_suffix, app_state, save_config, log):
+    def __init__(self, tool_dir, exe_suffix, app_state, save_config, log,
+                 build_subtitle_command: Callable[..., list[str]] | None = None,
+                 download_manager=None, broadcast_download_state=None,
+                 cancel_idle_timer=None, start_idle_timer=None):
         self._tool_dir = tool_dir
         self._exe_suffix = exe_suffix
         self._app_state = app_state
         self._save_config = save_config
         self._log = log
         self._log_dir = tool_dir / "logs"
+        self._build_subtitle_command = build_subtitle_command
+        self._download_manager = download_manager
+        self._broadcast_download_state = broadcast_download_state or (lambda: None)
+        self._cancel_idle_timer = cancel_idle_timer or (lambda: None)
+        self._start_idle_timer = start_idle_timer or (lambda: None)
+
+    @staticmethod
+    def _should_retry_recommended_subtitles(langs, output):
+        if langs != LEGACY_ALL_SUBTITLE_LANGS:
+            return False
+        return "HTTP Error 429" in output or "Too Many Requests" in output
 
     def check_deps(self):
         deps = {}
@@ -118,6 +137,120 @@ class ToolService:
                 self._log(f"[yt-dlp] 更新异常: {exc}", "error")
         threading.Thread(target=run, daemon=True).start()
         return {"ok": True}
+
+    def download_subtitles(self, urls, subtitle_type, subtitle_langs):
+        ytdlp = self._tool_dir / f"yt-dlp{self._exe_suffix}"
+        if not ytdlp.exists():
+            return {"error": "未找到yt-dlp.exe"}
+        if self._build_subtitle_command is None:
+            return {"error": "字幕下载命令未配置"}
+        cleaned_urls = []
+        for url in urls:
+            if isinstance(url, str):
+                cleaned = clean_url(url)
+                if cleaned:
+                    cleaned_urls.append(cleaned)
+        if not cleaned_urls:
+            return {"error": "请输入至少一个视频链接"}
+        if subtitle_type not in SUBTITLE_TYPE_OPTIONS:
+            return {"error": "字幕类型无效"}
+        langs = (subtitle_langs or DEFAULT_SUBTITLE_LANGS).strip()
+        if not langs:
+            langs = DEFAULT_SUBTITLE_LANGS
+        if len(langs) > 200:
+            return {"error": "字幕语言设置长度不能超过 200 字符"}
+        if self._download_manager is None:
+            return {"error": "字幕下载任务管理器未配置"}
+        handle = self._download_manager.begin("subtitles")
+        if handle is None:
+            return {"error": "已有下载任务正在运行"}
+        self._cancel_idle_timer()
+        self._broadcast_download_state()
+
+        def run():
+            success = missing = fail = 0
+            try:
+                self._log(f"[字幕下载] 开始处理 {len(cleaned_urls)} 个链接", "info")
+                env = os.environ.copy()
+                env["PYTHONUTF8"] = "1"
+                for index, url in enumerate(cleaned_urls, 1):
+                    if handle.cancel_event.is_set():
+                        break
+                    self._log(f"[{index}/{len(cleaned_urls)}] 字幕下载: {url}", "info")
+                    try:
+                        def run_command(language_value):
+                            cmd = self._build_subtitle_command(
+                                url,
+                                subtitle_type=subtitle_type,
+                                subtitle_langs=language_value,
+                            )
+                            proc = subprocess.Popen(
+                                cmd, cwd=self._tool_dir, env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, encoding="utf-8", errors="replace",
+                            )
+                            if not self._download_manager.publish_process(handle, proc):
+                                proc.kill()
+                                proc.wait()
+                                return None, ""
+                            try:
+                                try:
+                                    stdout, stderr = proc.communicate(timeout=600)
+                                except subprocess.TimeoutExpired:
+                                    proc.kill()
+                                    proc.communicate()
+                                    raise
+                                output = "\n".join(part for part in (stdout, stderr) if part).strip()
+                                return proc.returncode, output
+                            finally:
+                                self._download_manager.clear_process(handle, proc)
+
+                        returncode, output = run_command(langs)
+                        if returncode is None:
+                            break
+                        if returncode != 0 and self._should_retry_recommended_subtitles(langs, output):
+                            self._log("  -> 全量字幕请求被限流，改用常用字幕重试", "warn")
+                            returncode, output = run_command(RECOMMENDED_SUBTITLE_LANGS)
+                            if returncode is None:
+                                break
+                        result = classify_subtitle_result(returncode, output)
+                        if result == "success":
+                            self._log("  -> 字幕处理完成", "success")
+                            success += 1
+                        elif result == "missing":
+                            detail = output.splitlines()[-1][:300] if output else "yt-dlp 未写出字幕文件"
+                            self._log(f"  -> 未找到匹配字幕: {detail}", "warn")
+                            missing += 1
+                        else:
+                            detail = output.splitlines()[-1][:300] if output else ""
+                            suffix = f": {detail}" if detail else ""
+                            self._log(f"  -> 字幕下载失败或无可用字幕{suffix}", "warn")
+                            fail += 1
+                    except subprocess.TimeoutExpired:
+                        self._log("  -> 字幕下载超时", "warn")
+                        fail += 1
+                    except Exception as exc:
+                        if not handle.cancel_event.is_set():
+                            self._log(f"  -> 字幕下载异常: {exc}", "warn")
+                            fail += 1
+                if handle.cancel_event.is_set():
+                    self._log("[字幕下载] 已停止", "warn")
+                else:
+                    level = "success" if fail == 0 and missing == 0 else "warn"
+                    self._log(f"[字幕下载] 完成: 成功{success} 未找到{missing} 失败{fail}", level)
+            finally:
+                self._download_manager.finish(handle)
+                self._broadcast_download_state()
+                self._start_idle_timer()
+
+        try:
+            threading.Thread(target=run, daemon=True).start()
+        except Exception:
+            self._download_manager.finish(handle)
+            self._broadcast_download_state()
+            self._start_idle_timer()
+            return {"error": "字幕下载任务启动失败"}
+        return {"ok": True, "total": len(cleaned_urls)}
 
     def clean_temp(self):
         count = 0

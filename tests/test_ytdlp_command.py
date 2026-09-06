@@ -2,12 +2,46 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_downloader.core.constants import DEFAULT_CONFIG
+from video_downloader.core.constants import DEFAULT_CONFIG, DEFAULT_SUBTITLE_LANGS
 from video_downloader.core.command import build_ytdlp_cmd
 from video_downloader.core.platform import detect_platform
 
 
 class YtdlpCommandTests(unittest.TestCase):
+    def test_subtitles_are_disabled_by_default(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd("https://youtube.com/watch?v=abc", DEFAULT_CONFIG, Path(directory))
+        self.assertNotIn("--write-subs", cmd)
+        self.assertNotIn("--write-auto-subs", cmd)
+
+    def test_enabled_subtitles_use_chinese_languages_and_separate_directory(self):
+        config = dict(DEFAULT_CONFIG, DOWNLOAD_SUBTITLES=1)
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd("https://youtube.com/watch?v=abc", config, Path(directory))
+        self.assertIn("--write-subs", cmd)
+        self.assertIn("--write-auto-subs", cmd)
+        self.assertEqual(cmd[cmd.index("--sub-langs") + 1], DEFAULT_SUBTITLE_LANGS)
+        subtitle_output = cmd[cmd.index("-o", cmd.index("-o") + 1) + 1]
+        self.assertIn("subtitles", subtitle_output)
+
+    def test_subtitle_only_command_skips_video_and_archive(self):
+        config = dict(DEFAULT_CONFIG, DOWNLOAD_SUBTITLES=1)
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://youtube.com/watch?v=abc", config, Path(directory), subtitle_only=True
+            )
+        self.assertIn("--skip-download", cmd)
+        self.assertNotIn("--download-archive", cmd)
+        self.assertNotIn("-f", cmd)
+
+    def test_video_command_can_omit_subtitles_for_sidecar(self):
+        config = dict(DEFAULT_CONFIG, DOWNLOAD_SUBTITLES=1)
+        with tempfile.TemporaryDirectory() as directory:
+            cmd = build_ytdlp_cmd(
+                "https://youtube.com/watch?v=abc", config, Path(directory), include_subtitles=False
+            )
+        self.assertNotIn("--write-subs", cmd)
+        self.assertNotIn("--write-auto-subs", cmd)
     def test_progress_template_includes_media_stage_marker(self):
         with tempfile.TemporaryDirectory() as directory:
             cmd = build_ytdlp_cmd(

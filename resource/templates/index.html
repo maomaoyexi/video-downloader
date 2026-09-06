@@ -230,6 +230,14 @@
             </div>
 
             <div class="sect">
+              <div class="sh"><b>字幕下载</b><span class="rule"></span></div>
+              <div class="row"><span class="lb">下载字幕</span><span class="sw" id="sw_subtitles" onclick="toggleSwitch(this);onSubtitleToggle()"><i></i></span></div>
+              <div class="row" id="row_subtitle_type"><span class="lb">字幕类型</span><span class="sel"><select class="ctl" id="s_subtitle_type"><option value="all">人工字幕 + 自动字幕</option><option value="manual">仅人工字幕</option><option value="auto">仅自动字幕</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row" id="row_subtitle_lang"><span class="lb">字幕语言</span><span class="sel"><select class="ctl" id="s_subtitle_lang_preset" onchange="onSubtitleLanguagePresetChange('s')"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row" id="row_subtitle_custom" style="display:none"><span class="lb">自定义语言</span><input type="text" class="ctl mono" id="s_subtitle_langs" maxlength="200" style="flex:1" placeholder="例如 ja.*,zh.*,en.*"></div>
+            </div>
+
+            <div class="sect">
               <div class="sh"><b>网络与代理</b><span class="rule"></span></div>
               <div class="row"><span class="lb">并发线程数</span><input type="range" id="s_threads" min="1" max="8" value="4"><span class="rval" id="thr_val">4</span></div>
               <div class="row"><span class="lb">下载限速</span><input type="range" id="s_speed" min="0" max="50" value="0"><span class="rval" id="spd_val">不限</span></div>
@@ -287,6 +295,7 @@
           <button class="tile" onclick="startBatch()"><svg class="ico s20"><use href="#i-list"></use></svg><span class="nm">TXT 混合批量下载</span></button>
           <button class="tile" onclick="toolAction('gen-template')"><svg class="ico s20"><use href="#i-file-text"></use></svg><span class="nm">生成批量下载模板</span></button>
           <button class="tile" onclick="toolAction('gen-cookie-template')"><svg class="ico s20"><use href="#i-cookie"></use></svg><span class="nm">生成 Cookie 模板</span></button>
+          <button class="tile" data-panel="subtitleDownloadDialog" onclick="showSubtitleDownloader()"><svg class="ico s20"><use href="#i-file-text"></use></svg><span class="nm">单独下载字幕</span></button>
           <button class="tile" onclick="toolAction('update-ytdlp')"><svg class="ico s20"><use href="#i-refresh"></use></svg><span class="nm">更新 yt-dlp</span></button>
           <button class="tile" onclick="toolAction('clean-temp')"><svg class="ico s20"><use href="#i-trash"></use></svg><span class="nm">清理临时文件</span></button>
           <button class="tile" data-panel="audioConvertDialog" onclick="showAudioConverter()"><svg class="ico s20"><use href="#i-music"></use></svg><span class="nm">音频格式转换</span></button>
@@ -294,6 +303,26 @@
           <button class="tile" data-panel="audioVolumeDialog" onclick="showAudioVolume()"><svg class="ico s20"><use href="#i-volume"></use></svg><span class="nm">音频音量调整</span></button>
           <button class="tile" onclick="toolAction('open-downloads')"><svg class="ico s20"><use href="#i-folder-open"></use></svg><span class="nm">打开下载目录</span></button>
           <button class="tile" onclick="toolAction('open-logs')"><svg class="ico s20"><use href="#i-folder"></use></svg><span class="nm">打开日志目录</span></button>
+        </div>
+
+        <div class="panel" id="subtitleDownloadDialog">
+          <div class="ptitle">
+            <svg class="ico s18"><use href="#i-file-text"></use></svg>
+            <b>单独下载字幕</b><small>仅保存字幕，不下载视频</small>
+            <button class="btn sm gh" style="margin-left:auto" onclick="hideSubtitleDownloader()"><svg class="ico s14"><use href="#i-x"></use></svg>关闭</button>
+          </div>
+          <div class="compose" style="margin-bottom:14px">
+            <textarea class="ta" id="subtitleUrlInput" rows="3" placeholder="输入一个或多个视频链接，每行一个"></textarea>
+          </div>
+          <div class="cols" style="gap:14px 44px">
+            <div class="row"><span class="lb">字幕类型</span><span class="sel"><select class="ctl" id="tool_subtitle_type"><option value="all">人工字幕 + 自动字幕</option><option value="manual">仅人工字幕</option><option value="auto">仅自动字幕</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+            <div class="row"><span class="lb">字幕语言</span><span class="sel"><select class="ctl" id="tool_subtitle_lang_preset" onchange="onSubtitleLanguagePresetChange('tool')"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+          </div>
+          <div class="row" id="tool_subtitle_custom_row" style="display:none;margin-top:14px"><span class="lb">自定义语言</span><input type="text" class="ctl mono" id="tool_subtitle_langs" maxlength="200" style="flex:1" placeholder="例如 ja.*,zh.*,en.*"></div>
+          <div class="pfoot">
+            <span class="hint">字幕保存到对应平台的 subtitles 目录。</span>
+            <button class="btn pri" id="btnSubtitleDownload" onclick="startSubtitleDownload()"><svg class="ico s14"><use href="#i-play"></use></svg>开始下载字幕</button>
+          </div>
         </div>
 
         <!-- 音频格式转换 -->
@@ -499,6 +528,9 @@
                 <div class="specrow"><span class="k">v2.1.0 UI 重构</span><span>强壮的砍刀 <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a></span></div>
                 <div class="specrow"><span class="k">v2.3.0 平台与工具</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — NicoChannel、Twitter/X、TwitCasting、音频工具</span></div>
                 <div class="specrow"><span class="k">v2.3.0 Withny</span><span>猫猫葉汐A_spy — 历史存档、直播录制</span></div>
+                <div class="specrow"><span class="k">v2.4.0 UI</span><span>DarkKandaoMaster <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a> — UI 重构</span></div>
+                <div class="specrow"><span class="k">v2.4.0 字幕</span><span>ZheYi101 <a href="https://github.com/ZheYi101" target="_blank" rel="noopener noreferrer">@ZheYi101</a> — 字幕下载；猫猫葉汐A_spy — 修复与合并适配</span></div>
+                <div class="specrow"><span class="k">v2.4.0 更新</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — 其他更新与修复</span></div>
               </div>
             </div>
           </div>

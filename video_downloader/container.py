@@ -17,6 +17,7 @@ from typing import Any, Callable
 from .core.validation import validate_config
 from .core.constants import DEFAULT_CONFIG, IDLE_TIMEOUT, VERSION
 from .core.command import build_ytdlp_cmd as _build_ytdlp_cmd
+from .core.platform import detect_platform
 from .state.app_state import AppState
 from .services.download_executor import DownloadExecutor
 from .services.nicochannel_auth import NicochannelAuthService
@@ -155,7 +156,9 @@ class AppContainer:
                           platform_override: str | None = None,
                           config_override: dict | None = None,
                           bili_parts: str | None = None,
-                          use_ffmpeg_for_hls: bool = False) -> list[str]:
+                          use_ffmpeg_for_hls: bool = False,
+                          include_subtitles: bool = True,
+                          subtitle_only: bool = False) -> list[str]:
             cfg = config_override if config_override is not None else app_state.config_snapshot()
             cookie_file = tool_dir / "cookies.txt"
             effective_platform = platform_override if platform_override else cfg["PLATFORM"]
@@ -175,6 +178,25 @@ class AppContainer:
                 bili_parts=bili_parts,
                 nicochannel_auth_token=nicochannel_token,
                 use_ffmpeg_for_hls=use_ffmpeg_for_hls,
+                include_subtitles=include_subtitles,
+                subtitle_only=subtitle_only,
+            )
+
+        def build_subtitle_command(url: str, *, subtitle_type: str, subtitle_langs: str) -> list[str]:
+            cfg = app_state.config_snapshot()
+            detected = detect_platform(url)
+            effective_platform = detected if detected else cfg["PLATFORM"]
+            subtitle_config = dict(
+                cfg,
+                DOWNLOAD_SUBTITLES=1,
+                SUBTITLE_TYPE=subtitle_type,
+                SUBTITLE_LANGS=subtitle_langs,
+            )
+            return build_command(
+                url,
+                platform_override=effective_platform,
+                config_override=subtitle_config,
+                subtitle_only=True,
             )
 
         # ---- 工具服务 ----
@@ -184,6 +206,11 @@ class AppContainer:
             app_state=app_state,
             save_config=save_config,
             log=add_log,
+            build_subtitle_command=build_subtitle_command,
+            download_manager=download_manager,
+            broadcast_download_state=broadcast_download_state,
+            cancel_idle_timer=cancel_idle_timer,
+            start_idle_timer=start_idle_timer,
         )
 
         # ---- 下载执行器 ----
@@ -247,6 +274,7 @@ class AppContainer:
         browse_folder = tool_service.browse_folder
         handle_tool_action = tool_service.handle_tool_action
         read_urls_file = tool_service.read_urls_file
+        download_subtitles = tool_service.download_subtitles
 
         def batch_txt_download(bili_parts_map: dict | None = None) -> dict:
             """从 urls.txt 批量下载（混合平台）。"""
@@ -288,6 +316,7 @@ class AppContainer:
                 start_withny_live=start_withny_live,
                 batch_txt_download=batch_txt_download,
                 start_urls_download=start_urls_download,
+                download_subtitles=download_subtitles,
                 stop_download=stop_download,
                 get_current_command=get_current_command,
                 submit_password=submit_password,
