@@ -47,6 +47,19 @@ class ConfigValidationTests(unittest.TestCase):
         self.assertTrue(any("SUBTITLE_LANGS" in error for error in errors))
         self.assertEqual(validated["SUBTITLE_LANGS"], DEFAULT_SUBTITLE_LANGS)
 
+    def test_po_token_toggle_is_boolean(self):
+        validated, errors = validate_config({"YOUTUBE_PO_TOKEN_ENABLED": 2})
+        self.assertTrue(any("YOUTUBE_PO_TOKEN_ENABLED" in error for error in errors))
+        self.assertEqual(validated["YOUTUBE_PO_TOKEN_ENABLED"], 0)
+
+    def test_default_ytdlp_args_allow_up_to_4000_characters(self):
+        value = "x" * 4000
+        validated, errors = validate_config({"YTDLP_DEFAULT_ARGS": value})
+        self.assertEqual(errors, [])
+        self.assertEqual(validated["YTDLP_DEFAULT_ARGS"], value)
+        _, errors = validate_config({"YTDLP_DEFAULT_ARGS": "x" * 4001})
+        self.assertTrue(any("YTDLP_DEFAULT_ARGS" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

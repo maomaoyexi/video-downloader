@@ -24,6 +24,8 @@
 - **字幕下载** - 支持普通下载附带字幕及独立多链接字幕下载，默认关闭，开启后默认中文
 - 🎵 **MP3 音频下载** - 支持在下载视频时单独保存 MP3 音频
 - 🍪 **Cookie支持** - 支持cookies.txt文件模式
+- 🛡️ **YouTube PO Token** - 可选自动启动本地 BgUtils Provider，缓解部分 GVS/PO Token 相关 403
+- 🧩 **自定义 yt-dlp 参数** - 支持仅本次任务参数与每次下载默认参数
 - ⚡ **硬件加速** - 支持NVIDIA NVENC、Intel QSV、AMD AMF
 - 🔄 **自动更新** - 启动后通过 GitHub Releases 检查新版本，校验通过后自动更新替换
 - 🧰 **工具箱** - 内置WAV转MP3、yt-dlp更新、临时文件清理等8个工具
@@ -35,14 +37,18 @@
    - `视频下载工具v2.4.0-GUI.exe` - 主程序
    - `视频下载工具v2.4.0-依赖包.zip` - 通用依赖包（包含下载工具和帮助文档）
 2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.4.0-GUI.exe` 放入其中
-3. 解压依赖包，将里面的**全部内容**（所有exe文件、docs文件夹、changelog.html等）解压到主程序同一目录
+3. 解压依赖包，将其中的 `dependency` 文件夹完整放到主程序同一目录
 4. 双击 `视频下载工具v2.4.0-GUI.exe` 运行，自动打开浏览器界面
 
-> 💡 **提示**：依赖包包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe 和 withny-dl-windows-amd64.exe。NicoChannel 还需要单独准备 `nicochannel.zip` 并放在主程序同一目录。首次运行会自动生成配置文件和下载目录。
+> 💡 **提示**：依赖包的 `dependency/` 包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和 `yt-dlp-plugins` 目录。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。首次运行会自动生成 `download/`、归档及日志目录。
+
+若要启用 YouTube PO Token，请同时保留 `dependency/yt-dlp-plugins/bgutil-ytdlp-pot-provider.zip` 和 `dependency/bgutil-ytdlp-pot-provider/server`（含已安装的 `node_modules`）。在「设置 → 平台专项」打开 YouTube PO Token 后，程序会在 YouTube 任务开始前自动启动 Provider，并在退出工具时关闭它；无需另开 CMD。Provider 可能缓解部分 403，但不能保证绕过所有风控或登录校验。
+
+TwitCasting 多初始化段归档会自动加载随项目提供的 `dependency/yt-dlp-plugins/video_downloader` 插件，按设置中的下载线程数并发预取 HLS 分片，再由 FFmpeg 完成本地封装；无需另装下载器。若插件缺失，程序会安全退回 FFmpeg 串行下载。
 
 ### 源码运行版
 
-保持 `视频下载工具v2.4.0-GUI.py`、`video_downloader/` 与各依赖 EXE 位于同一目录，安装 Python 3 后运行：
+保持 `视频下载工具v2.4.0-GUI.py`、`video_downloader/` 与 `dependency/` 位于同一目录，安装 Python 3 后运行：
 
 ```powershell
 python ".\视频下载工具v2.4.0-GUI.py"
@@ -64,13 +70,13 @@ python ".\视频下载工具v2.4.0-GUI.py"
 4. 点击「TXT批量下载」开始批量下载
 
 ### Twitch直播录制
-直接粘贴主播频道URL（如 `https://www.twitch.tv/xqc`）即可从直播开头录制，停止则结束录制。文件自动保存到 `Twitch/主播名/直播/` 目录。
+直接粘贴主播频道URL（如 `https://www.twitch.tv/xqc`）即可从直播开头录制，停止则结束录制。文件自动保存到 `download/Twitch/主播名/直播/` 目录。
 
 ### YouTube / Niconico 直播录制
 YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp` 或 `live2.nicovideo.jp` 链接。程序会自动进入直播模式，并实时显示录制时长、大小、速度和分片状态。
 
 ### TwitCasting 直播录制 / 录播下载
-粘贴主播页 URL（如 `https://twitcasting.tv/主播名`）即可从直播开头录制，文件保存到 `TwitCasting/主播名/直播/` 目录。单条录播使用 `/movie/数字ID` 链接，历史直播列表使用 `/show` 或 `/archive` 链接。密码保护或会员限定内容可在「设置」页填写「TwitCasting 密码」后下载。
+粘贴主播页 URL（如 `https://twitcasting.tv/主播名`）即可从直播开头录制，文件保存到 `download/TwitCasting/主播名/直播/` 目录。单条录播使用 `/movie/数字ID` 链接，历史直播列表使用 `/show` 或 `/archive` 链接。密码保护或会员限定内容可在「设置」页填写「TwitCasting 密码」后下载。
 
 ### Bilibili 下载
 粘贴 Bilibili 视频或直播链接后程序会自动识别。多 P 视频可按设置下载全部分集或弹出分集选择器；1080P 及以上画质通常需要在程序目录配置 `cookies.txt`。
@@ -119,16 +125,21 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 ```
 工具目录/
 ├── 视频下载工具v2.4.0-GUI.exe # 主程序
-├── yt-dlp.exe               # 下载核心
-├── ffmpeg.exe               # 音视频处理
-├── ffprobe.exe              # 媒体信息探测
-├── deno.exe                 # JavaScript运行时
-├── fantiadl.exe             # Fantia下载器（可选）
+├── dependency/              # 所有第三方依赖，可整体替换
+│   ├── yt-dlp.exe           # 下载核心
+│   ├── ffmpeg.exe           # 音视频处理
+│   ├── ffprobe.exe          # 媒体信息探测
+│   ├── deno.exe             # JavaScript运行时
+│   ├── fantiadl.exe         # Fantia下载器（可选）
+│   ├── nicochannel.zip      # NicoChannel插件（可选）
+│   ├── yt-dlp-plugins/
+│   │   └── bgutil-ytdlp-pot-provider.zip
+│   └── bgutil-ytdlp-pot-provider/
+│       └── server/          # BgUtils Provider 与 node_modules（可选）
 ├── settings.ini             # 配置文件（自动生成）
 ├── presets.json             # 预设配置（自动生成）
 ├── cookies.txt              # Cookie文件（自行放置）
 ├── urls.txt                 # 批量下载链接（自行编辑）
-├── download_history.json    # 下载历史（自动生成）
 ├── changelog.html           # 更新日志
 ├── CREDITS.txt              # 作者与贡献者
 ├── docs/                    # 帮助文档
@@ -136,25 +147,24 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 │   ├── 常见问题答疑.txt
 │   ├── 错误码.txt
 │   └── cookies问题答疑.txt
-├── logs/                    # 日志目录
-├── YouTube/                 # YouTube下载目录
-│   └── 上传者名/
-│       └── 视频标题 [id].mp4
-├── Twitch/                  # Twitch下载目录
-│   ├── 主播名/
-│   │   └── 视频标题 [id].mp4
-│   └── 主播名/直播/
-│       └── 直播标题 - 日期 id.mp4
-├── Niconico/                # Niconico下载目录
-├── Bilibili/                # Bilibili视频、直播及多P目录
-├── Fantia/                  # Fantia下载目录
-├── Withny/                  # Withny历史存档目录
-└── TwitCasting/             # TwitCasting下载目录
-    ├── 主播名/
-    │   └── 视频标题 [id].mp4
-    └── 主播名/直播/
-        └── 直播标题 - 日期 id.mp4
+└── download/                # 所有运行产物，可整体迁移或备份
+    ├── archive/             # 各平台 *_archive.txt
+    ├── download_history.json # 下载历史（自动生成）
+    ├── logs/                # 日志目录
+    ├── YouTube/             # YouTube下载目录
+    │   └── 上传者名/
+    │       └── 视频标题 [id].mp4
+    ├── Twitch/              # Twitch下载目录
+    ├── Niconico/            # Niconico下载目录
+    ├── NicoChannel/         # NicoChannel下载目录
+    ├── Bilibili/            # Bilibili视频、直播及多P目录
+    ├── Fantia/              # Fantia下载目录
+    ├── Twitter/             # Twitter/X下载目录
+    ├── Withny/              # Withny历史存档目录
+    └── TwitCasting/         # TwitCasting下载目录
 ```
+
+旧版本散落在根目录的依赖、平台下载目录和 `*_archive.txt` 会在首次启动时自动迁移到上述结构。迁移不会覆盖同名文件；发生冲突时，旧文件会以 `.legacy-N` 后缀保留。
 
 ## 🔧 工具箱功能
 
@@ -180,7 +190,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 > A: 需要配置登录Cookie，游客身份仅能获取低清晰度。登录后导出cookies.txt即可。
 
 **Q: 下载的文件在哪里？**
-> A: 默认保存在exe同目录下对应平台名称的文件夹中，如YouTube/、Twitch/等。
+> A: 默认保存在exe同目录的 `download/` 下，如 `download/YouTube/`、`download/Twitch/` 等。
 
 **Q: 可以同时下载多个视频吗？**
 > A: 同一时间只能运行一个下载任务，但批量下载会按顺序自动下载所有链接。

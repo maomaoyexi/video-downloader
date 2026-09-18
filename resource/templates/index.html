@@ -138,11 +138,19 @@
           <div class="notice" id="twitterHint" style="display:none">
             <b>Twitter/X 提示：</b>部分内容需要登录才能下载，建议使用「浏览器 Cookie 模式」自动提取登录状态。
           </div>
+          <div class="notice" id="twitcastingHint" style="display:none">
+            <b>TwitCasting 提示：</b>受限归档建议使用已登录的 Firefox；密码视频会自动弹窗。若 m3u8 返回 400，工具会依次尝试直连与 Firefox 登录状态；多初始化片段会按“下载线程数”并发预取，再由 FFmpeg 本地封装。
+          </div>
           <div class="notice" id="nicochannelHint" style="display:none">
             <b>NicoChannel 提示：</b>首次下载需从 Firefox 自动提取 JWT 登录令牌，请确保已在 Firefox 中登录 <b>nicochannel.jp</b>。
           </div>
           <div class="notice" id="withnyHint" style="display:none">
             <b>Withny 提示：</b>历史存档选浏览器导出的「包含内容」HAR，直播录制选 withny-dl 的 YAML 配置。凭据可能含登录信息，请勿分享。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
+          </div>
+
+          <div class="row task-args-row">
+            <span class="lb">本次 yt-dlp 参数</span>
+            <input type="text" class="ctl mono" id="task_ytdlp_args" maxlength="4000" autocomplete="off" spellcheck="false" placeholder='仅用于本次单条或批量任务，例如：--sleep-requests 1' style="flex:1">
           </div>
 
           <div class="compose">
@@ -251,7 +259,7 @@
               <div class="row"><span class="lb">启用 Cookie</span><span class="sw on" id="sw_cookies" onclick="toggleSwitch(this)"><i></i></span></div>
               <div class="row"><span class="lb">Cookie 模式</span><span class="sel"><select class="ctl" id="s_cookiemode" onchange="toggleCookieMode()"><option value="1">cookies.txt 文件</option><option value="2">浏览器提取</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
               <div class="row" id="row_browser"><span class="lb">浏览器</span><span class="sel"><select class="ctl" id="s_browser"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row" id="row_profile"><span class="lb">配置文件名</span><input type="text" class="ctl mono" id="s_profile" value="Default" style="flex:1"></div>
+              <div class="row" id="row_profile"><span class="lb">配置文件名</span><input type="text" class="ctl mono" id="s_profile" value="Default" placeholder="Firefox 留空自动探测" style="flex:1"></div>
             </div>
 
           </div>
@@ -275,8 +283,15 @@
             <div class="sect">
               <div class="sh"><b>平台专项</b><span class="rule"></span></div>
               <div class="row"><span class="lb">B站多 P 策略</span><span class="sel"><select class="ctl" id="s_bili_policy"><option value="all">全部下载</option><option value="select">弹出选择</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row"><span class="lb">YouTube PO Token</span><span class="sw" id="sw_youtube_po_token" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载前自动启动本地 BgUtils Provider，缓解部分 403</span></div>
               <div class="row"><span class="lb">Niconico 弹幕</span><span class="sw" id="sw_nicocmt" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载并保存 XML 弹幕</span></div>
               <div class="row"><span class="lb">Niconico 重编码</span><span class="sw" id="sw_nicorec" onclick="toggleSwitch(this)"><i></i></span><span class="hint">兼容性优先，速度较慢</span></div>
+            </div>
+
+            <div class="sect">
+              <div class="sh"><b>高级参数</b><span class="rule"></span></div>
+              <div class="row args-setting-row"><span class="lb">默认 yt-dlp 参数</span><textarea class="ctl mono" id="s_ytdlp_default_args" maxlength="4000" rows="3" spellcheck="false" placeholder='每次下载都会添加，例如：--sleep-requests 1'></textarea></div>
+              <div class="hint">参数使用空格分隔；含空格的值请用英文引号包裹。本次参数会追加在默认参数之后。</div>
             </div>
 
             <div class="sect">
@@ -457,7 +472,7 @@
           <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-file-text"></use></svg>Withny 存档与录制</h3>
             <p><b>历史存档：</b>选 Withny 平台，点「开始下载」，选浏览器导出的「包含内容」HAR。</p>
-            <p><b>直播录制：</b>把 withny-dl 可执行文件放在程序目录，点「选择配置并录制」，选它的 YAML 配置，工具会持续监控频道。</p>
+            <p><b>直播录制：</b>把 withny-dl 可执行文件放在 dependency 目录，点「选择配置并录制」，选它的 YAML 配置，工具会持续监控频道。</p>
             <p><b>限制与隐私：</b>仅处理未加密的普通 HLS 存档；检测到 DRM、加密或缺失签名会拒绝。HAR 含登录凭据，用完请删除，不要分享。</p>
           </div>
 
@@ -480,15 +495,16 @@
           <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-folder"></use></svg>目录结构</h3>
             <div class="tree">工具目录/
-├── YouTube/          按作者分文件夹
-├── Bilibili/
-│   └── UP主名/直播/  直播录制
-├── Twitch/ Nico/ Fantia/
-├── Withny/ TwitCasting/ Twitter/
+├── dependency/       yt-dlp、FFmpeg、Deno及插件
+├── download/
+│   ├── archive/      各平台去重归档
+│   ├── logs/         运行日志
+│   ├── YouTube/      按作者分文件夹
+│   ├── Bilibili/ Twitch/ Niconico/
+│   └── 其他平台目录及download_history.json
 ├── urls.txt          批量链接
 ├── cookies.txt       Cookie
-├── presets.json      配置预设
-└── download_history.json</div>
+└── settings.ini      配置</div>
           </div>
 
           <div class="dsec">

@@ -17,11 +17,13 @@ from typing import Any, Callable
 from .core.validation import validate_config
 from .core.constants import DEFAULT_CONFIG, IDLE_TIMEOUT, VERSION
 from .core.command import build_ytdlp_cmd as _build_ytdlp_cmd
+from .core.paths import AppPaths
 from .core.platform import detect_platform
 from .state.app_state import AppState
 from .services.download_executor import DownloadExecutor
 from .services.nicochannel_auth import NicochannelAuthService
 from .services.download_manager import DownloadManager
+from .services.po_token_provider import PoTokenProviderService
 from .services.storage import StorageService
 from .services.tools import ToolService
 from .services.updater import UpdaterService
@@ -50,8 +52,9 @@ class AppContainer:
     def __init__(self, tool_dir: Path, exe_suffix: str = ".exe"):
         self._tool_dir = tool_dir
         self._exe_suffix = exe_suffix
-        self._log_dir = tool_dir / "logs"
-        self._log_dir.mkdir(exist_ok=True)
+        self._paths = AppPaths(tool_dir)
+        self._paths.ensure_runtime_dirs()
+        self._log_dir = self._paths.log_dir
 
     def wire(self) -> WiredApp:
         """构造完整的对象图并返回 WiredApp 句柄。"""
@@ -158,7 +161,9 @@ class AppContainer:
                           bili_parts: str | None = None,
                           use_ffmpeg_for_hls: bool = False,
                           include_subtitles: bool = True,
-                          subtitle_only: bool = False) -> list[str]:
+                          subtitle_only: bool = False,
+                          custom_args: str | None = None,
+                          po_token_base_url: str | None = None) -> list[str]:
             cfg = config_override if config_override is not None else app_state.config_snapshot()
             cookie_file = tool_dir / "cookies.txt"
             effective_platform = platform_override if platform_override else cfg["PLATFORM"]
@@ -180,6 +185,8 @@ class AppContainer:
                 use_ffmpeg_for_hls=use_ffmpeg_for_hls,
                 include_subtitles=include_subtitles,
                 subtitle_only=subtitle_only,
+                custom_args=custom_args,
+                po_token_base_url=po_token_base_url,
             )
 
         def build_subtitle_command(url: str, *, subtitle_type: str, subtitle_langs: str) -> list[str]:
@@ -214,6 +221,7 @@ class AppContainer:
         )
 
         # ---- 下载执行器 ----
+        po_token_provider = PoTokenProviderService(tool_dir=tool_dir, log=add_log)
         download_executor = DownloadExecutor(
             tool_dir=tool_dir,
             exe_suffix=exe_suffix,
@@ -229,10 +237,18 @@ class AppContainer:
             emit_event=emit_event,
             pick_withny_archive=tool_service.pick_withny_archive,
             pick_withny_live_config=tool_service.pick_withny_live_config,
+            ensure_po_token_provider=po_token_provider.ensure_running,
         )
 
-        def start_download(url: str, bili_parts: str | None = None, tc_password: str | None = None) -> dict:
-            return download_executor.start_download(url, bili_parts=bili_parts, tc_password=tc_password)
+        def start_download(url: str, bili_parts: str | None = None,
+                           tc_password: str | None = None,
+                           custom_args: str | None = None) -> dict:
+            return download_executor.start_download(
+                url,
+                bili_parts=bili_parts,
+                tc_password=tc_password,
+                custom_args=custom_args,
+            )
 
         def submit_password(url: str, password: str) -> dict:
             return download_executor.submit_password(url, password)
@@ -276,22 +292,28 @@ class AppContainer:
         read_urls_file = tool_service.read_urls_file
         download_subtitles = tool_service.download_subtitles
 
-        def batch_txt_download(bili_parts_map: dict | None = None) -> dict:
+        def batch_txt_download(bili_parts_map: dict | None = None,
+                               custom_args: str | None = None) -> dict:
             """从 urls.txt 批量下载（混合平台）。"""
             urls, err = read_urls_file()
             if err:
                 return {"error": err}
             save_config()
-            return download_executor.batch_download(urls, bili_parts_map=bili_parts_map)
+            return download_executor.batch_download(
+                urls,
+                bili_parts_map=bili_parts_map,
+                custom_args=custom_args,
+            )
 
-        def start_urls_download(urls: list) -> dict:
+        def start_urls_download(urls: list, custom_args: str | None = None) -> dict:
             """从输入框的多行文本批量下载（每行一个链接）。"""
             save_config()
-            return download_executor.batch_download(urls)
+            return download_executor.batch_download(urls, custom_args=custom_args)
 
         def request_exit() -> None:
             ticket = download_manager.request_stop()
             _kill_proc_tree(ticket.process)
+            po_token_provider.stop()
             app_state.publish({"type": "exit"})
             exit_event.set()
 

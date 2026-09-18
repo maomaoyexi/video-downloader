@@ -12,16 +12,16 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 3、如果端口被占用，程序会自动尝试其他端口
 
 问题2：提示缺少 yt-dlp.exe/ffmpeg.exe/ffprobe.exe
-原因：核心依赖文件缺失，未与主程序放在同一目录
+原因：核心依赖文件未放在主程序旁的dependency目录
 解决：
-1、将对应exe文件放到与主程序（视频下载工具v2.4.0-GUI.py）同一文件夹
+1、将对应exe文件放到主程序旁的dependency文件夹
 2、缺失时程序会在「关于」页面显示依赖状态和官方下载地址
 3、Fantia功能还需额外放置fantiadl.exe（可选）
 
 问题3：运行Python主程序后控制台立即关闭
 原因：Python环境不可用、程序模块缺失、依赖文件缺失，或被杀毒软件拦截
 解决：
-1、确认yt-dlp.exe、ffmpeg.exe、ffprobe.exe与主程序同目录
+1、确认dependency/yt-dlp.exe、dependency/ffmpeg.exe、dependency/ffprobe.exe存在
 2、检查杀毒软件是否隔离了程序文件，添加信任即可
 3、确认video_downloader文件夹与Python主程序同目录
 4、在命令行中运行「python 视频下载工具v2.4.0-GUI.py」查看具体报错信息
@@ -149,6 +149,17 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 - 检查代理是否能正常访问Niconico
 - URL前后不要有反引号、引号等特殊字符（程序会自动清理）
 
+TwitCasting专项：提示m3u8 HTTP 400或Initialization fragment错误
+原因：受限归档登录态/视频密码无效、代理出口被拒绝，或fMP4播放列表中途切换初始化片段
+解决：
+- 新版会在m3u8 400时受控尝试直连与Firefox登录状态，不会无限重试
+- 在Firefox中登录twitcasting.tv；设置为浏览器Cookie模式时，Firefox配置文件名可留空自动探测
+- 密码保护内容会弹窗索取密码；不要把账号密码填入视频密码框
+- 检测到多初始化片段后会按“下载线程数”并发预取分片，再交给FFmpeg从本地播放列表封装
+- 并发预取支持断点缓存：下载成功后自动清理，失败或取消后保留隐藏的.tc-hls缓存供下次重试
+- 若并发预取遇到不支持的播放列表，会自动退回原有FFmpeg串行下载，不影响兼容性
+- 若仍失败，请关闭代理或更换节点，并重新导出cookies.txt
+
 问题21：提示"You must provide at least one URL"
 原因：URL包含反引号、引号等特殊字符导致解析失败（已修复）
 解决：
@@ -182,7 +193,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 七、功能类疑问
 =====================================
 问题25：如何防止重复下载？
-答：各平台自带归档记录文件（*_archive.txt），自动记录已下载内容，自动跳过重复项；断点续传默认启用，同一URL会从断点继续
+答：归档记录统一保存在download/archive/（*_archive.txt），自动记录已下载内容并跳过重复项；断点续传默认启用，同一URL会从断点继续
 
 问题26：TXT批量下载怎么用？
 答：
@@ -213,7 +224,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 答：在设置页面底部点击「恢复默认设置」按钮，一键恢复所有参数到默认值
 
 问题32：下载历史保存在哪里？
-答：历史记录保存在download_history.json，在「历史」标签页可查看最近500条记录，支持一键清空
+答：历史记录保存在download/download_history.json，在「历史」标签页可查看最近500条记录，支持一键清空
 
 问题33：WAV转MP3工具怎么用？
 答：
@@ -225,9 +236,9 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 
 问题34：录制的直播文件保存在哪里？
 答：
-- YouTube直播：YouTube/上传者名/直播/ 目录
-- Twitch直播：Twitch/主播名/直播/ 目录
-- Niconico直播：Niconico/直播/ 目录
+- YouTube直播：download/YouTube/上传者名/直播/ 目录
+- Twitch直播：download/Twitch/主播名/直播/ 目录
+- Niconico直播：download/Niconico/直播/ 目录
 - 文件名包含主播名、录制时间、直播ID等信息
 
 问题35：YouTube直播支持吗？
@@ -249,5 +260,5 @@ Cookie模式：cookies.txt文件模式（全平台通用，最稳定）
 编码：兼容优先（H.264，所有设备可直接播放）
 代理：根据网络环境正确配置
 WAV转MP3：320kbps，保留源文件（确认质量后再手动删除）
-运行方式：所有依赖exe与主程序放同一目录，运行「python 视频下载工具v2.4.0-GUI.py」启动
+运行方式：所有依赖exe放入主程序旁的dependency目录，运行「python 视频下载工具v2.4.0-GUI.py」启动
 关闭方式：使用右上角「✕ 退出」按钮彻底关闭

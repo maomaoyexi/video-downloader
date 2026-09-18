@@ -151,6 +151,10 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;bac
 .notice a{color:var(--fg2);border-bottom-color:var(--line2);white-space:nowrap}
 
 .compose-wrap{display:flex;flex-direction:column;gap:5px;flex:none}
+.task-args-row{padding:3px 0}
+.task-args-row>.lb{width:126px}
+.args-setting-row{align-items:flex-start}
+.args-setting-row textarea.ctl{display:block;width:100%;height:auto;min-height:70px;padding:8px 11px;line-height:1.5;resize:vertical;flex:1}
 .compose{border:1px solid var(--line2);border-radius:8px;background:var(--surface);display:flex;flex-direction:column;flex:none}
 .compose:focus-within{border-color:var(--fg3)}
 textarea.ta{width:100%;border:none;background:none;resize:none;padding:14px 16px;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--fg);min-height:76px;max-height:190px;overflow-y:auto}

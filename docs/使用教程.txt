@@ -14,28 +14,28 @@ YT-DLP 多平台视频下载工具 完整使用教程
 安装步骤（新用户）：
   1. 安装Python 3，并确保python命令可用
   2. 保持「视频下载工具v2.4.0-GUI.py」与video_downloader文件夹在同一目录
-  3. 将依赖程序放到Python主程序同一目录
+  3. 将依赖程序放到Python主程序旁的dependency目录
   4. 运行「python 视频下载工具v2.4.0-GUI.py」启动
 
 升级步骤（老用户）：
   1. 关闭正在运行的旧版本
   2. 替换「视频下载工具v2.4.0-GUI.py」和video_downloader文件夹
-  3. 原有配置、下载记录、Cookie及依赖文件全部无需改动
+  3. 原有配置、下载记录和Cookie保留在根目录；依赖文件统一放入dependency文件夹
 
 依赖包已包含以下文件，无需单独下载：
 
 基础必需依赖
-  yt-dlp.exe    （核心下载引擎）
-  ffmpeg.exe    （音视频合并与转码）
-  ffprobe.exe   （媒体信息检测）
-  deno.exe      （JavaScript运行时）
+  dependency/yt-dlp.exe    （核心下载引擎）
+  dependency/ffmpeg.exe    （音视频合并与转码）
+  dependency/ffprobe.exe   （媒体信息检测）
+  dependency/deno.exe      （JavaScript运行时）
 缺失任意一个会直接报错无法运行。
 
 Fantia 功能可选依赖
-  fantiadl.exe
+  dependency/fantiadl.exe
 缺失不影响 YouTube/Twitch/Niconico 使用，仅 Fantia 专区功能不可用。
 
-所有依赖exe与Python主程序放在同一文件夹内即可。
+所有外部依赖统一放在Python主程序旁的dependency文件夹内。
 
 =====================================
 二、首次运行须知
@@ -126,7 +126,23 @@ Fantia 功能可选依赖
   FFmpeg硬件加速：CPU软编码 / N卡NVENC / Intel QSV / AMD AMF
   浏览器Cookie来源：Chrome / Edge / Firefox / Brave / Opera / cookies.txt文件
   Niconico弹幕下载开关
+  YouTube PO Token开关：下载YouTube前自动启动本地BgUtils Provider
+  默认yt-dlp参数：保存后自动附加到每次yt-dlp下载命令
   文件名兼容、元数据嵌入、下载封面等开关
+
+下载页面另有「本次 yt-dlp 参数」输入框：
+  - 对当前单条、多行批量或TXT批量任务有效，启动成功后自动清空
+  - 不会写入settings.ini
+  - 含空格的参数值请使用英文双引号包裹
+
+YouTube PO Token依赖：
+  - dependency/deno.exe
+  - dependency/yt-dlp-plugins/bgutil-ytdlp-pot-provider.zip
+  - dependency/bgutil-ytdlp-pot-provider/server/src/main.ts
+  - dependency/bgutil-ytdlp-pot-provider/server/node_modules
+开启后无需手动运行CMD。程序会检查127.0.0.1或IPv6本机回环地址的4416端口，
+复用已运行的Provider，或自动启动并等待/ping成功后再调用yt-dlp获取PO Token。
+PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效Cookie或更换网络出口。
 
 封面说明：
   - 「下载封面」默认开启，会写出并转换为JPG封面
@@ -219,7 +235,7 @@ YouTube直播录制：
   2. 程序会识别为直播任务并从直播开始处录制
   3. 录制过程中显示录制时长、已下载大小、分片或速度信息
   4. 点击「停止下载」即可结束录制
-  5. 文件保存到 YouTube/上传者名/直播/ 目录
+  5. 文件保存到 download/YouTube/上传者名/直播/ 目录
 
 Twitch直播录制：
   1. 粘贴主播频道链接（如 https://www.twitch.tv/主播名）
@@ -228,7 +244,7 @@ Twitch直播录制：
   3. 未开播会持续等待，开播后自动开始录制
   4. 录制过程中实时显示录制时长、已下载大小、下载速度
   5. 点击「停止下载」结束录制，或主播下播后自动结束
-  6. 文件自动保存到 Twitch/主播名/直播/ 目录
+  6. 文件自动保存到 download/Twitch/主播名/直播/ 目录
 
 Niconico直播录制：
   1. 粘贴Niconico直播链接（live.nicovideo.jp 或 live2.nicovideo.jp）
@@ -244,7 +260,7 @@ Niconico直播录制：
   - 绿色表示成功、红色表示失败，一目了然
   - 最多保留500条记录，支持一键清空
   - 下载完成立即通过SSE实时更新，无需刷新页面
-  - 历史数据保存在 download_history.json
+  - 历史数据保存在 download/download_history.json
 
 =====================================
 十二、断点续传说明
@@ -260,7 +276,7 @@ Niconico直播录制：
 十三、文件保存规则
 =====================================
 自动分类：程序目录 / 平台名 / UP主/主播/创作者名 / 视频文件
-自动去重：各平台独立归档记录（*_archive.txt），已下载内容不会重复下载
+自动去重：归档记录统一位于download/archive/（*_archive.txt），已下载内容不会重复下载
 临时文件：下载中断产生的 .part/.ytdl 文件可用于断点续传
 日志记录：控制台实时输出日志，WebUI界面实时显示
 
@@ -286,5 +302,5 @@ Cookie模式：cookies.txt 文件模式（全平台通用，最稳定）
 音视频模式：合并输出
 编码：兼容优先（H.264，所有设备可直接播放）
 代理：根据网络环境配置
-运行方式：所有依赖exe与主程序放同一目录，运行「python 视频下载工具v2.4.0-GUI.py」启动
+运行方式：所有依赖exe放入主程序旁的dependency目录，运行「python 视频下载工具v2.4.0-GUI.py」启动
 关闭方式：使用「✕ 退出」按钮彻底关闭，不要直接关控制台窗口

@@ -9,6 +9,7 @@ let evtSource = null;
 let currentPlatform = "YouTube";
 let lastUrlPlatform = "YouTube";
 let download_running = false;
+let activeTaskYtdlpArgs = "";
 const SESSION_TOKEN = window.SESSION_TOKEN || "";
 
 const PLATFORMS = [
@@ -137,6 +138,7 @@ function init() {
   fillSelect('s_audiofmt', [['m4a','m4a(原生)'],['mp3','MP3'],['wav','WAV']]);
   fillSelect('s_hwaccel', [['cpu','CPU软编码'],['h264_nvenc','N卡 NVENC'],['h264_qsv','Intel QSV'],['h264_amf','AMD AMF']]);
   fillSelect('s_browser', [['chrome','Chrome'],['edge','Edge'],['firefox','Firefox'],['brave','Brave'],['opera','Opera']]);
+  $('s_browser').addEventListener('change', onBrowserChanged);
   fillSelect('s_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
   fillSelect('tool_subtitle_lang_preset', SUBTITLE_LANG_PRESETS);
 
@@ -193,6 +195,7 @@ function selectPlatform(name) {
   // 平台专项提示
   $('bilibiliHint').style.display    = name === 'Bilibili' ? '' : 'none';
   $('twitterHint').style.display     = name === 'Twitter' ? '' : 'none';
+  $('twitcastingHint').style.display = name === 'TwitCasting' ? '' : 'none';
   $('nicochannelHint').style.display = name === 'NicoChannel' ? '' : 'none';
   $('withnyHint').style.display      = name === 'Withny' ? '' : 'none';
 
@@ -287,6 +290,7 @@ function applyConfig(s) {
   $('s_cookiemode').value = s.COOKIE_MODE;
   $('s_browser').value = s.BROWSER_NAME;
   $('s_profile').value = s.BROWSER_PROFILE;
+  onBrowserChanged();
   $('s_hwaccel').value = s.HWACCEL;
   if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
   setSwitch('sw_meta', s.EMBED_META);
@@ -299,6 +303,8 @@ function applyConfig(s) {
   setSwitch('sw_strict', s.STRICT_FILENAME);
   setSwitch('sw_nicocmt', s.NICO_COMMENTS);
   setSwitch('sw_nicorec', s.NICO_RECODE);
+  setSwitch('sw_youtube_po_token', s.YOUTUBE_PO_TOKEN_ENABLED);
+  $('s_ytdlp_default_args').value = s.YTDLP_DEFAULT_ARGS || '';
   setSwitch('sw_log', s.ENABLE_LOG);
   if(s.BILI_MULTIP_POLICY !== undefined) $('s_bili_policy').value = s.BILI_MULTIP_POLICY;
   // 音频输出格式设置（audio-convert.js 负责 UI 初始化）
@@ -361,6 +367,18 @@ function toggleCookieMode() {
   $('row_profile').style.display = browserMode ? 'flex' : 'none';
 }
 
+/** Firefox Profile 通常带随机前缀；留空交给 yt-dlp 自动选择最近使用项。 */
+function onBrowserChanged() {
+  const profile = $('s_profile');
+  if($('s_browser').value === 'firefox') {
+    if(profile.value.trim().toLowerCase() === 'default') profile.value = '';
+    profile.placeholder = '留空自动探测最近使用的 Firefox Profile';
+  } else {
+    if(!profile.value.trim()) profile.value = 'Default';
+    profile.placeholder = '例如 Default 或 Profile 1';
+  }
+}
+
 
 /** 从设置表单中收集当前全部配置项。 */
 function collectCfg() {
@@ -393,6 +411,8 @@ function collectCfg() {
     STRICT_FILENAME: isOn('sw_strict')?1:0,
     NICO_COMMENTS: isOn('sw_nicocmt')?1:0,
     NICO_RECODE: isOn('sw_nicorec')?1:0,
+    YOUTUBE_PO_TOKEN_ENABLED: isOn('sw_youtube_po_token')?1:0,
+    YTDLP_DEFAULT_ARGS: $('s_ytdlp_default_args').value.trim(),
     ENABLE_LOG: isOn('sw_log')?1:0,
     BILI_MULTIP_POLICY: $('s_bili_policy').value,
   };
@@ -422,8 +442,9 @@ async function resetSettings() {
 async function loadDeps() {
   const d = await api('/api/deps');
   const names = {'yt-dlp':'yt-dlp', ffmpeg:'ffmpeg', ffprobe:'ffprobe',
-    fantiadl:'fantiadl', withny_dl:'withny-dl', nicochannel_plugin:'nicochannel 插件'};
-  const optional = {fantiadl:1, withny_dl:1, nicochannel_plugin:1};
+    fantiadl:'fantiadl', withny_dl:'withny-dl', nicochannel_plugin:'nicochannel 插件',
+    youtube_po_token:'YouTube PO Token Provider'};
+  const optional = {fantiadl:1, withny_dl:1, nicochannel_plugin:1, youtube_po_token:1};
   $('depStatus').innerHTML = Object.entries(d).map(([k,v]) =>
     `<span class="dep${v?'':' miss'}">${icon(v?'check':'x','s14')}${names[k]||k}` +
     `<span class="st">${v ? '已就绪' : (optional[k] ? '可选 · 未安装' : '缺失')}</span></span>`
@@ -462,11 +483,12 @@ async function startDl() {
   // 按行拆分，每行一个链接，清理后过滤空行
   const urls = $('urlInput').value.split(/\r?\n/).map(cleanOneUrl).filter(Boolean);
   if(urls.length === 0) { showToast('请输入链接', 'error'); return; }
+  activeTaskYtdlpArgs = $('task_ytdlp_args').value.trim();
 
   // 多链接：走批量下载（每行一个），跳过单条 Bilibili 分P 选择
   if(urls.length > 1) {
     try { await saveSettingsNoAlert(); } catch(e) { showToast('设置保存失败: ' + e.message, 'error'); return; }
-    doStartUrls(urls);
+    doStartUrls(urls, activeTaskYtdlpArgs);
     return;
   }
 
@@ -489,7 +511,7 @@ async function startDl() {
       if(pl.note) { addLog({time: nowTime(), msg: '[分P检测] ' + pl.note, level: 'info'}); }
       if(pl.parts && pl.parts.length > 1) {
         addLog({time: nowTime(), msg: `[分P检测] 检测到 ${pl.total} 个分P，等待选择…`, level: 'info'});
-        pendingPartCallback = (parts) => doStartDl(url, parts);
+        pendingPartCallback = (parts) => doStartDl(url, parts, undefined, activeTaskYtdlpArgs);
         showPartSelector(pl.parts);
         return;
       }
@@ -498,7 +520,7 @@ async function startDl() {
       setStatus('就绪', 'idle');
     }
   }
-  doStartDl(url);
+  doStartDl(url, undefined, undefined, activeTaskYtdlpArgs);
 }
 
 function nowTime(){ return new Date().toTimeString().slice(0,8); }
@@ -583,33 +605,46 @@ function markStarted(total) {
   updateStatsVisibility();
 }
 
-async function doStartDl(url, biliParts, tcPassword) {
+function clearStartedTaskArgs(value) {
+  if($('task_ytdlp_args').value.trim() === value) $('task_ytdlp_args').value = '';
+}
+
+async function doStartDl(url, biliParts, tcPassword, customArgs) {
   const body = {url};
   if(biliParts) body.bili_parts = biliParts;
   if(tcPassword) body.tc_password = tcPassword;
+  const taskArgs = customArgs === undefined ? activeTaskYtdlpArgs : customArgs;
+  if(taskArgs) body.custom_args = taskArgs;
   const r = await api('/api/start', {method:'POST', body:JSON.stringify(body)});
   if(r.error) { showToast(r.error, 'error'); return; }
+  clearStartedTaskArgs(taskArgs);
   markStarted('1');
 }
 
-async function doStartUrls(urls) {
-  const r = await api('/api/start-urls', {method:'POST', body:JSON.stringify({urls})});
+async function doStartUrls(urls, customArgs) {
+  const body = {urls};
+  if(customArgs) body.custom_args = customArgs;
+  const r = await api('/api/start-urls', {method:'POST', body:JSON.stringify(body)});
   if(r.error) { showToast(r.error, 'error'); return; }
+  clearStartedTaskArgs(customArgs || '');
   markStarted(r.total || String(urls.length));
 }
 
 async function startBatch() {
   if(!confirm('将从 urls.txt 文件读取链接进行批量下载，是否继续？')) return;
+  activeTaskYtdlpArgs = $('task_ytdlp_args').value.trim();
   showToolStatus('正在启动批量下载…', 'working');
   try { await saveSettingsNoAlert(); } catch(e) { showToolStatus('设置保存失败: ' + e.message, 'error'); return; }
-  doStartBatch();
+  doStartBatch(undefined, activeTaskYtdlpArgs);
 }
 
-async function doStartBatch(biliPartsMap) {
+async function doStartBatch(biliPartsMap, customArgs) {
   const body = {};
   if(biliPartsMap) body.bili_parts_map = biliPartsMap;
+  if(customArgs) body.custom_args = customArgs;
   const r = await api('/api/batch-txt', {method:'POST', body:JSON.stringify(body)});
   if(r.error) { showToast(r.error, 'error'); return; }
+  clearStartedTaskArgs(customArgs || '');
   markStarted(r.total || '0');
 }
 

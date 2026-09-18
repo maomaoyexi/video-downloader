@@ -72,6 +72,9 @@ class WebPageTests(unittest.TestCase):
         self.assertIn('id="s_subtitle_type"', html)
         self.assertIn('id="subtitleDownloadDialog"', html)
         self.assertIn('id="btnSubtitleDownload"', html)
+        self.assertIn('id="task_ytdlp_args"', html)
+        self.assertIn('id="s_ytdlp_default_args"', html)
+        self.assertIn('id="sw_youtube_po_token"', html)
 
     def test_reset_config_uses_post(self):
         _skip_if_frozen()

@@ -67,6 +67,7 @@ class ToolServiceTests(unittest.TestCase):
                 "fantiadl": False,
                 "withny_dl": False,
                 "nicochannel_plugin": False,
+                "youtube_po_token": False,
             })
 
     def test_read_urls_file_filters_blank_and_comment_lines(self):
@@ -85,8 +86,8 @@ class ToolServiceTests(unittest.TestCase):
     def test_clean_temp_only_removes_known_extensions(self):
         with tempfile.TemporaryDirectory() as directory:
             tool_dir = Path(directory)
-            nested = tool_dir / "nested"
-            nested.mkdir()
+            nested = tool_dir / "download" / "nested"
+            nested.mkdir(parents=True)
             (nested / "video.part").touch()
             (nested / "state.ytdl").touch()
             kept = tool_dir / "video.mp4"
@@ -133,8 +134,8 @@ class ToolServiceTests(unittest.TestCase):
             tool_dir = Path(directory)
             service = create_service(tool_dir)
             with patch.object(service, "open_folder", side_effect=lambda path: {"path": path}):
-                self.assertEqual(service.handle_tool_action("open-downloads"), {"path": tool_dir})
-                self.assertEqual(service.handle_tool_action("open-logs"), {"path": tool_dir / "logs"})
+                self.assertEqual(service.handle_tool_action("open-downloads"), {"path": tool_dir / "download"})
+                self.assertEqual(service.handle_tool_action("open-logs"), {"path": tool_dir / "download" / "logs"})
 
     def test_handle_tool_action_rejects_unknown_action(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -220,7 +220,15 @@ def create_handler(dependencies):
                     self._json({"error": "字段 tc_password 类型错误"}, status=400)
                     return
                 tc_password = tc_password or None
-                self._json(dependencies.start_download(url, bili_parts=bili_parts, tc_password=tc_password))
+                custom_args = self._custom_args(data)
+                if custom_args is None:
+                    return
+                self._json(dependencies.start_download(
+                    url,
+                    bili_parts=bili_parts,
+                    tc_password=tc_password,
+                    custom_args=custom_args or None,
+                ))
             elif path == "/api/start-withny-archive":
                 self._json(dependencies.start_withny_archive())
             elif path == "/api/start-withny-live":
@@ -243,7 +251,10 @@ def create_handler(dependencies):
                 if not all(isinstance(u, str) for u in urls):
                     self._json({"error": "字段 urls 必须是字符串数组"}, status=400)
                     return
-                self._json(dependencies.start_urls_download(urls))
+                custom_args = self._custom_args(data)
+                if custom_args is None:
+                    return
+                self._json(dependencies.start_urls_download(urls, custom_args=custom_args or None))
             elif path == "/api/download-subtitles":
                 urls = self._field(data, "urls", list, [])
                 if urls is None:
@@ -260,7 +271,13 @@ def create_handler(dependencies):
                 self._json(dependencies.download_subtitles(urls, subtitle_type, subtitle_langs))
             elif path == "/api/batch-txt":
                 bili_parts_map = data.get("bili_parts_map") or None
-                self._json(dependencies.batch_txt_download(bili_parts_map=bili_parts_map))
+                custom_args = self._custom_args(data)
+                if custom_args is None:
+                    return
+                self._json(dependencies.batch_txt_download(
+                    bili_parts_map=bili_parts_map,
+                    custom_args=custom_args or None,
+                ))
             elif path == "/api/bili-playlist":
                 url = self._field(data, "url", str, "")
                 if url is None:
@@ -403,6 +420,16 @@ def create_handler(dependencies):
                     return None
             if not isinstance(value, expected_type):
                 self._json({"error": f"字段 {name} 类型错误"}, status=400)
+                return None
+            return value
+
+        def _custom_args(self, data):
+            value = self._field(data, "custom_args", str, "")
+            if value is None:
+                return None
+            value = value.strip()
+            if len(value) > 4000:
+                self._json({"error": "字段 custom_args 不能超过 4000 字符"}, status=400)
                 return None
             return value
 

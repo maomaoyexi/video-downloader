@@ -16,7 +16,7 @@ HAR 是浏览器导出的网络请求记录，不是视频文件。它可能包�
 
 1. 使用 Chrome 或 Edge 登录 https://www.withny.fun/
 2. 确认目标历史存档已经购买且能够正常播放
-3. 确认工具目录存在 ffmpeg.exe
+3. 确认工具的 dependency 目录存在 ffmpeg.exe
 4. 打开目标存档详情页：https://www.withny.fun/user/archives/存档ID
 
 三、导出包含内容的 HAR
@@ -56,7 +56,7 @@ HAR 是浏览器导出的网络请求记录，不是视频文件。它可能包�
 
 「检测到加密 HLS」或「检测到 DRM」：该内容不符合本工具的安全处理范围，无法继续。
 
-「缺少依赖：ffmpeg.exe」：将可信来源的 ffmpeg.exe 放到主程序同一目录。
+「缺少依赖：ffmpeg.exe」：将可信来源的 ffmpeg.exe 放到主程序旁的 dependency 目录。
 
 HTTP 403 或签名过期：重新启用 Allow to generate HAR with sensitive data，刷新并播放后重新导出，随后立即下载。
 
@@ -71,14 +71,14 @@ HAR 超过 64 MB：清空网络记录，刷新后只播放 5～10 秒并立即�
 □ 已看到 m3u8 和 ts 请求
 □ 已启用 Allow to generate HAR with sensitive data
 □ HAR 包含响应内容且不超过 64 MB
-□ ffmpeg.exe 与主程序位于同一目录
+□ ffmpeg.exe 位于主程序旁的 dependency 目录
 □ 下载完成后删除 HAR 并清空回收站
 
 七、Withny 直播监控与录制
 
 外部工具：withny-dl-windows-amd64.exe v2.0.0
 
-1. 从 https://github.com/Darkness4/withny-dl 获取可信版本的 withny-dl，并放到视频下载工具主程序同一目录。
+1. 从 https://github.com/Darkness4/withny-dl 获取可信版本的 withny-dl，并放到视频下载工具的 dependency 目录。
 2. 按 withny-dl 官方文档准备 config.yaml、credentials.yaml 等文件。凭据文件和缓存令牌必须保存在本机，不要上传或分享。
 3. 在下载任务页选择 Withny，点击“选择配置并录制”。
 4. 选择 yaml 或 yml 配置文件。配置中的相对路径会以该配置文件所在目录为基准。

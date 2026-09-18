@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .core.command import build_ytdlp_cmd
 from .core.constants import DEFAULT_CONFIG, VERSION, PLATFORM_INFO
+from .core.paths import AppPaths
 from .core.platform import clean_url, detect_platform
 
 
@@ -34,15 +35,15 @@ def _print_help():
 说明:
   - CLI 模式使用默认配置：最佳画质、H.264、MP4、4线程、Cookie 自动
   - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/NicoChannel/Fantia/TwitCasting/Twitter）
-  - 下载文件保存到工具目录下的「平台名/作者名/」文件夹
+  - 下载文件保存到工具目录下的「download/平台名/作者名/」文件夹
   - 如需自定义配置（画质、编码、代理等），请启动 WebUI 在设置页面调整
-  - 依赖 yt-dlp.exe 和 ffmpeg.exe 需位于工具目录中
+  - 依赖 yt-dlp.exe 和 ffmpeg.exe 需位于工具目录的 dependency 文件夹中
 """.strip())
     print()
 
 
 def _find_tool_dir():
-    """找到工具目录（yt-dlp.exe / ffmpeg.exe 所在目录）。"""
+    """找到应用程序根目录（包含 dependency 和 download 子目录）。"""
     if getattr(sys, 'frozen', False):
         return Path(sys.executable).parent
     return Path(__file__).parent.parent
@@ -83,6 +84,8 @@ def run_cli(argv):
 def _cmd_download(url):
     """下载单个视频。"""
     tool_dir = _find_tool_dir()
+    paths = AppPaths(tool_dir)
+    paths.ensure_runtime_dirs()
     exe_suffix = _get_exe_suffix()
 
     url = clean_url(url)
@@ -111,10 +114,10 @@ def _cmd_download(url):
         print()
 
     # 检查依赖
-    ytdlp = tool_dir / f"yt-dlp{exe_suffix}"
-    ffmpeg = tool_dir / f"ffmpeg{exe_suffix}"
+    ytdlp = paths.executable("yt-dlp", exe_suffix)
+    ffmpeg = paths.executable("ffmpeg", exe_suffix)
     if not ytdlp.exists():
-        print(f"错误: 找不到 {ytdlp.name}，请将其放到工具目录中")
+        print(f"错误: 找不到 {ytdlp.name}，请将其放到 dependency 目录中")
         return 1
     if not ffmpeg.exists():
         print(f"警告: 找不到 {ffmpeg.name}，部分功能可能不可用")
@@ -126,12 +129,14 @@ def _cmd_download(url):
         return 1
 
     print(f"链接: {url}")
-    print(f"保存: {tool_dir / config['PLATFORM']}")
+    print(f"保存: {paths.download_dir / config['PLATFORM']}")
     print()
 
     try:
         # CLI 模式下直接输出到终端，不隐藏窗口
-        proc = subprocess.Popen(cmd, cwd=str(tool_dir))
+        env = paths.subprocess_env()
+        env.update({"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
+        proc = subprocess.Popen(cmd, cwd=str(tool_dir), env=env)
         proc.wait()
         if proc.returncode == 0:
             print("\n✓ 下载完成!")

@@ -21,5 +21,9 @@ https://github.com/ZheYi101
 - ZheYi101：v2.4.0 字幕下载功能
 - 猫猫葉汐A_spy：v2.4.0 字幕功能修复、生命周期修复及合并适配
 
+第三方组件
+- BgUtils POT Provider（Brainicism 等贡献者，GPL-3.0-only）
+  https://github.com/Brainicism/bgutil-ytdlp-pot-provider
+
 项目仓库
 https://github.com/maomaoyexi/video-downloader

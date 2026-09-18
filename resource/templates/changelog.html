@@ -316,7 +316,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v2.4.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code>、<code>download_history.json</code>、各平台下载目录均可直接沿用，无需迁移。字幕下载默认关闭，开启后默认选择中文。</p>
+    <p>v2.4.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code> 可直接沿用；<code>download_history.json</code> 会自动迁入 <code>download/</code>。旧版根目录依赖仍可识别。字幕下载默认关闭，开启后默认选择中文。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -437,10 +437,10 @@ ul.compact li::before {
       <ul class="compact">
         <li>下载 <code>视频下载工具v2.4.0-GUI.exe</code> 和 <code>视频下载工具v2.4.0-依赖包.zip</code> 两个文件</li>
         <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.4.0-GUI.exe</code> 放入其中</li>
-        <li>解压依赖包，将里面的<strong>全部内容</strong>（所有 exe 文件 + <code>docs</code> 文件夹 + <code>changelog.html</code> 等）解压到 exe 同一目录</li>
+        <li>解压依赖包，将第三方工具和插件统一放入主程序旁的 <code>dependency/</code> 文件夹</li>
         <li>双击 <code>视频下载工具v2.4.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
-      <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：NicoChannel 还需要单独准备 <code>nicochannel.zip</code> 并放在主程序同一目录。</p>
+      <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：NicoChannel 还需要单独准备 <code>nicochannel.zip</code> 并放入 <code>dependency/</code>。</p>
     </div>
   </div>
 
@@ -457,7 +457,7 @@ ul.compact li::before {
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
         <li>只需下载新版 <code>视频下载工具v2.4.0-GUI.exe</code>，替换旧版 exe 即可</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
-        <li>原有依赖文件（<code>yt-dlp.exe</code>、<code>ffmpeg.exe</code> 等）<strong>无需重新下载</strong>，继续使用即可</li>
+        <li>原有依赖、平台下载目录和 <code>*_archive.txt</code> 会在首次启动时安全迁移到新目录；同名文件不会被覆盖</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
       </ul>
     </div>

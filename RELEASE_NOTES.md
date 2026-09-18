@@ -19,7 +19,8 @@
 - **任务生命周期** - 字幕任务接入统一任务管理，支持停止、退出清理、任务互斥和超时终止
 - **WebUI 重构** - 更新设置、工具箱、日志、历史记录和响应式布局，字幕控件与新版设计保持一致
 - **下载稳定性** - 改进媒体阶段进度、即时停止、可取消音频提取、敏感命令脱敏和 TwitCasting FFmpeg 回退
-- **回归保护** - 自动化测试扩展至 162 项，并覆盖字幕与 TwitCasting 重试组合场景
+- **TwitCasting 加速** - 多初始化段归档按设置线程数并发预取，随后由 FFmpeg 本地封装；失败时保留断点缓存并自动回退串行路径
+- **回归保护** - 自动化测试扩展至 175 项，并覆盖字幕与 TwitCasting 重试、并发预取和打包场景
 - 🔄 **兼容升级** - 原有配置、预设、Cookie、历史记录和下载目录继续兼容
 
 ## 📦 下载说明
@@ -32,7 +33,7 @@
 | `视频下载工具v2.4.0-依赖包.zip` | 通用依赖包（下载工具 + 帮助文档） | ✅ |
 | `视频下载工具v2.4.0-源码版.zip` | Python 源码、测试、资源与文档 | 可选 |
 
-> 💡 **依赖包已包含**：yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe、docs 帮助文档、changelog.html 和 CREDITS.txt。NicoChannel 还需要单独准备 `nicochannel.zip` 并放在主程序同一目录。
+> 💡 **依赖包已包含**：`dependency/` 中的 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和插件。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。
 
 ### SHA-256
 
@@ -47,15 +48,15 @@
 ### 新用户安装
 1. 下载 `视频下载工具v2.4.0-GUI.exe` 和 `视频下载工具v2.4.0-依赖包.zip`
 2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.4.0-GUI.exe` 放入其中
-3. 解压依赖包，将里面的**全部内容**解压到 exe 同一目录
+3. 解压依赖包，将其中的 `dependency` 文件夹完整放到 exe 同一目录
 4. 双击 `视频下载工具v2.4.0-GUI.exe` 运行，自动打开浏览器界面
 5. （可选）配置 Cookie 以支持会员/高画质内容
 
 ### 老用户升级
 1. 关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮）
 2. 只需下载新版 `视频下载工具v2.4.0-GUI.exe`，替换旧版 exe 即可
-3. 原有 `settings.ini`、`presets.json`、`cookies.txt`、`download_history.json` 全部兼容
-4. 原有依赖文件（yt-dlp.exe、ffmpeg.exe 等）无需重新下载，继续使用即可
+3. 原有 `settings.ini`、`presets.json`、`cookies.txt` 全部兼容，`download_history.json` 会迁入 `download/`
+4. 原有依赖、平台下载目录和归档文件无需手动整理，首次启动会安全迁移到 `dependency/` 与 `download/`；程序仍兼容无法迁移的旧版根目录依赖
 5. 双击运行新版 exe 即可
 
 ## 📖 文档

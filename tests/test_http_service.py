@@ -52,11 +52,17 @@ def make_dependencies(exit_event):
         load_history=lambda: [{"url": "example"}],
         cancel_idle_timer=lambda: None,
         start_idle_timer=lambda: None,
-        start_download=lambda url, bili_parts=None, tc_password=None: {"url": url},
+        start_download=lambda url, bili_parts=None, tc_password=None, custom_args=None: {
+            "url": url, **({"custom_args": custom_args} if custom_args else {}),
+        },
         start_withny_archive=lambda: {"ok": True, "kind": "withny-archive"},
         start_withny_live=lambda: {"ok": True, "kind": "withny-live"},
-        batch_txt_download=value,
-        start_urls_download=lambda urls: {"urls": urls},
+        batch_txt_download=lambda bili_parts_map=None, custom_args=None: {
+            "custom_args": custom_args,
+        },
+        start_urls_download=lambda urls, custom_args=None: {
+            "urls": urls, **({"custom_args": custom_args} if custom_args else {}),
+        },
         download_subtitles=lambda *args: {"args": list(args)},
         stop_download=value,
         get_current_command=lambda: {"ok": True, "command": "yt-dlp https://example.com"},
@@ -165,6 +171,29 @@ class HttpServiceTests(unittest.TestCase):
         self.assertEqual(json.loads(body), {"url": "https://example.com"})
         self.request("/api/exit", method="POST", payload={})
         self.assertTrue(self.exit_event.wait(1))
+
+    def test_start_routes_forward_one_time_custom_args(self):
+        status, body, _ = self.request("/api/start", method="POST", payload={
+            "url": "https://example.com",
+            "custom_args": "--retries 20",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["custom_args"], "--retries 20")
+
+        status, body, _ = self.request("/api/start-urls", method="POST", payload={
+            "urls": ["https://example.com/1"],
+            "custom_args": "--sleep-requests 1",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["custom_args"], "--sleep-requests 1")
+
+    def test_start_rejects_oversized_custom_args(self):
+        with self.assertRaises(HTTPError) as raised:
+            self.request("/api/start", method="POST", payload={
+                "url": "https://example.com",
+                "custom_args": "x" * 4001,
+            })
+        self.assertEqual(raised.exception.code, 400)
 
     def test_download_subtitles_route_uses_injected_dependency(self):
         status, body, _ = self.request("/api/download-subtitles", method="POST", payload={

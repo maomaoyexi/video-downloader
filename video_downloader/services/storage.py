@@ -5,15 +5,19 @@ import tempfile
 import threading
 from datetime import datetime
 
-from video_downloader.core.constants import DEFAULT_CONFIG
+from video_downloader.core.constants import DEFAULT_CONFIG, PLATFORM_INFO
+from video_downloader.core.paths import AppPaths
 
 
 class StorageService:
     def __init__(self, tool_dir, app_state, validate_config, log, emit_event):
         self._tool_dir = tool_dir
+        self._paths = AppPaths(tool_dir)
         self._config_file = tool_dir / "settings.ini"
         self._preset_file = tool_dir / "presets.json"
-        self._history_file = tool_dir / "download_history.json"
+        self._history_file = self._paths.download_dir / "download_history.json"
+        self._legacy_history_file = tool_dir / "download_history.json"
+        self._history_file.parent.mkdir(parents=True, exist_ok=True)
         self._app_state = app_state
         self._validate_config = validate_config
         self._log = log
@@ -28,7 +32,9 @@ class StorageService:
             config = dict(DEFAULT_CONFIG)
             if self._config_file.exists():
                 try:
-                    parser = configparser.ConfigParser()
+                    # yt-dlp output templates commonly contain ``%(field)s``;
+                    # configuration values must be stored literally, without INI interpolation.
+                    parser = configparser.ConfigParser(interpolation=None)
                     with open(self._config_file, "r", encoding="utf-8") as file:
                         parser.read_file(file)
                     if parser.has_section("settings"):
@@ -54,7 +60,7 @@ class StorageService:
     def save_config(self):
         with self._app_state.config_lock, self._config_lock:
             snapshot = self._app_state.config_snapshot()
-            parser = configparser.ConfigParser()
+            parser = configparser.ConfigParser(interpolation=None)
             parser["settings"] = {key: str(value) for key, value in snapshot.items()}
             descriptor, temp_name = tempfile.mkstemp(
                 prefix=f"{self._config_file.name}.",
@@ -161,14 +167,72 @@ class StorageService:
 
     def load_history(self):
         with self._history_lock:
+            if not self._history_file.exists() and self._legacy_history_file.exists():
+                try:
+                    self._history_file.parent.mkdir(parents=True, exist_ok=True)
+                    os.replace(self._legacy_history_file, self._history_file)
+                except OSError:
+                    # A read-only legacy installation can still display its history.
+                    self._history_file = self._legacy_history_file
             if self._history_file.exists():
                 try:
                     with open(self._history_file, "r", encoding="utf-8") as file:
                         history = json.load(file)
-                    return history if isinstance(history, list) else []
+                    if not isinstance(history, list):
+                        return []
+                    if self._migrate_history_paths(history):
+                        try:
+                            self._write_history(history)
+                        except OSError:
+                            # Migration persistence is best-effort; history remains usable.
+                            pass
+                    return history
                 except Exception:
                     pass
             return []
+
+    def _migrate_history_paths(self, history):
+        """Retarget history entries whose platform folders moved into download/."""
+        changed = False
+        platform_names = {item["name"] for item in PLATFORM_INFO} | {"Withny"}
+        root = os.path.normcase(os.path.abspath(self._tool_dir))
+        for entry in history:
+            if not isinstance(entry, dict) or not isinstance(entry.get("filepath"), str):
+                continue
+            filepath = os.path.abspath(entry["filepath"])
+            try:
+                relative = os.path.relpath(filepath, root)
+            except (OSError, ValueError):
+                continue
+            parts = relative.split(os.sep)
+            if relative == os.pardir or relative.startswith(os.pardir + os.sep):
+                continue
+            if not parts or parts[0] not in platform_names:
+                continue
+            entry["filepath"] = str(self._paths.download_dir.joinpath(*parts))
+            changed = True
+        return changed
+
+    def _write_history(self, history):
+        self._history_file.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temp_name = tempfile.mkstemp(
+            prefix=f"{self._history_file.name}.",
+            suffix=".tmp",
+            dir=self._history_file.parent,
+        )
+        temp_file = os.fdopen(descriptor, "w", encoding="utf-8")
+        try:
+            with temp_file as file:
+                json.dump(history, file, ensure_ascii=False, indent=2)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(temp_name, self._history_file)
+        except Exception:
+            try:
+                os.unlink(temp_name)
+            except FileNotFoundError:
+                pass
+            raise
 
     def add_history(self, url, title, platform, status="success", filepath=None):
         with self._history_lock:
@@ -186,8 +250,7 @@ class StorageService:
             history.insert(0, entry)
             history = history[:500]
             try:
-                with open(self._history_file, "w", encoding="utf-8") as file:
-                    json.dump(history, file, ensure_ascii=False, indent=2)
+                self._write_history(history)
             except Exception:
                 pass
             self._emit_event("history", history[:50])
@@ -196,8 +259,7 @@ class StorageService:
     def clear_history(self):
         with self._history_lock:
             try:
-                with open(self._history_file, "w", encoding="utf-8") as file:
-                    json.dump([], file)
+                self._write_history([])
                 self._log("[历史] 已清空下载历史", "warn")
                 self._emit_event("history", [])
                 return {"ok": True}

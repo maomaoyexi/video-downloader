@@ -43,6 +43,21 @@ class StorageServiceTests(unittest.TestCase):
         storage.load_config()
         self.assertEqual(restored.config_snapshot()["THREADS"], 8)
 
+    def test_custom_ytdlp_args_round_trip_preserves_percent_templates(self):
+        self.state.replace_config(DEFAULT_CONFIG)
+        value = "-o custom/%(uploader)s/%(title)s.%(ext)s"
+        self.state.update_config({"YTDLP_DEFAULT_ARGS": value})
+        self.storage.save_config()
+        restored = AppState()
+        StorageService(
+            Path(self.temp_dir.name),
+            restored,
+            validate_config,
+            lambda message, level="info": None,
+            lambda event_type, data=None: None,
+        ).load_config()
+        self.assertEqual(restored.config_snapshot()["YTDLP_DEFAULT_ARGS"], value)
+
     def test_config_replace_failure_preserves_existing_file(self):
         self.state.replace_config(DEFAULT_CONFIG)
         self.storage.save_config()
@@ -164,6 +179,22 @@ class StorageServiceTests(unittest.TestCase):
         self.assertEqual(self.storage.load_history()[0]["filepath"], "C:/vids/a.mp4")
         self.storage.add_history("url2", "t2", "YouTube")
         self.assertNotIn("filepath", self.storage.load_history()[0])
+
+    def test_load_history_migrates_legacy_platform_filepath(self):
+        root = Path(self.temp_dir.name)
+        history_file = root / "download_history.json"
+        legacy_path = root / "YouTube" / "author" / "video.mp4"
+        history_file.write_text(
+            json.dumps([{"url": "url", "filepath": str(legacy_path)}]),
+            encoding="utf-8",
+        )
+        history = self.storage.load_history()
+        expected = root / "download" / "YouTube" / "author" / "video.mp4"
+        self.assertEqual(history[0]["filepath"], str(expected))
+        canonical_history = root / "download" / "download_history.json"
+        self.assertFalse(history_file.exists())
+        persisted = json.loads(canonical_history.read_text(encoding="utf-8"))
+        self.assertEqual(persisted[0]["filepath"], str(expected))
 
     def test_find_cover_returns_sibling_image(self):
         video = Path(self.temp_dir.name) / "YouTube" / "clip [abcdef].mp4"

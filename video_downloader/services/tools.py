@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS, LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS, SUBTITLE_TYPE_OPTIONS
+from video_downloader.core.paths import AppPaths
 from video_downloader.core.platform import clean_url
 from video_downloader.core.subtitles import classify_subtitle_result
 
@@ -30,11 +31,13 @@ class ToolService:
                  download_manager=None, broadcast_download_state=None,
                  cancel_idle_timer=None, start_idle_timer=None):
         self._tool_dir = tool_dir
+        self._paths = AppPaths(tool_dir)
         self._exe_suffix = exe_suffix
         self._app_state = app_state
         self._save_config = save_config
         self._log = log
-        self._log_dir = tool_dir / "logs"
+        self._download_dir = self._paths.download_dir
+        self._log_dir = self._paths.log_dir
         self._build_subtitle_command = build_subtitle_command
         self._download_manager = download_manager
         self._broadcast_download_state = broadcast_download_state or (lambda: None)
@@ -50,10 +53,16 @@ class ToolService:
     def check_deps(self):
         deps = {}
         for dep in ["yt-dlp", "ffmpeg", "ffprobe"]:
-            deps[dep] = (self._tool_dir / f"{dep}{self._exe_suffix}").exists()
-        deps["fantiadl"] = (self._tool_dir / f"fantiadl{self._exe_suffix}").exists()
-        deps["withny_dl"] = (self._tool_dir / f"withny-dl-windows-amd64{self._exe_suffix}").exists()
-        deps["nicochannel_plugin"] = (self._tool_dir / "nicochannel.zip").exists()
+            deps[dep] = self._paths.executable(dep, self._exe_suffix).exists()
+        deps["fantiadl"] = self._paths.executable("fantiadl", self._exe_suffix).exists()
+        deps["withny_dl"] = self._paths.executable("withny-dl-windows-amd64", self._exe_suffix).exists()
+        deps["nicochannel_plugin"] = self._paths.dependency("nicochannel.zip").exists()
+        deps["youtube_po_token"] = all(path.exists() for path in (
+            self._paths.executable("deno", self._exe_suffix),
+            self._paths.dependency("yt-dlp-plugins/bgutil-ytdlp-pot-provider.zip"),
+            self._paths.dependency("bgutil-ytdlp-pot-provider/server/src/main.ts"),
+            self._paths.dependency("bgutil-ytdlp-pot-provider/server/node_modules"),
+        ))
         return deps
 
     def pick_withny_archive(self):
@@ -73,7 +82,7 @@ class ToolService:
             if not har_path:
                 return {"ok": True, "cancelled": True}
             output_path = filedialog.asksaveasfilename(
-                initialdir=str(self._tool_dir / "Withny"),
+                initialdir=str(self._download_dir / "Withny"),
                 title="保存 Withny 历史存档",
                 defaultextension=".mp4",
                 filetypes=[("MP4 视频", "*.mp4"), ("MKV 视频", "*.mkv"), ("TS 视频", "*.ts")],
@@ -117,13 +126,13 @@ class ToolService:
                     pass
 
     def update_ytdlp(self):
-        ytdlp = self._tool_dir / f"yt-dlp{self._exe_suffix}"
+        ytdlp = self._paths.executable("yt-dlp", self._exe_suffix)
         if not ytdlp.exists():
             return {"error": "未找到yt-dlp.exe"}
 
         def run():
             try:
-                env = os.environ.copy()
+                env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
                 proc = subprocess.run([str(ytdlp), "-U"], cwd=self._tool_dir, env=env, capture_output=True, text=True, timeout=120)
                 for line in (proc.stdout or "").split("\n"):
@@ -139,7 +148,7 @@ class ToolService:
         return {"ok": True}
 
     def download_subtitles(self, urls, subtitle_type, subtitle_langs):
-        ytdlp = self._tool_dir / f"yt-dlp{self._exe_suffix}"
+        ytdlp = self._paths.executable("yt-dlp", self._exe_suffix)
         if not ytdlp.exists():
             return {"error": "未找到yt-dlp.exe"}
         if self._build_subtitle_command is None:
@@ -171,7 +180,7 @@ class ToolService:
             success = missing = fail = 0
             try:
                 self._log(f"[字幕下载] 开始处理 {len(cleaned_urls)} 个链接", "info")
-                env = os.environ.copy()
+                env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
                 for index, url in enumerate(cleaned_urls, 1):
                     if handle.cancel_event.is_set():
@@ -255,14 +264,14 @@ class ToolService:
     def clean_temp(self):
         count = 0
         temp_ext = [".part", ".ytdl", ".temp", ".tmp"]
-        for file in self._tool_dir.rglob("*"):
+        for file in self._download_dir.rglob("*"):
             if file.is_file() and file.suffix.lower() in temp_ext:
                 try:
                     file.unlink()
                     count += 1
                 except Exception:
                     pass
-        for directory in sorted(self._tool_dir.rglob("*"), reverse=True):
+        for directory in sorted(self._download_dir.rglob("*"), reverse=True):
             if directory.is_dir():
                 try:
                     if not any(directory.iterdir()):
@@ -303,7 +312,7 @@ class ToolService:
         return {"ok": True}
 
     def wav_to_mp3(self, target_dir, recursive, bitrate, del_src):
-        ffmpeg = self._tool_dir / f"ffmpeg{self._exe_suffix}"
+        ffmpeg = self._paths.executable("ffmpeg", self._exe_suffix)
         if not ffmpeg.exists():
             return {"error": "ffmpeg.exe未找到"}
         target = Path(target_dir)
@@ -335,7 +344,7 @@ class ToolService:
                     continue
                 cmd = [str(ffmpeg), "-y", "-i", str(wav), "-codec:a", "libmp3lame",
                        "-b:a", f"{bitrate}k", "-ac", "2", "-ar", "44100", str(mp3)]
-                env = os.environ.copy()
+                env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
                 try:
                     proc = subprocess.run(cmd, cwd=self._tool_dir, env=env, stdout=subprocess.DEVNULL,
@@ -477,7 +486,7 @@ class ToolService:
         Returns:
             dict: 包含 ok, total, output_dir 的结果字典。
         """
-        ffmpeg = self._tool_dir / f"ffmpeg{self._exe_suffix}"
+        ffmpeg = self._paths.executable("ffmpeg", self._exe_suffix)
         if not ffmpeg.exists():
             return {"error": "ffmpeg.exe未找到"}
 
@@ -531,7 +540,7 @@ class ToolService:
                     )
                     cmd_analyze = [str(ffmpeg), '-y', '-i', str(src),
                                    '-af', analyze_filter, '-f', 'null', '-']
-                    env = os.environ.copy()
+                    env = self._paths.subprocess_env()
                     env["PYTHONUTF8"] = "1"
                     try:
                         proc = subprocess.run(cmd_analyze, cwd=self._tool_dir, env=env,
@@ -564,7 +573,7 @@ class ToolService:
                     cmd = [str(ffmpeg), '-y', '-i', str(src),
                            '-af', loudnorm_filter] + codec_args + [str(dst)]
 
-                env = os.environ.copy()
+                env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
                 try:
                     proc = subprocess.run(cmd, cwd=self._tool_dir, env=env,
@@ -610,7 +619,7 @@ class ToolService:
         Returns:
             dict: 包含 ok, total, output_dir 的结果字典。
         """
-        ffmpeg = self._tool_dir / f"ffmpeg{self._exe_suffix}"
+        ffmpeg = self._paths.executable("ffmpeg", self._exe_suffix)
         if not ffmpeg.exists():
             return {"error": "ffmpeg.exe未找到"}
 
@@ -670,7 +679,7 @@ class ToolService:
                 cmd = [str(ffmpeg), '-y', '-i', str(src),
                        '-af', filter_chain] + codec_args + [str(dst)]
 
-                env = os.environ.copy()
+                env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
                 try:
                     proc = subprocess.run(cmd, cwd=self._tool_dir, env=env,
@@ -705,7 +714,7 @@ class ToolService:
                 root = tk.Tk()
                 root.withdraw()
                 root.attributes('-topmost', True)
-                folder = filedialog.askdirectory(initialdir=str(self._tool_dir))
+                folder = filedialog.askdirectory(initialdir=str(self._download_dir))
                 root.destroy()
             except Exception:
                 ps_cmd = '''
@@ -801,7 +810,7 @@ class ToolService:
             "gen-cookie-template": self.gen_cookie_template,
             "update-ytdlp": self.update_ytdlp,
             "clean-temp": self.clean_temp,
-            "open-downloads": lambda: self.open_folder(self._tool_dir),
+            "open-downloads": lambda: self.open_folder(self._download_dir),
             "open-logs": lambda: self.open_folder(self._log_dir),
         }
         handler = actions.get(action)

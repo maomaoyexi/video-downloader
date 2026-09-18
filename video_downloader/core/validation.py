@@ -51,6 +51,8 @@ _ERROR_REASONS = {
     "TC_PASSWORD": "TwitCasting密码长度不能超过 200 字符",
     "ENABLE_LOG": "日志开关仅支持 0 或 1",
     "DEL_WAV_AFTER_CONVERT": "删除WAV仅支持 0 或 1",
+    "YOUTUBE_PO_TOKEN_ENABLED": "YouTube PO Token 开关仅支持 0 或 1",
+    "YTDLP_DEFAULT_ARGS": "默认 yt-dlp 参数长度不能超过 4000 字符",
     "HWACCEL_WEBM": "WebM输出格式不支持硬件加速，已自动回退为CPU编码",
 }
 
@@ -95,6 +97,7 @@ def validate_config(values, base=None):
         "MERGE_MODE", "PROXY_ENABLED", "USE_COOKIES", "EMBED_META",
         "DOWNLOAD_THUMB", "DOWNLOAD_SUBTITLES", "WIN_FILENAMES", "STRICT_FILENAME",
         "NICO_COMMENTS", "NICO_RECODE", "ENABLE_LOG", "DEL_WAV_AFTER_CONVERT",
+        "YOUTUBE_PO_TOKEN_ENABLED",
     }
     for key, value in values.items():
         if key not in DEFAULT_CONFIG:
@@ -128,6 +131,10 @@ def validate_config(values, base=None):
                     or "@" in value
                     or any(character.isspace() for character in value)
                 ):
+                    raise ValueError
+            elif key == "YTDLP_DEFAULT_ARGS":
+                value = str(value).strip()
+                if len(value) > 4000:
                     raise ValueError
             else:
                 value = str(value).strip()

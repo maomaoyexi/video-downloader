@@ -12,9 +12,11 @@ withny-dl.json
 
 # 日志
 logs/
+download/logs/
 *.log
 
 # 下载目录
+download/
 YouTube/
 Twitch/
 Niconico/
@@ -43,6 +45,13 @@ release-output/
 temp/
 
 # 依赖工具
+dependency/*.exe
+dependency/.venv/
+dependency/node_modules/
+dependency/package.json
+dependency/package-lock.json
+dependency/bgutil-ytdlp-pot-provider/
+dependency/development/
 yt-dlp.exe
 ffmpeg.exe
 ffprobe.exe
@@ -75,3 +84,5 @@ package-lock.json
 package.json
 .ai/
 .playwright-mcp/
+
+bgutil-ytdlp-pot-provider
