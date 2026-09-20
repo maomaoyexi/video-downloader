@@ -34,11 +34,11 @@
 ## 🚀 快速开始
 
 1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
-   - `视频下载工具v2.5.0-GUI.exe` - 主程序
-   - `视频下载工具v2.5.0-依赖包.zip` - 通用依赖包（包含下载工具和帮助文档）
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.5.0-GUI.exe` 放入其中
+   - `video-downloader-v2.5.0-GUI.exe` - 主程序
+   - `video-downloader-v2.5.0-dependencies.zip` - 通用依赖包（包含下载工具和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `video-downloader-v2.5.0-GUI.exe` 放入其中
 3. 解压依赖包，将其中的 `dependency` 文件夹完整放到主程序同一目录
-4. 双击 `视频下载工具v2.5.0-GUI.exe` 运行，自动打开浏览器界面
+4. 双击 `video-downloader-v2.5.0-GUI.exe` 运行，自动打开浏览器界面
 
 > 💡 **提示**：依赖包的 `dependency/` 包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和 `yt-dlp-plugins` 目录。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。首次运行会自动生成 `download/`、归档及日志目录。
 
@@ -202,7 +202,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
 **Q: 老用户如何升级？**
-> A: 下载 `视频下载工具v2.5.0-GUI.exe` 替换旧版 exe，并使用 v2.5.0 依赖包补齐新增插件；原有配置和下载记录无需改动。
+> A: 下载 `video-downloader-v2.5.0-GUI.exe` 替换旧版 exe，并使用 v2.5.0 依赖包补齐新增插件；原有配置和下载记录无需改动。
 
 ## 📚 详细文档
 
