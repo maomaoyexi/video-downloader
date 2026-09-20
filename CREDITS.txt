@@ -20,6 +20,8 @@ https://github.com/ZheYi101
 - ErgouTree：v2.4.0 其他更新与修复
 - ZheYi101：v2.4.0 字幕下载功能
 - 猫猫葉汐A_spy：v2.4.0 字幕功能修复、生命周期修复及合并适配
+- DarkKandaoMaster：v2.5.0 WebUI 视觉与交互体系重构
+- ErgouTree：v2.5.0 设置控件补充、TwitCasting 下载与进度增强、BgUtils Provider 集成及依赖和下载目录收拢
 
 第三方组件
 - BgUtils POT Provider（Brainicism 等贡献者，GPL-3.0-only）

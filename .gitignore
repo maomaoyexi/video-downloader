@@ -41,6 +41,7 @@ htmlcov/
 build/
 dist/
 release-output/
+release-assets/
 *.spec
 temp/
 

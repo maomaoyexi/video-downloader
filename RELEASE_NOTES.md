@@ -1,27 +1,28 @@
-# v2.4.0 WebUI
+# v2.5.0 WebUI
 
 ## 🎉 发布说明
 
-多平台视频下载工具 v2.4.0 WebUI 版于 2026-09-05 发布。本次版本以重构后的 WebUI 为基础，新增普通下载附带字幕和独立字幕下载工具，并完善下载进度、停止流程、命令诊断、音频提取与 TwitCasting 兼容性。主程序文件名升级为 `视频下载工具v2.4.0-GUI.exe`，原有设置、预设、Cookie、下载记录及下载目录全部兼容。
+多平台视频下载工具 v2.5.0 WebUI 版于 2026-09-18 发布。本次版本重构 WebUI 视觉与交互体系，重点改进 TwitCasting 多初始化段归档下载、代理直连行为和 YouTube PO Token 获取，并增加自定义 yt-dlp 参数及运行目录迁移。主程序文件名升级为 `视频下载工具v2.5.0-GUI.exe`，原有设置、预设、Cookie 和下载记录继续兼容。
 
 ## 🤝 本次贡献者
 
-- [ZheYi101](https://github.com/ZheYi101) - 提供字幕下载功能
-- [猫猫葉汐A_spy (@maomaoyexi)](https://github.com/maomaoyexi) - 修复字幕任务生命周期、停止流程、界面适配与合并问题
-- [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) - 提供本版 UI 重构
-- [ErgouTree (@ergou10086)](https://github.com/ergou10086) - 提供本版其他更新与修复
+- [DarkKandaoMaster](https://github.com/DarkKandaoMaster) - WebUI 视觉与交互体系重构（`dcdf010`，合并为 `1db8864`）
+- [ErgouTree (@ergou10086)](https://github.com/ergou10086) - 设置控件补充（`c865dc1`）、TwitCasting 下载与进度增强（`3ca46de`、`3dab5ec`）、BgUtils Provider 集成（`f3547b4`）及依赖和下载目录收拢（`a24b57f`）
+
+合并提交和本地保存提交不重复计入功能贡献。
 
 ## ✨ 主要更新
 
-- **字幕下载** - 普通视频完成后可继续下载独立字幕，字幕失败不影响视频成功状态
-- **独立字幕工具** - 支持多链接、人工字幕、自动字幕、全部字幕和自定义语言
-- **默认行为** - 字幕默认关闭；开启后默认下载中文，全部字幕请求遇到 HTTP 429 时自动缩小范围重试
-- **任务生命周期** - 字幕任务接入统一任务管理，支持停止、退出清理、任务互斥和超时终止
-- **WebUI 重构** - 更新设置、工具箱、日志、历史记录和响应式布局，字幕控件与新版设计保持一致
-- **下载稳定性** - 改进媒体阶段进度、即时停止、可取消音频提取、敏感命令脱敏和 TwitCasting FFmpeg 回退
-- **TwitCasting 加速** - 多初始化段归档按设置线程数并发预取，随后由 FFmpeg 本地封装；失败时保留断点缓存并自动回退串行路径
-- **回归保护** - 自动化测试扩展至 175 项，并覆盖字幕与 TwitCasting 重试、并发预取和打包场景
-- 🔄 **兼容升级** - 原有配置、预设、Cookie、历史记录和下载目录继续兼容
+- **WebUI 视觉与交互重构** - 统一页面布局、视觉层级、控件样式和交互反馈，并补齐设置页所需控件
+- **TwitCasting 并发预取** - 多初始化段归档按下载线程数并发获取分片，生成本地播放列表后交由 FFmpeg 封装
+- **安全回退与续传** - 并发预取失败时恢复远程播放列表并回退 FFmpeg 串行下载，保留已完成分片供下次复用
+- **代理直连修复** - 关闭代理时显式要求 yt-dlp 直连，并清理子进程继承的 HTTP、HTTPS 和 SOCKS 代理环境变量
+- **YouTube PO Token** - 可选托管本地 BgUtils Provider，按需启动、复用健康实例并在程序退出时清理自有进程
+- **自定义 yt-dlp 参数** - 支持持久化默认参数和仅用于当前单条或批量任务的临时参数
+- **进度反馈增强** - 接入 TwitCasting 分片百分比、速度、ETA 和媒体阶段，并扩展 FFmpeg 进度识别
+- **目录结构升级** - 依赖统一放入 `dependency/`，下载、日志和归档统一放入 `download/`，首次启动安全迁移旧版文件
+- **兼容改进** - Firefox 默认配置改为自动探测，旧版根目录依赖和未迁移数据仍可继续使用
+- **回归保护** - 自动化测试覆盖命令构建、代理直连、Provider 生命周期、目录迁移和 TwitCasting 回退链路
 
 ## 📦 下载说明
 
@@ -29,32 +30,32 @@
 
 | 文件 | 说明 | 必须 |
 |------|------|------|
-| `视频下载工具v2.4.0-GUI.exe` | 主程序，单文件绿色版 | ✅ |
-| `视频下载工具v2.4.0-依赖包.zip` | 通用依赖包（下载工具 + 帮助文档） | ✅ |
-| `视频下载工具v2.4.0-源码版.zip` | Python 源码、测试、资源与文档 | 可选 |
+| `视频下载工具v2.5.0-GUI.exe` | 主程序，单文件绿色版 | ✅ |
+| `视频下载工具v2.5.0-依赖包.zip` | 通用依赖包（下载工具 + 帮助文档） | ✅ |
+| `视频下载工具v2.5.0-源码版.zip` | Python 源码、测试、资源与文档 | 可选 |
 
 > 💡 **依赖包已包含**：`dependency/` 中的 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和插件。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。
 
 ### SHA-256
 
 ```text
-79823330ACC99931643E8FBBA5EE0F6DAFC9724B0F91F67FCF04FE2502F1B575  视频下载工具v2.4.0-GUI.exe
-68A598F9642E3215DBDF5963209D6FEA7ADCDD45539B9113370FCB41C2442E43  视频下载工具v2.4.0-依赖包.zip
+FA828DB2260B4E4E44D9A873759FA47EC8BE1CA745F8DECC01FA79F9B4DBA606  视频下载工具v2.5.0-GUI.exe
+D607CAF3B8B0B5D72FE6B3A2BE92EBA831821C535CD5EDBAC04C891D47EDBA49  视频下载工具v2.5.0-依赖包.zip
 源码 ZIP 的 SHA-256 请以 GitHub Release 页面为准。
 ```
 
 ## 🚀 快速开始
 
 ### 新用户安装
-1. 下载 `视频下载工具v2.4.0-GUI.exe` 和 `视频下载工具v2.4.0-依赖包.zip`
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.4.0-GUI.exe` 放入其中
+1. 下载 `视频下载工具v2.5.0-GUI.exe` 和 `视频下载工具v2.5.0-依赖包.zip`
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.5.0-GUI.exe` 放入其中
 3. 解压依赖包，将其中的 `dependency` 文件夹完整放到 exe 同一目录
-4. 双击 `视频下载工具v2.4.0-GUI.exe` 运行，自动打开浏览器界面
+4. 双击 `视频下载工具v2.5.0-GUI.exe` 运行，自动打开浏览器界面
 5. （可选）配置 Cookie 以支持会员/高画质内容
 
 ### 老用户升级
 1. 关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮）
-2. 只需下载新版 `视频下载工具v2.4.0-GUI.exe`，替换旧版 exe 即可
+2. 下载新版 `视频下载工具v2.5.0-GUI.exe` 替换旧版 exe，并解压 v2.5.0 依赖包补齐 Provider 与 TwitCasting 插件
 3. 原有 `settings.ini`、`presets.json`、`cookies.txt` 全部兼容，`download_history.json` 会迁入 `download/`
 4. 原有依赖、平台下载目录和归档文件无需手动整理，首次启动会安全迁移到 `dependency/` 与 `download/`；程序仍兼容无法迁移的旧版根目录依赖
 5. 双击运行新版 exe 即可

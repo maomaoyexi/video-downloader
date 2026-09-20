@@ -289,18 +289,18 @@ ul.compact li::before {
 <body>
 <div class="container">
 
-  <!-- v2.4.0 WebUI 更新 -->
+  <!-- v2.5.0 WebUI 更新 -->
   <div class="hero">
-    <div class="version-badge">v2.4.0 WebUI</div>
+    <div class="version-badge">v2.5.0 WebUI</div>
     <h1>多平台视频下载工具</h1>
-    <div class="subtitle">WebUI 重构 · 字幕下载 · 任务管理 · 下载稳定性</div>
-    <div class="date">发布日期：2026-09-05 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
+    <div class="subtitle">WebUI 重构 · TwitCasting 并发预取 · 代理直连 · PO Token</div>
+    <div class="date">发布日期：2026-09-18 · 原版作者：<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a></div>
   </div>
 
   <div class="notice-box info">
     <div class="notice-title">ℹ️ 更新说明</div>
-    <p>v2.4.0 以重构后的 WebUI 为基础，新增普通下载附带字幕和独立字幕下载工具，并完善停止流程、下载进度、命令诊断、音频提取与 TwitCasting 兼容性。</p>
-    <p><strong>本次贡献者：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a> 提供 UI 重构；<a href="https://github.com/ZheYi101">ZheYi101</a> 提供字幕下载；<a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 提供其他更新与修复；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 完成字幕功能修复与合并适配。</p>
+    <p>v2.5.0 重构 WebUI 视觉与交互体系，重点改进 TwitCasting 多初始化段归档、代理直连行为和 YouTube PO Token 获取，并增加自定义 yt-dlp 参数及运行目录迁移。</p>
+    <p><strong>本次贡献者：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a> 提供 WebUI 视觉与交互体系重构；<a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 提供设置控件补充、TwitCasting 下载与进度增强、BgUtils Provider 集成及目录收拢。</p>
   </div>
 
   <div class="summary-grid">
@@ -316,7 +316,7 @@ ul.compact li::before {
 
   <div class="notice-box success">
     <div class="notice-title">✅ 兼容性说明</div>
-    <p>v2.4.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code> 可直接沿用；<code>download_history.json</code> 会自动迁入 <code>download/</code>。旧版根目录依赖仍可识别。字幕下载默认关闭，开启后默认选择中文。</p>
+    <p>v2.5.0 向下兼容，原有 <code>settings.ini</code>、<code>presets.json</code>、<code>cookies.txt</code> 可直接沿用；历史记录、平台下载目录和归档文件会安全迁入 <code>download/</code>，第三方工具会迁入 <code>dependency/</code>，同名文件不会被覆盖。</p>
   </div>
 
   <!-- 变更内容 -->
@@ -328,70 +328,79 @@ ul.compact li::before {
 
     <div class="bug-card fix">
       <div class="header">
-        <span class="tag critical">安全</span>
-        <span class="title">字幕任务生命周期修复</span>
-        <span class="severity">可靠性</span>
+        <span class="tag minor">重构</span>
+        <span class="title">WebUI 视觉与交互体系</span>
+        <span class="severity">界面体验</span>
       </div>
       <div class="desc">
-        字幕任务接入统一任务管理，支持停止、退出清理、任务互斥和超时终止；字幕失败不会影响已完成的视频。
+        统一页面布局、视觉层级、控件样式和交互反馈，并补齐设置页所需控件。
+        <br><strong>提供：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a>　<strong>合并与控件补充：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag minor">新增</span>
-        <span class="title">普通下载附带字幕</span>
-        <span class="severity">字幕功能</span>
+        <span class="title">TwitCasting 多初始化段并发预取</span>
+        <span class="severity">下载加速</span>
       </div>
       <div class="desc">
-        视频下载和字幕下载使用独立命令。支持人工字幕、自动字幕、语言预设与自定义语言，字幕保存到对应平台的 <code>subtitles</code> 目录。
-        <br><strong>提供：</strong><a href="https://github.com/ZheYi101">ZheYi101</a>　<strong>修复与适配：</strong><a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a>
+        检测到多初始化段 HLS 归档后，按下载线程数并发获取初始化段、媒体分片和密钥，再由 FFmpeg 读取本地播放列表完成封装。预取失败会自动恢复远程地址并回退串行下载。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
-        <span class="tag critical">安全</span>
-        <span class="title">独立字幕下载工具</span>
-        <span class="severity">工具箱</span>
+        <span class="tag major">修复</span>
+        <span class="title">关闭代理后仍可能走系统代理</span>
+        <span class="severity">网络行为</span>
       </div>
       <div class="desc">
-        支持一次提交多个链接并仅下载字幕。默认关闭全局字幕，开启后默认中文；全部字幕遇到 HTTP 429 时自动缩小语言范围重试。
+        关闭界面代理开关时显式向 yt-dlp 传递直连配置，并清除子进程继承的 <code>HTTP_PROXY</code>、<code>HTTPS_PROXY</code> 和 <code>ALL_PROXY</code> 环境变量。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
         <span class="tag minor">新增</span>
-        <span class="title">WebUI 重构</span>
-        <span class="severity">界面</span>
+        <span class="title">YouTube PO Token Provider 托管</span>
+        <span class="severity">YouTube</span>
       </div>
       <div class="desc">
-        重构下载、设置、工具箱、历史记录和响应式布局，并将字幕控件适配到统一设计体系。
-        <br><strong>提供：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a>
+        可按需启动本地 BgUtils Provider，支持 IPv4/IPv6 回环健康检查、复用现有实例、启动失败诊断，并在退出时只清理由本程序创建的进程。
       </div>
     </div>
 
     <div class="bug-card fix">
       <div class="header">
-        <span class="tag major">加固</span>
-        <span class="title">停止、进度与命令诊断</span>
-        <span class="severity">稳定性</span>
+        <span class="tag minor">新增</span>
+        <span class="title">自定义 yt-dlp 参数</span>
+        <span class="severity">高级设置</span>
       </div>
       <div class="desc">
-        改进媒体阶段进度、即时停止、可取消音频提取和当前命令复制；复制命令时自动遮盖密码等敏感参数。
+        下载页支持仅用于当前任务的临时参数，设置页支持持久化默认参数；参数以列表形式传给子进程，不经过 Shell，并对引号和长度进行校验。
+      </div>
+    </div>
+
+    <div class="bug-card fix">
+      <div class="header">
+        <span class="tag minor">优化</span>
+        <span class="title">下载进度反馈增强</span>
+        <span class="severity">进度显示</span>
+      </div>
+      <div class="desc">
+        新增 TwitCasting 分片百分比、速度、ETA 和媒体阶段显示，并扩展 FFmpeg 非直播任务的进度识别。
       </div>
     </div>
 
     <div class="bug-card improve">
       <div class="header">
-        <span class="tag minor">优化</span>
-        <span class="title">TwitCasting 兼容与回归保护</span>
-        <span class="severity">下载可靠性</span>
+        <span class="tag major">加固</span>
+        <span class="title">运行目录整理与兼容迁移</span>
+        <span class="severity">升级兼容</span>
       </div>
       <div class="desc">
-        遇到多初始化片段错误时自动切换 FFmpeg HLS 下载器重试，并保留字幕任务；自动化测试扩展至 162 项。
-        <br><strong>其他更新与修复：</strong><a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a>
+        第三方依赖统一放入 <code>dependency/</code>，下载、日志和归档统一放入 <code>download/</code>。首次启动自动迁移旧版文件，冲突内容使用 <code>.legacy-N</code> 后缀保留。
       </div>
     </div>
   </div>
@@ -400,6 +409,11 @@ ul.compact li::before {
     <div class="section-title">
       <span class="icon">📋</span>
       <span>历史版本</span>
+    </div>
+    <div class="notice-box info">
+      <div class="notice-title">v2.4.0 WebUI · 2026-09-05</div>
+      <p>完成 WebUI 重构，新增普通下载附带字幕和独立字幕工具，并完善停止流程、媒体阶段进度、命令诊断、音频提取及 TwitCasting FFmpeg 回退。</p>
+      <p><strong>贡献者：</strong><a href="https://github.com/DarkKandaoMaster">DarkKandaoMaster</a> 提供 UI 重构；<a href="https://github.com/ZheYi101">ZheYi101</a> 提供字幕下载；<a href="https://github.com/ergou10086">ErgouTree (@ergou10086)</a> 提供其他更新与修复；<a href="https://github.com/maomaoyexi">猫猫葉汐A_spy (@maomaoyexi)</a> 完成字幕修复与合并适配。</p>
     </div>
     <div class="notice-box info">
       <div class="notice-title">v2.3.0 WebUI · 2026-08-16</div>
@@ -419,8 +433,8 @@ ul.compact li::before {
       <div class="notice-title">📦 Release 附件说明</div>
       <p>本次发布分为两个附件：</p>
       <ul class="compact" style="margin-top: 0.8rem;">
-        <li><strong>主程序</strong>：<code>视频下载工具v2.4.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
-        <li><strong>通用依赖包</strong>：<code>视频下载工具v2.4.0-依赖包.zip</code> - 包含 yt-dlp、ffmpeg、ffprobe、deno、fantiadl、withny-dl 与帮助文档</li>
+        <li><strong>主程序</strong>：<code>视频下载工具v2.5.0-GUI.exe</code> - 单文件绿色版，双击即可运行</li>
+        <li><strong>通用依赖包</strong>：<code>视频下载工具v2.5.0-依赖包.zip</code> - 包含 yt-dlp、ffmpeg、ffprobe、deno、Provider、插件与帮助文档</li>
       </ul>
     </div>
   </div>
@@ -435,10 +449,10 @@ ul.compact li::before {
     <div class="notice-box success">
       <div class="notice-title">✅ 安装步骤（超简单，4步搞定）</div>
       <ul class="compact">
-        <li>下载 <code>视频下载工具v2.4.0-GUI.exe</code> 和 <code>视频下载工具v2.4.0-依赖包.zip</code> 两个文件</li>
-        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.4.0-GUI.exe</code> 放入其中</li>
+        <li>下载 <code>视频下载工具v2.5.0-GUI.exe</code> 和 <code>视频下载工具v2.5.0-依赖包.zip</code> 两个文件</li>
+        <li>新建一个文件夹（如「视频下载工具」），将 <code>视频下载工具v2.5.0-GUI.exe</code> 放入其中</li>
         <li>解压依赖包，将第三方工具和插件统一放入主程序旁的 <code>dependency/</code> 文件夹</li>
-        <li>双击 <code>视频下载工具v2.4.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
+        <li>双击 <code>视频下载工具v2.5.0-GUI.exe</code> 启动，自动打开浏览器进入 WebUI 界面即可使用！</li>
       </ul>
       <p style="margin-top: 0.8rem; font-size: 0.85rem;">💡 <strong>提示</strong>：NicoChannel 还需要单独准备 <code>nicochannel.zip</code> 并放入 <code>dependency/</code>。</p>
     </div>
@@ -455,7 +469,7 @@ ul.compact li::before {
       <div class="notice-title">✅ 升级步骤（超简单）</div>
       <ul class="compact">
         <li>关闭正在运行的旧版本程序（点击右上角「✕ 退出」按钮，或直接关闭命令行窗口）</li>
-        <li>只需下载新版 <code>视频下载工具v2.4.0-GUI.exe</code>，替换旧版 exe 即可</li>
+        <li>下载新版 <code>视频下载工具v2.5.0-GUI.exe</code> 替换旧版 exe，并解压 v2.5.0 依赖包补齐新增 Provider 与插件</li>
         <li>原有 <code>settings.ini</code>、<code>cookies.txt</code>、下载文件、配置预设<strong>无需任何改动</strong></li>
         <li>原有依赖、平台下载目录和 <code>*_archive.txt</code> 会在首次启动时安全迁移到新目录；同名文件不会被覆盖</li>
         <li>双击运行新版 exe，自动打开浏览器进入 WebUI 界面即可使用</li>
@@ -464,8 +478,8 @@ ul.compact li::before {
   </div>
 
   <div class="footer">
-    多平台视频下载工具 v2.4.0 WebUI <br>
-    2026-09-05 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny 与字幕下载工具
+    多平台视频下载工具 v2.5.0 WebUI <br>
+    2026-09-18 · 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter，另提供 Withny 与字幕下载工具
   </div>
 
 </div>

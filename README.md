@@ -1,11 +1,11 @@
-# 多平台视频下载工具 v2.4.0 WebUI
+# 多平台视频下载工具 v2.5.0 WebUI
 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter 八个平台的视频/直播下载，并提供 Withny 已授权历史存档 HAR 保存及直播监控录制功能。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
-![Version](https://img.shields.io/badge/version-v2.4.0%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v2.5.0%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> v2.4.0 完成 WebUI 重构并新增字幕下载、独立字幕工具、任务生命周期修复和下载稳定性优化。UI 由 [DarkKandaoMaster](https://github.com/DarkKandaoMaster) 提供，字幕功能由 [ZheYi101](https://github.com/ZheYi101) 提供，其他更新与修复由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 提供，字幕相关修复与合并适配由 [猫猫葉汐A_spy (@maomaoyexi)](https://github.com/maomaoyexi) 完成。
+> v2.5.0 由 [DarkKandaoMaster](https://github.com/DarkKandaoMaster) 重构 WebUI 视觉与交互体系；[ErgouTree (@ergou10086)](https://github.com/ergou10086) 完善设置控件、TwitCasting 下载与进度、YouTube PO Token Provider 集成及运行目录收拢。本版同时支持自定义 yt-dlp 参数，并修复关闭代理后仍可能继承系统代理的问题。
 
 ## ✨ 功能特性
 
@@ -34,11 +34,11 @@
 ## 🚀 快速开始
 
 1. 从 [Releases](https://github.com/maomaoyexi/video-downloader/releases) 下载最新版本（两个文件都要下载）：
-   - `视频下载工具v2.4.0-GUI.exe` - 主程序
-   - `视频下载工具v2.4.0-依赖包.zip` - 通用依赖包（包含下载工具和帮助文档）
-2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.4.0-GUI.exe` 放入其中
+   - `视频下载工具v2.5.0-GUI.exe` - 主程序
+   - `视频下载工具v2.5.0-依赖包.zip` - 通用依赖包（包含下载工具和帮助文档）
+2. 新建一个文件夹（如「视频下载工具」），将 `视频下载工具v2.5.0-GUI.exe` 放入其中
 3. 解压依赖包，将其中的 `dependency` 文件夹完整放到主程序同一目录
-4. 双击 `视频下载工具v2.4.0-GUI.exe` 运行，自动打开浏览器界面
+4. 双击 `视频下载工具v2.5.0-GUI.exe` 运行，自动打开浏览器界面
 
 > 💡 **提示**：依赖包的 `dependency/` 包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和 `yt-dlp-plugins` 目录。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。首次运行会自动生成 `download/`、归档及日志目录。
 
@@ -48,10 +48,10 @@ TwitCasting 多初始化段归档会自动加载随项目提供的 `dependency/y
 
 ### 源码运行版
 
-保持 `视频下载工具v2.4.0-GUI.py`、`video_downloader/` 与 `dependency/` 位于同一目录，安装 Python 3 后运行：
+保持 `视频下载工具v2.5.0-GUI.py`、`video_downloader/` 与 `dependency/` 位于同一目录，安装 Python 3 后运行：
 
 ```powershell
-python ".\视频下载工具v2.4.0-GUI.py"
+python ".\视频下载工具v2.5.0-GUI.py"
 ```
 
 源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本与 `video_downloader/` 目录。
@@ -124,7 +124,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ```
 工具目录/
-├── 视频下载工具v2.4.0-GUI.exe # 主程序
+├── 视频下载工具v2.5.0-GUI.exe # 主程序
 ├── dependency/              # 所有第三方依赖，可整体替换
 │   ├── yt-dlp.exe           # 下载核心
 │   ├── ffmpeg.exe           # 音视频处理
@@ -202,7 +202,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 > A: 查看控制台窗口显示的端口号（如 http://127.0.0.1:8765），手动在浏览器中输入该地址访问。
 
 **Q: 老用户如何升级？**
-> A: 只需下载新版 `视频下载工具v2.4.0-GUI.exe` 替换旧版exe即可，原有配置、下载记录、依赖文件全部无需改动。
+> A: 下载 `视频下载工具v2.5.0-GUI.exe` 替换旧版 exe，并使用 v2.5.0 依赖包补齐新增插件；原有配置和下载记录无需改动。
 
 ## 📚 详细文档
 
@@ -217,7 +217,7 @@ YouTube 使用明确的 `/live` 直播链接，Niconico 使用 `live.nicovideo.j
 
 ## 📋 版本更新
 
-v2.4.0 的完整更新内容、贡献者和升级说明请查看：
+v2.5.0 的完整更新内容和升级说明请查看：
 
 - [发布说明](RELEASE_NOTES.md)
 - [内置更新日志](resource/templates/changelog.html)
@@ -243,6 +243,8 @@ v2.4.0 的完整更新内容、贡献者和升级说明请查看：
 - v2.4.0 字幕下载：[ZheYi101](https://github.com/ZheYi101)
 - v2.4.0 其他更新与修复：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
 - v2.4.0 字幕功能修复与合并适配：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
+- v2.5.0 WebUI 视觉与交互体系重构：[DarkKandaoMaster](https://github.com/DarkKandaoMaster)
+- v2.5.0 设置控件、TwitCasting 下载与进度、BgUtils Provider 及目录收拢：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
 
 ## 致谢
 
