@@ -347,6 +347,9 @@ class LiveWatchService:
             return {"error": "无法识别平台"}
         if platform_name == "Withny":
             return {"error": "Withny 请使用专用 withny-dl 配置监控，不支持通用 WAIT"}
+        from .modes import capability_for
+        if not capability_for(platform_name).wait:
+            return {"error": f"{platform_name} 当前未开放蹲开播"}
         existing = self._store.find_active_url(target.url)
         if existing:
             return {"ok": True, "waiting": True, "duplicate": True, "job": existing.to_dict()}

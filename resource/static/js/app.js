@@ -40,7 +40,8 @@ const PLATFORMS = [
   {name:"Fantia",color:"#E6399B"},
   {name:"TwitCasting",color:"#00A0D1"},
   {name:"Twitter",color:"#1DA1F2"},
-  {name:"Withny",color:"#22C55E"}
+  {name:"Withny",color:"#22C55E"},
+  {name:"Rplay",color:"#F43F5E"}
 ];
 const PLATFORM_COLORS = Object.fromEntries(PLATFORMS.map(p => [p.name, p.color]));
 
@@ -321,6 +322,8 @@ function applyConfig(s) {
   $('s_cookiemode').value = s.COOKIE_MODE;
   $('s_browser').value = s.BROWSER_NAME;
   $('s_profile').value = s.BROWSER_PROFILE;
+  $('s_rplay_auth').value = s.RPLAY_AUTH_SOURCE || 'none';
+  $('s_rplay_profile').value = s.RPLAY_FIREFOX_PROFILE || '';
   onBrowserChanged();
   $('s_hwaccel').value = s.HWACCEL;
   if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
@@ -572,6 +575,8 @@ function collectCfg() {
     USE_COOKIES: isOn('sw_cookies')?1:0,
     COOKIE_MODE: parseInt($('s_cookiemode').value),
     BROWSER_NAME: $('s_browser').value,
+    RPLAY_AUTH_SOURCE: $('s_rplay_auth').value,
+    RPLAY_FIREFOX_PROFILE: $('s_rplay_profile').value.trim(),
     BROWSER_PROFILE: $('s_profile').value,
     HWACCEL: $('s_hwaccel').value,
     LIVE_STREAM_METHOD: $('s_live_stream_method').value,
@@ -1581,6 +1586,10 @@ function isLiveCandidateUrl(url) {
     const host = u.hostname.toLowerCase();
     const path = u.pathname.toLowerCase();
     const segs = path.split('/').filter(Boolean);
+    if((host === 'rplay.live' || host === 'www.rplay.live') && u.protocol === 'https:' &&
+       !u.username && !u.password && (!u.port || u.port === '443') &&
+       /^\/(live|creatorhome)\/[0-9a-fA-F]{24}\/?$/.test(u.pathname) &&
+       (segs[0] !== 'creatorhome' || !['contents','replays','playlists'].includes(u.searchParams.get('page')))) return true;
     if(host === 'live.bilibili.com' || host.endsWith('.live.bilibili.com')) return true;
     if(host === 'b23.tv' || host.endsWith('.b23.tv')) return true;
     if(host.includes('youtube.com') && (path.endsWith('/live') || path.startsWith('/live/'))) return true;

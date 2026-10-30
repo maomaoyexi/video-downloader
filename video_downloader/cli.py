@@ -55,6 +55,11 @@ def _get_exe_suffix():
 
 def run_cli(argv):
     """CLI 入口。解析参数并执行对应命令。"""
+    # Redirected Windows consoles can default to GBK; video titles may contain
+    # emoji. Keep command output consistent with the UTF-8 downloader stream.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='replace')
     if not argv:
         _print_help()
         return 0
@@ -94,6 +99,9 @@ def _cmd_download(url):
         return 1
 
     platform = detect_platform(url)
+    if platform == 'Rplay':
+        from .platforms.rplay_cli import download
+        return download(url, paths, exe_suffix)
     config = dict(DEFAULT_CONFIG)
     if platform:
         config["PLATFORM"] = platform

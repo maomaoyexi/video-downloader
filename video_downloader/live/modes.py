@@ -86,6 +86,12 @@ CAPABILITIES: Mapping[str, PlatformCapability] = MappingProxyType({
         catch_up=Support.UNSUPPORTED,
         catch_up_reason="无公开 DVR 证据",
     ),
+    "Rplay": PlatformCapability(
+        catch_up=Support.UNSUPPORTED,
+        catch_up_reason="尚无可验证的 DVR",
+        live_edge=True,
+        wait=True,
+    ),
 })
 
 _UNKNOWN_CAPABILITY = PlatformCapability(
@@ -130,7 +136,7 @@ def resolve_mode(platform: str | None, requested_mode: "LiveMode | str | None") 
     """把用户请求解析成实际模式；不可用时抛 LiveModeError。"""
     requested = LiveMode.parse(requested_mode)
     if requested is LiveMode.AUTO:
-        return auto_mode_for(platform)
+        requested = auto_mode_for(platform)
 
     capability = capability_for(platform)
     if requested is LiveMode.CATCH_UP:

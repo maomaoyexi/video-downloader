@@ -12,6 +12,7 @@ SOURCES = {
     "NicoChannel": "评论历史 API 轮询",
     "Niconico": "NDGR 消息流",
     "Withny": "withny-dl 聊天 JSON",
+    "Rplay": "AWS IVS 评论",
 }
 
 

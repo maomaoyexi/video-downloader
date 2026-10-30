@@ -75,6 +75,8 @@ DEFAULT_CONFIG = {
     "BILI_MULTIP_POLICY": "all",
     "YOUTUBE_PO_TOKEN_ENABLED": 0,
     "YTDLP_DEFAULT_ARGS": "",
+    "RPLAY_AUTH_SOURCE": "none",
+    "RPLAY_FIREFOX_PROFILE": "",
 }
 
 RESOLUTION_OPTIONS = ["best", "2160", "1440", "1080", "720", "480", "360"]
@@ -110,4 +112,5 @@ PLATFORM_INFO = [
     {"name": "TwitCasting", "color": "#4B4B4D", "domains": ["twitcasting.tv"]},
     {"name": "Twitter", "color": "#1DA1F2", "domains": ["twitter.com", "x.com", "t.co"]},
     {"name": "NicoChannel", "color": "#FF6B35", "domains": ["nicochannel.jp"]},
+    {"name": "Rplay", "color": "#F43F5E", "domains": ["rplay.live"]},
 ]

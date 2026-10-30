@@ -7,6 +7,15 @@ from video_downloader import cli
 
 
 class CliLiveTests(unittest.TestCase):
+    def test_redirected_cli_output_accepts_unicode_titles(self):
+        import io
+        binary=io.BytesIO()
+        output=io.TextIOWrapper(binary,encoding='gbk')
+        with patch.object(cli.sys,'stdout',output),patch.object(cli.sys,'stderr',output):
+            self.assertEqual(cli.run_cli(['--help']),0)
+            print('测试标题 💜')
+            output.flush()
+        self.assertIn('💜'.encode(),binary.getvalue())
     def test_single_live_url_passes_live_mode_to_command_builder(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

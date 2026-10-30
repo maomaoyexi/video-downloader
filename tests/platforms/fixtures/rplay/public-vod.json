@@ -1,0 +1,23 @@
+{
+  "_id": "682065da13ed2c564c77d8f7",
+  "creatorOid": "64d483add2c96306099ef734",
+  "title": "公开点播样本",
+  "introText": "",
+  "createdAt": "2025-05-11T08:54:50.298Z",
+  "publishedAt": "2025-05-11T08:56:45.726Z",
+  "length": 11.483,
+  "creatorInfo": {
+    "nickname": "creator-01"
+  },
+  "drm": false,
+  "encrypted": true,
+  "deleted": false,
+  "waitingEncoding": false,
+  "isAdultContent": false,
+  "hideContent": false,
+  "canView": {
+    "canView": true,
+    "mediaType": "video/mp4",
+    "url": "https://api2.rplay.live/content/hlsstream?s3key=fixture&token=REDACTED"
+  }
+}

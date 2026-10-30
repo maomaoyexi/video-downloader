@@ -98,6 +98,10 @@ class LiveInspector:
         })
 
         if probe.status is LiveStatus.LIVE:
+            if not capability.live_edge and not catch_up_available:
+                base.update({"recommended_mode": "", "effective_mode": "", "warning": "",
+                             "downgraded": False, "error": f"{platform} 当前未开放直播录制"})
+                return base
             effective = _choose_live_mode(platform, requested, catch_up_available)
             warning = ""
             if (requested is LiveMode.CATCH_UP or (requested is LiveMode.AUTO and

@@ -54,4 +54,12 @@ def self_check():
     yaml = library("ruamel.yaml").YAML(typ="safe", pure=True)
     result["managed_yaml"] = yaml.load("writeChat: true")["writeChat"] is True
     result["tls_certificates"] = Path(library("certifi").where()).is_file()
+    from video_downloader.platforms.rplay import auth_support
+    support = auth_support()
+    result['rplay_session_decoder'] = support.decompress_session(b'\x03\x08xyz') == b'xyz'
+    import os
+    if os.name == 'nt':
+        plain = b'rplay-release-self-check'
+        encrypted = support.protect(plain)
+        result['rplay_credential_protection'] = plain not in encrypted and support.protect(encrypted, decrypt=True) == plain
     return result

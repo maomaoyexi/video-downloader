@@ -20,6 +20,8 @@ from .constants import (
 
 # 校验错误的中文说明（key → 错误详情映射）
 _ERROR_REASONS = {
+    "RPLAY_AUTH_SOURCE": "Rplay 登录来源仅支持 none/firefox",
+    "RPLAY_FIREFOX_PROFILE": "Firefox 配置路径长度不能超过 200 字符",
     "PLATFORM": "平台选项无效",
     "RESOLUTION": "分辨率选项无效",
     "CODEC": "编码选项无效",
@@ -102,6 +104,7 @@ def validate_config(values, base=None):
     except (TypeError, ValueError, OverflowError):
         proxy_enabled = bool(result["PROXY_ENABLED"])
     enums = {
+        "RPLAY_AUTH_SOURCE": ["none", "firefox"],
         "PLATFORM": [item["name"] for item in PLATFORM_INFO],
         "RESOLUTION": RESOLUTION_OPTIONS,
         "CODEC": CODEC_OPTIONS,
@@ -185,6 +188,10 @@ def validate_config(values, base=None):
             elif key == "YTDLP_DEFAULT_ARGS":
                 value = str(value).strip()
                 if len(value) > 4000:
+                    raise ValueError
+            elif key == 'RPLAY_FIREFOX_PROFILE':
+                value = str(value).strip()
+                if len(value) > 200 or any(char in value for char in '\r\n\0'):
                     raise ValueError
             elif key == "LIVE_DANMAKU_PLATFORMS":
                 import json

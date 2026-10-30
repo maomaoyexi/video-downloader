@@ -73,7 +73,13 @@ class IntegrityChecker:
                         continue
                     key = values["stream_index"]
                     track = result["timestamps"].setdefault(key, {"first": stamp, "last": stamp, "packets": 0,
-                                                                "max_gap": 0, "backwards": 0})
+                                                                "max_gap": 0, "backwards": 0,
+                                                                "max_pts_gap": 0, "max_presentation_delay": 0})
+                    if pts is not None:
+                        if 'last_pts' in track:
+                            track['max_pts_gap'] = max(track['max_pts_gap'], abs(pts - track['last_pts']))
+                        track['last_pts'] = pts
+                        track['max_presentation_delay'] = max(track['max_presentation_delay'], abs(pts - stamp))
                     if track["packets"]:
                         delta = stamp - track["last"]
                         track["max_gap"] = max(track["max_gap"], delta)
@@ -96,6 +102,13 @@ class IntegrityChecker:
                 # A forward gap leaves a playable recording with missing media.
                 # Preserve it as usable and report gaps rather than corruption.
                 result['warnings'].append('timestamp_discontinuity')
+            # Decode timestamps can remain monotonic while a corrupt video PTS
+            # stretches an 80-second capture to an hour. Small B-frame reorder
+            # is normal; large presentation jumps/delays cannot pass integrity.
+            if any(t['max_presentation_delay'] > max(5, limits.get(key, 5))
+                   or (t['max_pts_gap'] > max(5, limits.get(key, 5)) and t['max_gap'] <= limits.get(key, 1))
+                   for key, t in result['timestamps'].items()):
+                result['errors'].append('presentation_timestamp_discontinuity')
             for start in sorted({0, max(0, result["duration"] - 10)}):
                 decode = subprocess.run(
                     [self.ffmpeg, "-hide_banner", "-v", "error", "-nostdin", "-ss", str(start), "-i", str(path),

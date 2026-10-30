@@ -17,7 +17,9 @@ from . import process
 from .engines.bililive import BililiveEngine, EngineUnavailable, cookie_from_file, validate_install
 from .engines.ytdlp import YtDlpEngine
 from .engines.withnydl import WithnyEngine
+from .engines.rplay import RplayEngine
 from .engines import EngineFeatures
+from .probe import ProbeError
 from .integrity import IntegrityChecker
 from .session import LiveSession, media_files, redact_command
 from .urls import classify_target
@@ -42,6 +44,8 @@ class LiveRunner:
         if platform == "Withny":
             return WithnyEngine(command, self.session, config["_withny_config_path"],
                                 bool(config.get("LIVE_DANMAKU_ENABLED", 0)))
+        if platform == 'Rplay':
+            return RplayEngine(command, url)
         if platform != "Bilibili" or config.get("LIVE_STREAM_METHOD", "auto") == "yt-dlp":
             return YtDlpEngine(command)
         try:
@@ -177,7 +181,18 @@ class LiveRunner:
             attempt, next_reason = 0, "initial"
             while not cancel.is_set():
                 directory, part = session.part(engine.name, [], next_reason)
-                cmd = engine.command(directory)
+                try:
+                    cmd = engine.command(directory)
+                except ProbeError as exc:
+                    if platform != 'Rplay' or not exc.retryable or attempt >= max_retries:
+                        raise
+                    attempt += 1
+                    next_reason = 'source_probe_error'
+                    session.event(next_reason, attempt=attempt)
+                    if cancel.wait(min(10 * 2 ** (attempt - 1), 30)):
+                        reason = 'user'
+                        break
+                    continue
                 media_clock = MediaClock(directory, command, checker.ffprobe) if config.get('LIVE_DANMAKU_ENABLED') else None
                 if media_clock:
                     clocks.append((media_clock, part))
@@ -293,6 +308,8 @@ class LiveRunner:
                         try:
                             metadata = json.loads(line[len("LIVE_META:"):])
                             if isinstance(metadata, dict):
+                                if hasattr(engine, 'observe_metadata'):
+                                    engine.observe_metadata(metadata)
                                 title = metadata.get("title") or title
                                 session.data["probe"] = metadata
                                 session.save()
@@ -302,7 +319,8 @@ class LiveRunner:
                                     session.event('source_no_longer_live')
                         except ValueError:
                             pass
-                    if any(value in line.lower() for value in ("403 forbidden", "login required", "drm", "private video", "unsupported url")):
+                    if (any(value in line.lower() for value in ("login required", "drm", "private video", "unsupported url", "rplay private"))
+                            or (platform != 'Rplay' and '403 forbidden' in line.lower())):
                         fatal_error = True
                     if any(value in line.lower() for value in (
                             'failed to reload playlist', 'failed to open segment', 'error when loading first segment',
@@ -310,6 +328,9 @@ class LiveRunner:
                         stream_failure = True
                         warnings.append('stream_transport_interrupted')
                     if "ERROR" in line or "ERR]" in line or "FTL]" in line:
+                        if platform == 'Rplay':
+                            from video_downloader.platforms.rplay import sanitize_output
+                            line = sanitize_output(line)
                         error_lines.append(line[:2000])
                         error_lines = error_lines[-16:]
                         if platform == "TwitCasting" and any(value in line for value in (
@@ -342,8 +363,13 @@ class LiveRunner:
                     reason = "user"
                     break
                 if proc.returncode == 0 and not stop_requested and not stream_failure:
-                    reason = "crash" if engine.name == "withny-dl" else "ended"
-                    break
+                    if hasattr(engine, 'source_ended') and not engine.source_ended():
+                        warnings.append('source_still_live_after_eof')
+                        stream_failure = True
+                        session.event('source_still_live_after_eof')
+                    else:
+                        reason = "crash" if engine.name == "withny-dl" else "ended"
+                        break
                 # Startup-only BR failures may fall back; never append yt-dlp to a BR session with media.
                 if engine.name == "withny-dl":
                     reason = "crash"

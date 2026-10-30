@@ -109,7 +109,10 @@ def _append_shared_options(cmd, cfg, cookie_file, platform_name, nicochannel_aut
     于 URL 解析阶段，因此必须在追加 URL 之前调用。
     """
     _append_proxy_option(cmd, cfg)
-    _append_cookie_options(cmd, cfg, cookie_file)
+    # Rplay stores account authorization outside cookies. The first adapter only
+    # accesses public VOD; opening a browser cookie database cannot authenticate it.
+    if platform_name != "Rplay":
+        _append_cookie_options(cmd, cfg, cookie_file)
     if cfg["WIN_FILENAMES"]:
         cmd += ["--windows-filenames"]
     if cfg["STRICT_FILENAME"]:
@@ -187,13 +190,19 @@ def parse_custom_ytdlp_args(value):
         ctypes.windll.kernel32.LocalFree(argv)
 
 
-def _append_custom_ytdlp_args(cmd, cfg, custom_args):
+def _append_custom_ytdlp_args(cmd, cfg, custom_args, platform_name=None):
     # 默认参数在前、本次参数在后，让本次参数可以按 yt-dlp 的常规规则覆盖默认值。
-    cmd += parse_custom_ytdlp_args(cfg.get("YTDLP_DEFAULT_ARGS", ""))
-    cmd += parse_custom_ytdlp_args(custom_args)
+    custom = parse_custom_ytdlp_args(cfg.get("YTDLP_DEFAULT_ARGS", "")) + parse_custom_ytdlp_args(custom_args)
+    if platform_name == 'Rplay' and any(value.split('=', 1)[0] in {'--write-pages', '--dump-pages', '--print-traffic'} for value in custom):
+        raise ValueError('Rplay 不支持保存原始网络响应的调试参数')
+    cmd += custom
+    if platform_name == 'Rplay':
+        # Info JSON contains temporary signed playback URLs. Keep task/history
+        # records at the application layer instead of persisting extractor output.
+        cmd += ['--no-write-info-json', '--no-continue', '--abort-on-unavailable-fragments']
 
 
-def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live_mode=None, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, use_ffmpeg_for_hls=False, include_subtitles=True, subtitle_only=False, thumbnail_only=False, custom_args=None, po_token_base_url=None):
+def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live_mode=None, platform_override=None, cookie_file=None, bili_parts=None, nicochannel_auth_token=None, use_ffmpeg_for_hls=False, include_subtitles=True, subtitle_only=False, thumbnail_only=False, custom_args=None, po_token_base_url=None, rplay_auth_dir=None):
     """构建 yt-dlp 下载命令行参数。
 
     根据配置项组装完整的 yt-dlp 命令行参数列表，包括输出模板、格式选择、
@@ -246,6 +255,17 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live
     for plugin_dir in plugin_dirs:
         cmd += ["--plugin-dirs", str(plugin_dir)]
     platform_name = platform_override if platform_override else cfg["PLATFORM"]
+    if platform_name == "Rplay":
+        from video_downloader.live.urls import classify_target, TargetKind
+        if classify_target(url, platform_name).kind not in {TargetKind.ARCHIVE, TargetKind.CHANNEL}:
+            raise ValueError("Rplay 暂不支持此路径，请使用单个点播或直播间链接")
+        from video_downloader.platforms.rplay import auth_arguments
+        cmd += auth_arguments(cfg, rplay_auth_dir)
+        if is_live:
+            cmd += ['--downloader', 'http:ffmpeg']
+        # Signed URLs can rotate between runs. Restart incomplete fragments until
+        # resumption can verify the resource/format identity; never skip gaps.
+        cmd += ["--ignore-config", "--no-continue", "--abort-on-unavailable-fragments", "--no-playlist"]
     is_nico_live = platform_name == "Niconico" and is_live
 
     if subtitle_only:
@@ -257,7 +277,7 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live
         _append_shared_options(
             cmd, cfg, cookie_file, platform_name, nicochannel_auth_token, po_token_base_url
         )
-        _append_custom_ytdlp_args(cmd, cfg, custom_args)
+        _append_custom_ytdlp_args(cmd, cfg, custom_args, platform_name)
         cmd.append(url)
         return cmd
 
@@ -297,7 +317,7 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live
         _append_shared_options(
             cmd, cfg, cookie_file, platform_name, nicochannel_auth_token, po_token_base_url
         )
-        _append_custom_ytdlp_args(cmd, cfg, custom_args)
+        _append_custom_ytdlp_args(cmd, cfg, custom_args, platform_name)
         cmd.append(url)
         return cmd
 
@@ -332,6 +352,9 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live
     fmt = cfg["OUTPUT_FORMAT"]
     vcodec_part = res_str + vcodec
     vfmt = f"bestvideo{vcodec_part}+{aformat_base}/best{vcodec_part}/best"
+    if platform_name == 'Rplay':
+        from video_downloader.platforms.rplay import format_selector
+        vfmt = format_selector(cfg)
 
     # === 音频处理方案 ===
     audio_mode = cfg.get("AUDIO_MODE", "0")
@@ -389,6 +412,6 @@ def build_ytdlp_cmd(url, config, tool_dir, exe_suffix="", *, is_live=False, live
     _append_shared_options(
         cmd, cfg, cookie_file, platform_name, nicochannel_auth_token, po_token_base_url
     )
-    _append_custom_ytdlp_args(cmd, cfg, custom_args)
+    _append_custom_ytdlp_args(cmd, cfg, custom_args, platform_name)
     cmd.append(url)
     return cmd

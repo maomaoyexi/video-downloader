@@ -68,6 +68,27 @@ def classify_target(url: str, platform: str | None = None) -> LiveTarget:
     if not host:
         return LiveTarget(raw_url, platform_name, TargetKind.UNKNOWN, reason="缺少 host")
 
+    if platform_name == "Rplay":
+        if (parsed.scheme != "https" or host not in {"rplay.live", "www.rplay.live"}
+                or parsed.username or parsed.password):
+            return LiveTarget(raw_url, platform_name, TargetKind.UNKNOWN, reason="需要 Rplay HTTPS 主站链接")
+        try:
+            if parsed.port not in (None, 443):
+                return LiveTarget(raw_url, platform_name, TargetKind.UNKNOWN, reason="Rplay 端口无效")
+        except ValueError:
+            return LiveTarget(raw_url, platform_name, TargetKind.UNKNOWN, reason="Rplay 端口无效")
+        segments = _segments(path)
+        if re.fullmatch(r"/(?:play|live|creatorhome)/[0-9a-fA-F]{24}/?", parsed.path):
+            stable = segments[1].lower()
+            if segments[0] == "play":
+                return LiveTarget(raw_url, platform_name, TargetKind.ARCHIVE, stable)
+            if segments[0] == "live":
+                return LiveTarget(raw_url, platform_name, TargetKind.CHANNEL, stable)
+            if segments[0] == "creatorhome":
+                kind = TargetKind.LIST if query.get("page", [""])[0] in {"contents", "replays", "playlists"} else TargetKind.CHANNEL
+                return LiveTarget(raw_url, platform_name, kind, stable)
+        return LiveTarget(raw_url, platform_name, TargetKind.UNKNOWN, reason="Rplay 暂不支持此路径")
+
     if platform_name == "YouTube":
         if host in {"youtu.be", "www.youtu.be"}:
             video_id = _segments(lowered)[0] if _segments(lowered) else ""

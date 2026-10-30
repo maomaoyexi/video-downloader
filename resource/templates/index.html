@@ -285,16 +285,16 @@
               <div class="row"><span class="lb">无增长告警</span><input type="number" class="ctl mono" id="s_live_watchdog" min="10" max="600" value="60" style="width:110px"><span class="hint">秒；连续两倍时间无媒体增长或下载进度则收尾并按策略重试</span></div>
               <div class="row"><span class="lb">磁盘安全余量</span><input type="number" class="ctl mono" id="s_live_free_mb" min="64" max="102400" value="256" style="width:110px"><span class="hint">MiB；低于余量自动收尾</span></div>
               <div class="row"><span class="lb">预检估算码率</span><input type="number" class="ctl mono" id="s_live_bitrate" min="128" max="100000" value="8000" style="width:110px"><span class="hint">Kbps；预计时长 × 码率 × 1.3；不限时先预留 15 分钟并持续检查</span></div>
-              <div class="hint">YouTube 先验证可追播 DASH；Twitch 先录实时尾部、独立回填本场 VOD。无法验证重叠时保留两路文件并报告缺口。B站录播姬使用原始 FLV、最高可用画质；代理、浏览器 Cookie、自定义参数或音频处理需要 yt-dlp 时会明确降级。</div>
+              <!-- <div class="hint">YouTube 先验证可追播 DASH；Twitch 先录实时尾部、独立回填本场 VOD。无法验证重叠时保留两路文件并报告缺口。B站录播姬使用原始 FLV、最高可用画质；代理、浏览器 Cookie、自定义参数或音频处理需要 yt-dlp 时会明确降级。</div> -->
               <div class="row"><span class="lb">默认抓取直播弹幕</span><span class="sw" id="sw_live_danmaku" role="switch" aria-label="默认抓取直播弹幕" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">下方可按平台覆盖；只影响新任务，采集失败不停止媒体录制</span></div>
               <div id="liveCommentPlatforms" class="live-platform-modes" aria-label="各平台弹幕默认值"></div>
               <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_formats">弹幕导出格式</label><span class="sel"><select class="ctl" id="s_live_danmaku_formats"><option value="srt,ass">SRT + ASS</option><option value="srt">SRT</option><option value="ass">ASS</option></select></span><span class="hint">结束后逐个媒体分段生成同名字幕；密集弹幕超出轨道容量会丢弃并计数</span></div>
               <div class="row"><span class="lb">导出匿名化</span><span class="sw" id="sw_live_danmaku_anon" role="switch" aria-label="导出匿名化" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">事件库与字幕的 UID/昵称作会话内哈希；原生 XML / 聊天 JSON 仍含原始身份信息</span></div>
               <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_offset">弹幕时间微调</label><input type="number" class="ctl mono" id="s_live_danmaku_offset" min="-600000" max="600000" step="100" value="0" style="width:130px"><span class="hint">毫秒；正数延后，负数提前。可在录制结束后按当前格式与微调重新导出</span></div>
-              <div class="hint">B站复用录播姬 XML，YouTube 使用原生 live_chat，Withny 使用原生聊天 JSON；Twitch、TwitCasting、NicoChannel、Niconico 独立采集。部分平台需要登录或观看权限。源时间与本机时间精度不同，估算锚点会标明未知误差，不宣称已精确校准；详情见 comments-report.json。</div>
+              <!-- <div class="hint">B站复用录播姬 XML，YouTube 使用原生 live_chat，Withny 使用原生聊天 JSON；Twitch、TwitCasting、NicoChannel、Niconico 独立采集。部分平台需要登录或观看权限。源时间与本机时间精度不同，估算锚点会标明未知误差，不宣称已精确校准；详情见 comments-report.json。</div> -->
               <div class="sh" style="margin-top:4px"><b>平台默认录制方式</b><span class="rule"></span><span class="note">仅显示同时支持追开播与当前录制的平台</span></div>
               <div id="livePlatformModes" class="live-platform-modes"></div>
-              <div class="hint">追开播不可用时会提示原因并降级为从当前时刻；条件平台（Niconico/NicoChannel/TwitCasting/X）在探测能力接入前不显示。</div>
+              <!-- <div class="hint">追开播不可用时会提示原因并降级为从当前时刻；条件平台（Niconico/NicoChannel/TwitCasting/X）在探测能力接入前不显示。</div> -->
               <div class="row"><span class="lb">直播提醒</span><button class="btn sm gh" onclick="clearLiveNoticeMutes()">清除“不再提醒”</button><span class="hint">提醒弹窗中的“不再提醒”保存在浏览器本地</span></div>
             </section>
 
@@ -325,6 +325,8 @@
               <div class="row"><span class="lb">Cookie 模式</span><span class="sel"><select class="ctl" id="s_cookiemode" onchange="toggleCookieMode()"><option value="1">cookies.txt 文件</option><option value="2">浏览器提取</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
               <div class="row" id="row_browser"><span class="lb">浏览器</span><span class="sel"><select class="ctl" id="s_browser"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
               <div class="row" id="row_profile"><span class="lb">配置文件名</span><input type="text" class="ctl mono" id="s_profile" value="Default" placeholder="Firefox 留空自动探测" style="flex:1"></div>
+              <div class="row"><label class="lb" for="s_rplay_auth">Rplay 登录来源</label><span class="sel"><select class="ctl" id="s_rplay_auth"><option value="none">未配置</option><option value="firefox">Firefox</option></select></span></div>
+              <div class="row"><label class="lb" for="s_rplay_profile">Rplay Firefox 配置</label><input type="text" class="ctl mono" id="s_rplay_profile" maxlength="200" autocomplete="off" style="flex:1"></div>
             </section>
 
             <section class="settings-section" id="set-subtitle">
@@ -361,8 +363,8 @@
               <div class="row"><span class="lb">任务内直播并行数</span><input type="number" class="ctl mono" id="s_task_live_parallel" min="2" max="5" value="2" style="width:100px"><span class="hint">默认 2，可设置 2–5 路，不占用视频下载额度</span></div>
               <div class="row"><span class="lb">任务内视频并行数</span><input type="number" class="ctl mono" id="s_task_download_parallel" min="1" max="5" value="1" style="width:100px"><span class="hint">默认 1，视频下载串行；最多 5 路，不占用直播额度</span></div>
               <div class="row"><span class="lb">普通下载限速</span><input type="number" class="ctl mono" id="s_task_download_speed" min="0" max="100000" step="0.1" value="0" style="width:110px"><span class="hint">MiB/s / 每条普通 yt-dlp 视频；0 不限，不限制直播，Withny 专用流程不适用</span></div>
-              <div class="hint">排序只影响排队任务；任务间并行数与排序对队列实时生效，任务内设置在提交时固定。默认共可运行 4 路直播 + 2 路视频，上限共 25 路直播 + 25 路视频；每条链接还会使用所设下载线程。</div>
-              <div class="hint">任务列表在本次运行期间保留，重启后不恢复。归档和密码确认在对应任务详情内处理；蹲开播仍由等待开播面板管理。</div>
+              <!-- <div class="hint">排序只影响排队任务；任务间并行数与排序对队列实时生效，任务内设置在提交时固定。默认共可运行 4 路直播 + 2 路视频，上限共 25 路直播 + 25 路视频；每条链接还会使用所设下载线程。</div> -->
+              <!-- <div class="hint">任务列表在本次运行期间保留，重启后不恢复。归档和密码确认在对应任务详情内处理；蹲开播仍由等待开播面板管理。</div> -->
             </section>
 
             <section class="settings-section" id="set-advanced">
