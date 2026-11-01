@@ -1,3 +1,12 @@
+# 根目录本地数据：同时由 pre-commit / pre-push 拦截强制添加。
+/cookies.txt
+/settings.ini
+/urls.txt
+/download/
+/.ai/
+/.claude/
+/temp/
+
 # 配置文件（包含用户隐私数据）
 settings.ini
 presets.json
@@ -46,7 +55,6 @@ dist/
 release-output/
 release-assets/
 *.spec
-/temp/
 
 # 下载/安装的依赖仅保留根目录的许可证；源码插件和锁文件在 resource 中维护。
 /dependency/*

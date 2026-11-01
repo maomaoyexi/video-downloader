@@ -3,7 +3,9 @@ from tests.helpers import PROJECT_ROOT
 from pathlib import Path
 import subprocess
 
-from scripts.check_repository_layout import violations, MAINTAINED_SCRIPTS
+import pytest
+
+from scripts.check_repository_layout import violations, local_paths, git, GuardError, MAINTAINED_SCRIPTS
 
 
 def test_tracked_tree_contains_no_local_plans_or_installed_dependencies():
@@ -13,7 +15,9 @@ def test_tracked_tree_contains_no_local_plans_or_installed_dependencies():
 
 
 def test_guard_rejects_forced_adds_and_accepts_only_license_files():
-    invalid = ['temp/plan/example.md', 'Temp/test.txt', 'dependency/tool.exe',
+    invalid = ['cookies.txt', 'Settings.INI', 'URLS.TXT', 'download/posts/image.png',
+               '.AI/state.json', '.Claude/state.json',
+               'temp/plan/example.md', 'Temp/test.txt', 'dependency/tool.exe',
                'dependency/.venv/pyvenv.cfg', 'dependency/package/LICENSE',
                'dependency/runtime.lock.json', 'scripts/one_off_probe.py', 'tests/test_scattered.py']
     assert violations(invalid) == invalid
@@ -21,11 +25,16 @@ def test_guard_rejects_forced_adds_and_accepts_only_license_files():
                        'resource/dependencies/live-python.lock.json',
                        'resource/yt-dlp-plugins/video_downloader/yt_dlp_plugins/extractor/twitcasting.py',
                        'tests/core/test_paths.py', *MAINTAINED_SCRIPTS]) == []
+    assert local_paths(['cookies.txt', '.AI', 'DOWNLOAD', 'Temp/a', 'docs/cookies.txt',
+                        'resource/download/icon.svg', 'temporary.txt', 'downloads/a']) == [
+                            'cookies.txt', '.AI', 'DOWNLOAD', 'Temp/a']
 
 
 def test_gitignore_uses_default_deny_for_runtime_and_temporary_scripts():
     root = PROJECT_ROOT
-    ignored = ['temp/plan/new.md', 'dependency/new-tool.dll', 'dependency/package/LICENSE',
+    ignored = ['cookies.txt', 'settings.ini', 'urls.txt', 'download/posts/image.png',
+               '.ai/state.json', '.claude/state.json',
+               'temp/plan/new.md', 'dependency/new-tool.dll', 'dependency/package/LICENSE',
                'dependency/yt-dlp-plugins/plugin.py', 'scripts/temporary-test.py']
     output = subprocess.check_output(['git', 'check-ignore', '--no-index', *ignored], cwd=root)
     assert output.decode('utf-8').splitlines() == ignored
@@ -33,3 +42,18 @@ def test_gitignore_uses_default_deny_for_runtime_and_temporary_scripts():
         result = subprocess.run(['git', 'check-ignore', '--no-index', allowed], cwd=root,
                                 stdout=subprocess.PIPE)
         assert result.returncode == 1, allowed
+
+
+@pytest.mark.parametrize('timeout', [False, True])
+def test_git_failure_is_closed_and_never_echoes_remote_credentials(monkeypatch, timeout):
+    secret = 'synthetic-token-never-echo'
+
+    def fail(command, **kwargs):
+        if timeout:
+            raise subprocess.TimeoutExpired(command, kwargs['timeout'], stderr=secret.encode())
+        return subprocess.CompletedProcess(command, 1, b'', secret.encode())
+
+    monkeypatch.setattr(subprocess, 'run', fail)
+    with pytest.raises(GuardError) as raised:
+        git('ls-remote', f'https://{secret}@example.invalid/repo')
+    assert secret not in str(raised.value)

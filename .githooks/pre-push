@@ -1,0 +1,12 @@
+#!/bin/sh
+# Check every outgoing commit, including files added and later deleted.
+if [ -x dependency/.venv/Scripts/python.exe ]; then
+    exec dependency/.venv/Scripts/python.exe scripts/check_repository_layout.py --pre-push "$@"
+elif command -v python >/dev/null 2>&1; then
+    exec python scripts/check_repository_layout.py --pre-push "$@"
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 scripts/check_repository_layout.py --pre-push "$@"
+else
+    echo "Repository safety check requires Python; install Python before pushing." >&2
+    exit 1
+fi
