@@ -70,6 +70,7 @@ class HttpHandlerDependencies:
     export_live_comments: object = None
     audio_convert: object = None
     stop_audio_tool: object = None
+    fanbox: object = None
 
 
 def create_handler(dependencies):
@@ -160,6 +161,8 @@ def create_handler(dependencies):
                 self._json(report if report is not None else {"error": "报告不存在或仍在生成"}, status=200 if report is not None else 404)
             elif path == "/api/tasks":
                 self._json({"tasks": dependencies.list_tasks()})
+            elif path.startswith('/api/fanbox/'):
+                self._fanbox_get(path,parse_qs(parsed.query))
             elif path == "/api/network-test":
                 self._json(dependencies.network_diagnostics.snapshot() if dependencies.network_diagnostics
                            else {"running": False, "phase": "unavailable", "message": "网络检测不可用", "result": None})
@@ -201,6 +204,7 @@ def create_handler(dependencies):
                     "live_watch": dependencies.list_live_watch_jobs(),
                     "tasks": dependencies.list_tasks(),
                     "network_test": dependencies.network_diagnostics.snapshot() if dependencies.network_diagnostics else None,
+                    "fanbox_jobs": dependencies.fanbox.snapshot() if dependencies.fanbox else [],
                 }}
             # 每个 SSE 连接使用有界队列；慢连接的丢旧保新策略由 AppState 统一执行。
             client_queue = queue.Queue(maxsize=256)
@@ -227,6 +231,51 @@ def create_handler(dependencies):
                 no_clients = dependencies.app_state.remove_sse_client(client_queue)
                 if no_clients and not dependencies.download_manager.snapshot()["running"] and not self.server.stop_event.is_set():
                     dependencies.start_idle_timer()
+
+        def _fanbox_error(self,error):
+            from video_downloader.platforms.fanbox.errors import FanboxError
+            if isinstance(error,FanboxError):
+                status=409 if error.code in {'stale_version','request_conflict','job_busy'} else 404 if error.code.endswith('not_found') else 400
+                self._json({'error':str(error),'code':error.code},status=status)
+            else:
+                self._json({'error':'FANBOX 操作失败','code':'fanbox_error'},status=400)
+
+        def _fanbox_get(self,path,query):
+            service=dependencies.fanbox
+            if service is None:
+                self._json({'error':'FANBOX 不可用'},status=503);return
+            try:
+                if path=='/api/fanbox/jobs':result={'jobs':service.list(),'error':service.access_error}
+                elif path=='/api/fanbox/options':result=service.options()
+                elif path=='/api/fanbox/auth':result=service.auth_status()
+                elif path=='/api/fanbox/history':result=service.history(query.get('source',[''])[0])
+                elif path=='/api/fanbox/logs':result=service.logs(query.get('id',[''])[0])
+                elif path=='/api/fanbox/manifest':result=service.manifest(query.get('id',[''])[0])
+                elif path=='/api/fanbox/records':result=service.records(export=query.get('export',['0'])[0]=='1')
+                elif path=='/api/fanbox/usage':result=service.usage()
+                elif path=='/api/fanbox/job':
+                    result=service.detail(query.get('id',[''])[0],offset=int(query.get('offset',['0'])[0]),
+                        limit=int(query.get('limit',['25'])[0]),post_id=query.get('post_id',[None])[0],query=query.get('q',[''])[0])
+                else:self.send_error(404);return
+                self._json(result)
+            except Exception as error:self._fanbox_error(error)
+
+        def _fanbox_post(self,path,data):
+            service=dependencies.fanbox
+            if service is None:
+                self._json({'error':'FANBOX 不可用'},status=503);return
+            try:
+                if path=='/api/fanbox/create':result=service.create(data)
+                elif path=='/api/fanbox/action':result=service.action(data)
+                elif path=='/api/fanbox/naming-preview':result=service.naming_preview(data)
+                elif path=='/api/fanbox/records':result=service.record_command(data)
+                elif path=='/api/fanbox/import-settings':
+                    from video_downloader.platforms.fanbox.options import import_plugin_settings
+                    options,report=import_plugin_settings(data.get('settings'))
+                    result={'options':options,'report':report}
+                else:self.send_error(404);return
+                self._json(result)
+            except Exception as error:self._fanbox_error(error)
 
         def do_POST(self):
             parsed = urlparse(self.path)
@@ -261,7 +310,9 @@ def create_handler(dependencies):
             if not isinstance(data, dict):
                 self._json({"error": "JSON 请求体必须是对象"}, status=400)
                 return
-            if path.startswith("/api/network-test/"):
+            if path.startswith('/api/fanbox/'):
+                self._fanbox_post(path,data)
+            elif path.startswith("/api/network-test/"):
                 service = dependencies.network_diagnostics
                 if service is None:
                     self._json({"error": "网络检测不可用"})

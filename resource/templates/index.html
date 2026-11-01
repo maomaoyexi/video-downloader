@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/static/css/responsive.css">
 <link rel="stylesheet" href="/static/css/animations.css">
 <link rel="stylesheet" href="/static/css/settings.css?v=task-network-1">
+<link rel="stylesheet" href="/static/css/fanbox.css">
 </head>
 <body>
 
@@ -162,11 +163,24 @@
               <div class="cacts">
                 <button class="btn" id="btnWithnyLive" onclick="startWithnyLive()" style="display:none"><svg class="ico s14"><use href="#i-radio"></use></svg>选择配置并录制</button>
                 <button class="btn dgr" id="btnStop" onclick="stopDl()" disabled><svg class="ico s14"><use href="#i-square"></use></svg>停止</button>
+                <button class="btn" id="fanboxPreview" type="button" hidden>预览</button>
                 <button class="btn pri" id="btnStart" onclick="startDl()"><svg class="ico s14"><use href="#i-plus"></use></svg><span id="btnStartLabel">开始下载</span></button>
               </div>
             </div>
           </div>
         </div>
+
+        <span id="fanboxAuth" hidden></span>
+        <section id="fanboxJobsPanel" class="fb-panel" hidden aria-label="FANBOX 归档记录">
+          <div class="fb-toolbar"><b>内容归档</b><span class="rule"></span><button class="btn sm gh" id="fanboxRefresh">刷新</button></div>
+          <div id="fanboxJobs" aria-live="polite"></div>
+          <section id="fanboxDetail" class="fb-detail" hidden aria-label="帖子预览">
+            <div class="fb-toolbar"><b id="fanboxDetailTitle"></b><button class="btn sm gh" id="fanboxOpenArchive" hidden>打开归档</button><button class="btn sm gh" id="fanboxVerify" hidden>校验资源文件</button><button class="btn sm gh" id="fanboxCopyLinks">复制外链</button><button class="btn sm gh" id="fanboxExportManifest">导出清单</button><button class="btn sm gh" id="fanboxCloseDetail">收起</button></div>
+            <div class="fb-toolbar"><input class="ctl" id="fanboxSearch" aria-label="筛选帖子标题" placeholder="筛选帖子标题"><label><input type="checkbox" id="fanboxSelectAll" checked>全选筛选结果</label><button class="btn pri sm" id="fanboxDownloadSelected">下载所选</button></div>
+            <div id="fanboxScope" class="dim"></div><div id="fanboxVerification" class="fb-verification" hidden><p id="fanboxVerificationStatus" role="status"></p><div id="fanboxVerificationIssues"></div></div><div id="fanboxPosts"></div>
+            <div class="fb-toolbar"><button class="btn sm" id="fanboxPrevious">上一页</button><span id="fanboxPage"></span><button class="btn sm" id="fanboxNext">下一页</button></div>
+          </section>
+        </section>
 
         <div class="task-panel" id="taskModePanel" style="display:none">
           <div class="sh"><b>任务列表</b><span class="rule"></span><span class="note" id="taskCount"></span><button class="btn sm gh" onclick="clearFinishedTasks()">清理已结束</button></div>
@@ -285,16 +299,16 @@
               <div class="row"><span class="lb">无增长告警</span><input type="number" class="ctl mono" id="s_live_watchdog" min="10" max="600" value="60" style="width:110px"><span class="hint">秒；连续两倍时间无媒体增长或下载进度则收尾并按策略重试</span></div>
               <div class="row"><span class="lb">磁盘安全余量</span><input type="number" class="ctl mono" id="s_live_free_mb" min="64" max="102400" value="256" style="width:110px"><span class="hint">MiB；低于余量自动收尾</span></div>
               <div class="row"><span class="lb">预检估算码率</span><input type="number" class="ctl mono" id="s_live_bitrate" min="128" max="100000" value="8000" style="width:110px"><span class="hint">Kbps；预计时长 × 码率 × 1.3；不限时先预留 15 分钟并持续检查</span></div>
-              <div class="hint">YouTube 先验证可追播 DASH；Twitch 先录实时尾部、独立回填本场 VOD。无法验证重叠时保留两路文件并报告缺口。B站录播姬使用原始 FLV、最高可用画质；代理、浏览器 Cookie、自定义参数或音频处理需要 yt-dlp 时会明确降级。</div>
+              <!-- <div class="hint">YouTube 先验证可追播 DASH；Twitch 先录实时尾部、独立回填本场 VOD。无法验证重叠时保留两路文件并报告缺口。B站录播姬使用原始 FLV、最高可用画质；代理、浏览器 Cookie、自定义参数或音频处理需要 yt-dlp 时会明确降级。</div> -->
               <div class="row"><span class="lb">默认抓取直播弹幕</span><span class="sw" id="sw_live_danmaku" role="switch" aria-label="默认抓取直播弹幕" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">下方可按平台覆盖；只影响新任务，采集失败不停止媒体录制</span></div>
               <div id="liveCommentPlatforms" class="live-platform-modes" aria-label="各平台弹幕默认值"></div>
               <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_formats">弹幕导出格式</label><span class="sel"><select class="ctl" id="s_live_danmaku_formats"><option value="srt,ass">SRT + ASS</option><option value="srt">SRT</option><option value="ass">ASS</option></select></span><span class="hint">结束后逐个媒体分段生成同名字幕；密集弹幕超出轨道容量会丢弃并计数</span></div>
               <div class="row"><span class="lb">导出匿名化</span><span class="sw" id="sw_live_danmaku_anon" role="switch" aria-label="导出匿名化" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">事件库与字幕的 UID/昵称作会话内哈希；原生 XML / 聊天 JSON 仍含原始身份信息</span></div>
               <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_offset">弹幕时间微调</label><input type="number" class="ctl mono" id="s_live_danmaku_offset" min="-600000" max="600000" step="100" value="0" style="width:130px"><span class="hint">毫秒；正数延后，负数提前。可在录制结束后按当前格式与微调重新导出</span></div>
-              <div class="hint">B站复用录播姬 XML，YouTube 使用原生 live_chat，Withny 使用原生聊天 JSON；Twitch、TwitCasting、NicoChannel、Niconico 独立采集。部分平台需要登录或观看权限。源时间与本机时间精度不同，估算锚点会标明未知误差，不宣称已精确校准；详情见 comments-report.json。</div>
+              <!-- <div class="hint">B站复用录播姬 XML，YouTube 使用原生 live_chat，Withny 使用原生聊天 JSON；Twitch、TwitCasting、NicoChannel、Niconico 独立采集。部分平台需要登录或观看权限。源时间与本机时间精度不同，估算锚点会标明未知误差，不宣称已精确校准；详情见 comments-report.json。</div> -->
               <div class="sh" style="margin-top:4px"><b>平台默认录制方式</b><span class="rule"></span><span class="note">仅显示同时支持追开播与当前录制的平台</span></div>
               <div id="livePlatformModes" class="live-platform-modes"></div>
-              <div class="hint">追开播不可用时会提示原因并降级为从当前时刻；条件平台（Niconico/NicoChannel/TwitCasting/X）在探测能力接入前不显示。</div>
+              <!-- <div class="hint">追开播不可用时会提示原因并降级为从当前时刻；条件平台（Niconico/NicoChannel/TwitCasting/X）在探测能力接入前不显示。</div> -->
               <div class="row"><span class="lb">直播提醒</span><button class="btn sm gh" onclick="clearLiveNoticeMutes()">清除“不再提醒”</button><span class="hint">提醒弹窗中的“不再提醒”保存在浏览器本地</span></div>
             </section>
 
@@ -325,6 +339,8 @@
               <div class="row"><span class="lb">Cookie 模式</span><span class="sel"><select class="ctl" id="s_cookiemode" onchange="toggleCookieMode()"><option value="1">cookies.txt 文件</option><option value="2">浏览器提取</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
               <div class="row" id="row_browser"><span class="lb">浏览器</span><span class="sel"><select class="ctl" id="s_browser"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
               <div class="row" id="row_profile"><span class="lb">配置文件名</span><input type="text" class="ctl mono" id="s_profile" value="Default" placeholder="Firefox 留空自动探测" style="flex:1"></div>
+              <div class="row"><label class="lb" for="s_rplay_auth">Rplay 登录来源</label><span class="sel"><select class="ctl" id="s_rplay_auth"><option value="none">未配置</option><option value="firefox">Firefox</option></select></span></div>
+              <div class="row"><label class="lb" for="s_rplay_profile">Rplay Firefox 配置</label><input type="text" class="ctl mono" id="s_rplay_profile" maxlength="200" autocomplete="off" style="flex:1"></div>
             </section>
 
             <section class="settings-section" id="set-subtitle">
@@ -347,9 +363,19 @@
               <div class="row"><span class="lb">YouTube PO Token</span><span class="sw" id="sw_youtube_po_token" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载前自动启动本地 BgUtils Provider，缓解部分 403</span></div>
               <div class="row"><span class="lb">Niconico 点播弹幕</span><span class="sw" id="sw_nicocmt" onclick="toggleSwitch(this)"><i></i></span><span class="hint">直播弹幕使用上方的逐平台设置</span></div>
               <div class="row"><span class="lb">Niconico 重编码</span><span class="sw" id="sw_nicorec" onclick="toggleSwitch(this)"><i></i></span><span class="hint">兼容性优先，速度较慢</span></div>
-              <div class="sh" style="margin-top:12px"><b>TwitCasting</b><span class="rule"></span></div>
-              <div class="row"><span class="lb">记住密码</span><span class="sw" id="sw_tc_remember" role="switch" aria-label="记住 TwitCasting 密码" aria-checked="false" tabindex="0" onclick="toggleSwitch(this);onTcPasswordChange()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；开启后在本次运行内按链接复用成功使用的密码</span></div>
-              <div class="row"><span class="lb">保存密码到 XLSX</span><span class="sw" id="sw_tc_xlsx" role="switch" aria-label="保存 TwitCasting 密码到 XLSX" aria-checked="false" tabindex="0" onclick="if(this.getAttribute('aria-disabled')!=='true') toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；需开启记住密码，保存到根目录 twitcasting_passwords.xlsx，明文保存并在下次启动时读取</span></div>
+              <div class="row"><span class="lb">记住 TwitCasting 直播间密码</span><span class="sw" id="sw_tc_remember" role="switch" aria-label="记住 TwitCasting 密码" aria-checked="false" tabindex="0" onclick="toggleSwitch(this);onTcPasswordChange()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；开启后在本次运行内按链接复用成功使用的密码</span></div>
+              <div class="row"><span class="lb">保存 TwitCasting 直播间密码到 XLSX</span><span class="sw" id="sw_tc_xlsx" role="switch" aria-label="保存 TwitCasting 密码到 XLSX" aria-checked="false" tabindex="0" onclick="if(this.getAttribute('aria-disabled')!=='true') toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；需开启记住密码，保存到根目录 twitcasting_passwords.xlsx，明文保存并在下次启动时读取</span></div>
+            <section class="fb-platform-options" id="set-fanbox">
+              <h3 class="fb-platform-title">FANBOX</h3>
+              <label class="fb-field"><span>启用 FANBOX</span><input type="checkbox" class="fb-switch" id="fanboxEnabled" checked></label>
+              <label class="fb-field"><span>匿名访问</span><input type="checkbox" class="fb-switch" id="fanboxAnonymous"></label>
+              <label class="fb-field"><span>凭据文件</span><span class="fb-control"><input class="ctl mono" id="fanboxCookieFile" autocomplete="off" placeholder="cookies.txt"><button class="btn sm" type="button" id="fanboxAuthCheck">检查</button><span id="fanboxSettingsStatus" role="status"></span></span></label>
+              <div id="fanboxSettingsFields"></div>
+              <div class="fb-actions fb-settings-actions" id="fanboxSettingsActions">
+                <button class="btn sm gh" type="button" id="fanboxUsage">下载流量</button>
+                <button class="btn sm gh" type="button" id="fanboxRecords">下载记录</button>
+              </div>
+            </section>
             </section>
 
             <section class="settings-section" id="set-tasks">
@@ -361,8 +387,8 @@
               <div class="row"><span class="lb">任务内直播并行数</span><input type="number" class="ctl mono" id="s_task_live_parallel" min="2" max="5" value="2" style="width:100px"><span class="hint">默认 2，可设置 2–5 路，不占用视频下载额度</span></div>
               <div class="row"><span class="lb">任务内视频并行数</span><input type="number" class="ctl mono" id="s_task_download_parallel" min="1" max="5" value="1" style="width:100px"><span class="hint">默认 1，视频下载串行；最多 5 路，不占用直播额度</span></div>
               <div class="row"><span class="lb">普通下载限速</span><input type="number" class="ctl mono" id="s_task_download_speed" min="0" max="100000" step="0.1" value="0" style="width:110px"><span class="hint">MiB/s / 每条普通 yt-dlp 视频；0 不限，不限制直播，Withny 专用流程不适用</span></div>
-              <div class="hint">排序只影响排队任务；任务间并行数与排序对队列实时生效，任务内设置在提交时固定。默认共可运行 4 路直播 + 2 路视频，上限共 25 路直播 + 25 路视频；每条链接还会使用所设下载线程。</div>
-              <div class="hint">任务列表在本次运行期间保留，重启后不恢复。归档和密码确认在对应任务详情内处理；蹲开播仍由等待开播面板管理。</div>
+              <!-- <div class="hint">排序只影响排队任务；任务间并行数与排序对队列实时生效，任务内设置在提交时固定。默认共可运行 4 路直播 + 2 路视频，上限共 25 路直播 + 25 路视频；每条链接还会使用所设下载线程。</div> -->
+              <!-- <div class="hint">任务列表在本次运行期间保留，重启后不恢复。归档和密码确认在对应任务详情内处理；蹲开播仍由等待开播面板管理。</div> -->
             </section>
 
             <section class="settings-section" id="set-advanced">
@@ -765,9 +791,24 @@
 <script>
   window.SESSION_TOKEN = "__SESSION_TOKEN__";
 </script>
+<dialog id="fanboxTaskDialog" class="fb-dialog" aria-labelledby="fanboxTaskTitle">
+  <header class="fb-dialog-head"><b id="fanboxTaskTitle">本次 FANBOX 下载</b><button class="btn sm gh" type="button" data-fb-close>关闭</button></header>
+  <div id="fanboxTaskFields" class="fb-dialog-body"></div>
+  <footer class="fb-dialog-foot"><button class="btn" type="button" data-fb-close>取消</button><button class="btn pri" id="fanboxTaskConfirm" type="button">确认下载</button></footer>
+</dialog>
+<dialog id="fanboxHistoryDialog" class="fb-dialog" aria-labelledby="fanboxHistoryTitle">
+  <header class="fb-dialog-head"><b id="fanboxHistoryTitle">FANBOX 下载详情</b><button class="btn sm gh" type="button" data-fb-close>关闭</button></header>
+  <div class="fb-dialog-body"><div id="fanboxRuns"></div><div id="fanboxHistoryContent"></div></div>
+</dialog>
+<dialog id="fanboxRecordsDialog" class="fb-dialog" aria-labelledby="fanboxRecordsTitle">
+  <header class="fb-dialog-head"><b id="fanboxRecordsTitle">FANBOX 下载记录</b><button class="btn sm gh" type="button" data-fb-close>关闭</button></header>
+  <div class="fb-dialog-body"><div id="fanboxRecordCounts" role="status"></div><div id="fanboxRecordReport" role="status"></div><input id="fanboxRecordFile" type="file" accept="application/json,.json" hidden></div>
+  <footer class="fb-dialog-foot"><button class="btn" type="button" id="fanboxRecordClear">清空 URL 记录</button><button class="btn" type="button" id="fanboxRecordExport">导出记录</button><button class="btn" type="button" id="fanboxRecordImport">导入记录</button><button class="btn pri" type="button" id="fanboxRecordConfirm" hidden>确认导入</button></footer>
+</dialog>
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/audio-convert.js"></script>
 <script src="/static/js/audio-volume.js"></script>
 <script src="/static/js/app.js?v=task-network-1"></script>
+<script src="/static/js/fanbox.js"></script>
 </body>
 </html>

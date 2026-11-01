@@ -1,0 +1,21 @@
+{
+  "_id": "690e66fbcd5bc730495d1285",
+  "creatorOid": "6804c3b412eae6149c9ad9c5",
+  "title": "需要授权的点播样本",
+  "introText": "",
+  "createdAt": "2025-11-07T21:39:07.480Z",
+  "publishedAt": "2025-11-18T12:00:00.286Z",
+  "length": 377.2,
+  "creatorInfo": {
+    "nickname": "creator-01"
+  },
+  "drm": false,
+  "encrypted": true,
+  "deleted": false,
+  "waitingEncoding": false,
+  "isAdultContent": false,
+  "hideContent": false,
+  "canView": {
+    "canView": false
+  }
+}

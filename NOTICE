@@ -27,3 +27,23 @@ License text: dependency/defusedxml.LICENSE
 Pinned official PyPI wheel URLs and SHA256 values: resource/dependencies/live-python.lock.json.
 Portable source installs use dependency/live-python/; PyInstaller includes these
 Python modules and the license texts above. No new GPL component is embedded.
+
+FANBOX transport runtime (optional read-only content integration)
+curl_cffi 0.13.0: MIT; cffi 2.1.1: MIT; pycparser 3.12: BSD-3-Clause;
+certifi 2026.10.23: MPL-2.0; tzdata 2026.6: Apache-2.0 (IANA data: public domain).
+Pinned official wheel hashes: resource/dependencies/fanbox-runtime.txt.
+License texts: dependency/fanbox-{curl_cffi,cffi,pycparser,certifi,tzdata}.LICENSE.
+Pillow 12.2.0: HPND; license: dependency/fanbox-Pillow.LICENSE.
+Source: https://github.com/python-pillow/Pillow
+Sources: https://github.com/lexiforest/curl_cffi
+         https://github.com/python-cffi/cffi
+         https://github.com/eliben/pycparser
+         https://github.com/certifi/python-certifi
+         https://github.com/python/tzdata
+Source installs use dependency/fanbox-python; frozen builds collect curl_cffi
+and its native libraries. Do not omit the bundled native-library notices.
+
+The FANBOX integration was independently implemented from protocol observations
+and functional requirements. PixivFanboxDownloader and gallery-dl were inspected
+as references; their GPL implementation code/assets are not copied, translated,
+vendored or embedded in this application's source or executable.

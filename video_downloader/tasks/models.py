@@ -71,6 +71,10 @@ class Task:
     prompts: dict = field(default_factory=dict, repr=False)
     operation: str = "download"
     selection: dict = field(default_factory=dict, repr=False)
+    content_kind: str = ""
+    content_stats: dict = field(default_factory=dict)
+    archive_status: str = ""
+    content_job_id: str = ""
 
     @property
     def is_terminal(self) -> bool:
@@ -114,4 +118,8 @@ class Task:
             "stats": dict(self.stats),
             "items": [item.to_dict(include_logs=False) for item in self.items],
             "prompts": [dict(prompt) for prompt in self.prompts.values()],
+            "content_kind": self.content_kind,
+            "content_stats": dict(self.content_stats),
+            "archive_status": self.archive_status,
+            "content_job_id": self.content_job_id,
         }

@@ -171,3 +171,11 @@ def niconico(context, transport, stop, emit, stats):
 
 SOURCES = {"YouTube": youtube, "Twitch": twitch, "TwitCasting": twitcasting,
            "NicoChannel": nicochannel, "Niconico": niconico}
+
+
+def rplay(context, transport, stop, emit, stats):
+    from .rplay import collect
+    return collect(context, transport, stop, emit, stats)
+
+
+SOURCES['Rplay'] = rplay

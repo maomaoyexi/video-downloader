@@ -40,7 +40,9 @@ const PLATFORMS = [
   {name:"Fantia",color:"#E6399B"},
   {name:"TwitCasting",color:"#00A0D1"},
   {name:"Twitter",color:"#1DA1F2"},
-  {name:"Withny",color:"#22C55E"}
+  {name:"Withny",color:"#22C55E"},
+  {name:"Rplay",color:"#F43F5E"},
+  {name:"Fanbox",color:"#0096FA"}
 ];
 const PLATFORM_COLORS = Object.fromEntries(PLATFORMS.map(p => [p.name, p.color]));
 
@@ -235,6 +237,7 @@ function selectPlatform(name) {
     ? 'Withny 使用浏览器导出的「包含内容」HAR，点右侧按钮选择文件…'
     : '粘贴视频 / 播放列表 / 频道 / 直播链接，每行一个…';
   $('btnStartLabel').textContent = withnyMode ? '选择 HAR 并下载' : '开始下载';
+  if(window.FanboxUI)window.FanboxUI.sync();
 }
 
 /** 切换开关状态。 */
@@ -304,6 +307,7 @@ async function loadConfig() {
 }
 
 function applyConfig(s) {
+  if(window.FanboxUI)window.FanboxUI.applyConfig(s);
   selectPlatform(s.PLATFORM);
   $('s_resolution').value = s.RESOLUTION;
   $('s_codec').value = s.CODEC;
@@ -321,6 +325,8 @@ function applyConfig(s) {
   $('s_cookiemode').value = s.COOKIE_MODE;
   $('s_browser').value = s.BROWSER_NAME;
   $('s_profile').value = s.BROWSER_PROFILE;
+  $('s_rplay_auth').value = s.RPLAY_AUTH_SOURCE || 'none';
+  $('s_rplay_profile').value = s.RPLAY_FIREFOX_PROFILE || '';
   onBrowserChanged();
   $('s_hwaccel').value = s.HWACCEL;
   if(s.LIVE_STREAM_METHOD !== undefined) $('s_live_stream_method').value = s.LIVE_STREAM_METHOD;
@@ -557,6 +563,7 @@ function initSettingsToc() {
 function collectCfg() {
   return {
     PLATFORM: currentPlatform === 'Withny' ? lastUrlPlatform : currentPlatform,
+    ...(window.FanboxUI?window.FanboxUI.configValues():{}),
     RESOLUTION: $('s_resolution').value,
     CODEC: $('s_codec').value,
     AUDIO_QUALITY: $('s_audio').value,
@@ -572,6 +579,8 @@ function collectCfg() {
     USE_COOKIES: isOn('sw_cookies')?1:0,
     COOKIE_MODE: parseInt($('s_cookiemode').value),
     BROWSER_NAME: $('s_browser').value,
+    RPLAY_AUTH_SOURCE: $('s_rplay_auth').value,
+    RPLAY_FIREFOX_PROFILE: $('s_rplay_profile').value.trim(),
     BROWSER_PROFILE: $('s_profile').value,
     HWACCEL: $('s_hwaccel').value,
     LIVE_STREAM_METHOD: $('s_live_stream_method').value,
@@ -771,6 +780,7 @@ async function startDl() {
   // 按行拆分，每行一个链接，清理后过滤空行
   const urls = $('urlInput').value.split(/\r?\n/).map(cleanOneUrl).filter(Boolean);
   if(urls.length === 0) { showToast('请输入链接', 'error'); return; }
+  if(window.FanboxUI&&urls.every(window.FanboxUI.matches))return window.FanboxUI.start(urls.join('\n'));
   const taskArgs = $('task_ytdlp_args').value.trim();
   activeTaskYtdlpArgs = taskArgs;
 
@@ -926,6 +936,7 @@ function clearStartedTaskArgs(value) {
 }
 
 async function doStartDl(url, biliParts, tcPassword, customArgs) {
+  if(window.FanboxUI?.matches(url))return window.FanboxUI.start(url);
   const liveMode = await prepareLiveTask(url);
   if(liveMode === false) return;
   const body = {url};
@@ -1106,7 +1117,7 @@ function toggleConsole(consoleId, boxId, btnId) {
 }
 
 /** 清空主日志面板内容。 */
-function clearConsole() { $('logBox').innerHTML = ''; }
+function clearConsole() { $('logBox').innerHTML = '';window.FanboxUI?.clearConsole(); }
 /** 清空工具日志面板内容。 */
 function clearToolConsole() { $('toolLogBox').innerHTML = ''; }
 
@@ -1137,8 +1148,8 @@ async function copyCurrentCommand() {
 
 /** 写入一条日志，两个面板保持同步。 */
 function addLog(entry) {
-  _addToBox('logBox', entry);
-  _addToBox('toolLogBox', entry);
+  if(!window.FanboxUI||window.FanboxUI.consoleEntry(entry))_addToBox('logBox', entry);
+  if(!entry.job_id)_addToBox('toolLogBox', entry);
 }
 
 function _addToBox(id, entry) {
@@ -1451,7 +1462,7 @@ function renderTasks(tasks) {
       statusText,
       task.speed ? task.speed : '',
       task.eta ? 'ETA ' + task.eta : '',
-      task.kind === 'live' ? '直播' : '下载',
+      task.content_kind ? '内容归档' : task.kind === 'live' ? '直播' : '下载',
       task.prompts?.length ? '等待确认' : ''
     ].filter(Boolean).join(' · ');
     const percentText = task.indeterminate ? '进行中' : `${Math.round(pct)}%`;
@@ -1492,6 +1503,7 @@ function renderTasks(tasks) {
       <div class="task-detail">
         <div class="tdline"><span class="tdlabel">状态</span><span>${escapeTaskText(task.message || statusText)}</span></div>
         ${errorLine}
+        ${task.content_kind ? `<div class="tdline"><span class="tdlabel">内容</span><span>帖子 ${Number(task.content_stats?.posts)||0} · 文件 ${(Number(task.content_stats?.completed)||0)+(Number(task.content_stats?.reused)||0)} · 失败 ${Number(task.content_stats?.failed)||0} · 链接 ${Number(task.content_stats?.links)||0}</span></div>` : ''}
         <div class="tdline"><span class="tdlabel">链接统计</span><span>成功 ${stats.ok || 0} · 失败 ${stats.fail || 0} · 跳过 ${stats.skipped || 0} · 共 ${stats.total || task.url_count}</span></div>
         ${prompts}
         ${urls}
@@ -1581,6 +1593,10 @@ function isLiveCandidateUrl(url) {
     const host = u.hostname.toLowerCase();
     const path = u.pathname.toLowerCase();
     const segs = path.split('/').filter(Boolean);
+    if((host === 'rplay.live' || host === 'www.rplay.live') && u.protocol === 'https:' &&
+       !u.username && !u.password && (!u.port || u.port === '443') &&
+       /^\/(live|creatorhome)\/[0-9a-fA-F]{24}\/?$/.test(u.pathname) &&
+       (segs[0] !== 'creatorhome' || !['contents','replays','playlists'].includes(u.searchParams.get('page')))) return true;
     if(host === 'live.bilibili.com' || host.endsWith('.live.bilibili.com')) return true;
     if(host === 'b23.tv' || host.endsWith('.b23.tv')) return true;
     if(host.includes('youtube.com') && (path.endsWith('/live') || path.startsWith('/live/'))) return true;
@@ -1744,7 +1760,10 @@ function connectSSE() {
   };
   evtSource.onmessage = (e) => {
     const evt = JSON.parse(e.data);
-    if(evt.type === 'log') {
+    if(evt.type === 'fanbox_log') {window.FanboxUI?.log(evt.data);return;}
+    if(evt.type === 'fanbox_job') {
+      if(window.FanboxUI)window.FanboxUI.event(evt.data);
+    } else if(evt.type === 'log') {
       addLog(evt.data);
     } else if(evt.type === 'audio_tool_result') {
       showToolStatus(evt.data.message, evt.data.level === 'success' ? 'success' : 'error');
@@ -1823,6 +1842,7 @@ function connectSSE() {
         updateStatsVisibility();
       }
       if(Array.isArray(readyData.tasks)) renderTasks(readyData.tasks);
+      if(window.FanboxUI)window.FanboxUI.ready(readyData.fanbox_jobs);
       if(readyData.network_test) {
         networkEventVersion++;
         renderNetworkTest(readyData.network_test);
@@ -2009,7 +2029,8 @@ function shortUrl(url) {
 }
 
 function renderHistory(history) {
-  historyCache = history || [];
+  const seenFanbox=new Set();
+  historyCache = (history || []).filter(h=>{if(h.platform!=='Fanbox')return true;if(seenFanbox.has(h.url))return false;seenFanbox.add(h.url);return true;});
   const list = $('historyList');
   $('historyCount').textContent = `共 ${historyCache.length} 条`;
 
@@ -2021,23 +2042,27 @@ function renderHistory(history) {
 
   if(historyView === 'grid') {
     list.innerHTML = '<div class="hgrid">' + historyCache.map(h => `
-      <div class="hcard">
-        ${thumbHtml(h)}
+      <div class="hcard${h.platform==='Fanbox'?' fb-history':''}" ${h.platform==='Fanbox'?`role="button" tabindex="0" data-fanbox-url="${escAttr(h.url)}"`:''}>
+        ${h.platform==='Fanbox'?'<div class="fb-history-icon">FANBOX</div>':thumbHtml(h)}
         <div>
-          <div class="hti" title="${escAttr(h.title)}">${escHtml(h.title)}</div>
+          <div class="hti" title="${escAttr(h.title||h.url)}">${escHtml(h.title||h.url)}</div>
           <div class="hme">${escHtml(String(h.time).slice(5,16))} · ${platformHtml(h.platform)}</div>
         </div>
       </div>`).join('') + '</div>';
   } else {
     list.innerHTML = '<div class="hlist">' + historyCache.map(h => `
-      <div class="hitem">
-        ${thumbHtml(h)}
+      <div class="hitem${h.platform==='Fanbox'?' fb-history':''}" ${h.platform==='Fanbox'?`role="button" tabindex="0" data-fanbox-url="${escAttr(h.url)}"`:''}>
+        ${h.platform==='Fanbox'?'<div class="fb-history-icon">FANBOX</div>':thumbHtml(h)}
         <div style="min-width:0">
-          <div class="hti" title="${escAttr(h.title)}">${escHtml(h.title)}</div>
+          <div class="hti" title="${escAttr(h.title||h.url)}">${escHtml(h.title||h.url)}</div>
           <div class="hme">${escHtml(h.time)} · ${platformHtml(h.platform)} · ${escHtml(shortUrl(h.url))}</div>
         </div>
       </div>`).join('') + '</div>';
   }
+  list.querySelectorAll('[data-fanbox-url]').forEach(row=>{
+    row.onclick=()=>window.FanboxUI?.openHistory(row.dataset.fanboxUrl);
+    row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();row.click();}};
+  });
 }
 
 // 点击历史封面在遮罩层放大查看

@@ -19,6 +19,8 @@ DOWNLOAD_PLATFORM_DIRS = (
     "TwitCasting",
     "Twitter",
     "Withny",
+    "Rplay",
+    "Fanbox",
 )
 
 # Runtime-only files that older portable releases placed beside the main

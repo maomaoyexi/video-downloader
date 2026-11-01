@@ -308,6 +308,9 @@ $dialog.Dispose()
                                     proc.communicate()
                                     raise
                                 output = "\n".join(part for part in (stdout, stderr) if part).strip()
+                                if detect_platform(url) == 'Rplay':
+                                    from video_downloader.platforms.rplay import sanitize_output
+                                    output = sanitize_output(output)
                                 return proc.returncode, output
                             finally:
                                 self._download_manager.clear_process(handle, proc)
@@ -437,6 +440,9 @@ $dialog.Dispose()
                         finally:
                             self._download_manager.clear_process(handle, proc)
 
+                        if detected == 'Rplay':
+                            from video_downloader.platforms.rplay import sanitize_output
+                            output = sanitize_output(output or '')
                         result = classify_thumbnail_result(returncode, output)
                         if result == "success":
                             self._log(

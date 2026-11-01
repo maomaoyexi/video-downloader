@@ -327,7 +327,9 @@ class TaskManager:
             done.wait()
             with self._lock:
                 recording_status = item.history[-1].get("status") if item.history else None
-                if item.kind == "live" and recording_status in {"stopped", "timeout", "gaps", "earliest"}:
+                if item.content_kind and item.archive_status in {"partial","paused","failed"}:
+                    item.status = TaskStatus.FAILED if item.archive_status=='failed' else TaskStatus.PARTIAL
+                elif item.kind == "live" and recording_status in {"stopped", "timeout", "gaps", "earliest"}:
                     item.status = {"stopped": TaskStatus.STOPPED, "timeout": TaskStatus.TIMED_OUT,
                                    "gaps": TaskStatus.PARTIAL, "earliest": TaskStatus.PARTIAL}[recording_status]
                 elif item.kind == "live" and recording_status == "fail":
@@ -348,7 +350,7 @@ class TaskManager:
                 item.speed = item.eta = ""
                 item.message = {TaskStatus.CANCELLED: "已取消", TaskStatus.FAILED: "失败",
                                 TaskStatus.STOPPED: "已停止（已收尾）", TaskStatus.TIMED_OUT: "已到录制时限（已收尾）",
-                                TaskStatus.PARTIAL: "已保留录制，请查看完整性报告",
+                                TaskStatus.PARTIAL: "归档已保留，可继续" if item.content_kind else "已保留录制，请查看完整性报告",
                                 TaskStatus.COMPLETED: "已跳过" if item.stats["skipped"] else "已完成"}.get(item.status, item.message)
                 task.prompts.pop(item.id, None)
                 self._runtimes[task.id]["children"].pop(item.id, None)
@@ -370,7 +372,7 @@ class TaskManager:
             elif live_outcomes:
                 task.status = TaskStatus.PARTIAL if failures or TaskStatus.PARTIAL in live_outcomes else live_outcomes[0]
                 task.message = {TaskStatus.STOPPED: "已停止（已收尾）", TaskStatus.TIMED_OUT: "已到录制时限（已收尾）",
-                                TaskStatus.PARTIAL: "部分录制，请查看完整性报告"}[task.status]
+                                TaskStatus.PARTIAL: "部分归档已保留" if any(i.content_kind for i in task.items) else "部分录制，请查看完整性报告"}[task.status]
             elif task.cancel_requested:
                 task.status, task.message = TaskStatus.CANCELLED, "已取消"
             elif failures or task.error:
@@ -396,6 +398,14 @@ class TaskManager:
             "fail": sum(i.status is TaskStatus.FAILED for i in task.items),
             "skipped": sum(i.status is TaskStatus.COMPLETED and bool(i.stats["skipped"]) for i in task.items),
             "total": len(task.items)}
+        content=[i for i in task.items if i.content_kind]
+        if content:
+            task.content_kind='fanbox' if len(content)==len(task.items) else 'mixed'
+            keys={key for item in content for key in item.content_stats}
+            task.content_stats={key:sum(item.content_stats.get(key,0) for item in content) for key in keys}
+            if len(content)==1:
+                task.content_job_id=content[0].content_job_id
+                task.archive_status=content[0].archive_status
 
     def _on_progress(self, task, item, percent, status, speed, eta, stage):
         with self._lock:
@@ -448,6 +458,12 @@ class TaskManager:
     def _on_event(self, task, item, event_type, data=None):
         data = dict(data or {}, task_id=task.id, item_id=item.id)
         with self._lock:
+            if event_type in {'content_progress','content_result'} and not item.is_terminal:
+                item.content_kind=data.get('content_kind','')
+                item.content_stats=dict(data.get('content_stats') or {})
+                item.content_job_id=data.get('job_id','')
+                item.archive_status=data.get('archive_status',data.get('status',''))
+                self._aggregate(task)
             if event_type in {"password_required", "archive_choice_required"}:
                 if task.cancel_requested:
                     return

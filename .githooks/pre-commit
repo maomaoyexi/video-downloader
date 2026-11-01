@@ -1,11 +1,11 @@
 #!/bin/sh
-# Run the tracked policy even when someone used `git add -f`.
+# Check the entire index even when someone used `git add -f`.
 if [ -x dependency/.venv/Scripts/python.exe ]; then
     exec dependency/.venv/Scripts/python.exe scripts/check_repository_layout.py --staged
-elif command -v python3 >/dev/null 2>&1; then
-    exec python3 scripts/check_repository_layout.py --staged
 elif command -v python >/dev/null 2>&1; then
     exec python scripts/check_repository_layout.py --staged
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 scripts/check_repository_layout.py --staged
 else
     echo "Repository layout check requires Python; install Python before committing." >&2
     exit 1

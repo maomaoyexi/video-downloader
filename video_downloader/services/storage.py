@@ -290,6 +290,8 @@ class StorageService:
             # 记录下载文件的绝对路径，供历史界面按需查找同名封面图。
             if filepath:
                 entry["filepath"] = filepath
+            if platform=='Fanbox':
+                history=[item for item in history if not (item.get('platform')=='Fanbox' and item.get('url')==url)]
             history.insert(0, entry)
             history = history[:500]
             try:

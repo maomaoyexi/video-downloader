@@ -2145,8 +2145,14 @@ class DownloadExecutor:
         # 独立读线程持续排空子进程管道，避免主线程处理日志时令子进程写端阻塞。
         line_q = queue.Queue(maxsize=1024)
         read_done = threading.Event()
+        command = getattr(process, 'args', None)
+        is_rplay = isinstance(command, (list, tuple)) and any(
+            isinstance(value, str) and detect_platform(value) == 'Rplay' for value in command)
 
         def enqueue(line):
+            if is_rplay:
+                from video_downloader.platforms.rplay import sanitize_output
+                line = sanitize_output(line)
             try:
                 line_q.put_nowait(line)
             except queue.Full:

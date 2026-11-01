@@ -33,6 +33,9 @@ def is_live_url(url: str, platform: str | None = None) -> bool:
         return False
 
     platform_name = platform or _detect_platform(url)
+    if platform_name == "Rplay":
+        from .urls import TargetKind, classify_target
+        return classify_target(url, platform_name).kind is TargetKind.CHANNEL
     if platform_name == "YouTube":
         return (host == "youtube.com" or host.endswith(".youtube.com")) and (
             path == "/live" or path.startswith("/live/") or path.endswith("/live")

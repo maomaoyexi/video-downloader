@@ -73,11 +73,13 @@ class Transport:
             # chunk size buffers low-volume live streams until the buffer fills.
             yield response.iter_bytes()
 
-    def socket(self, url, *, origin=None):
+    def socket(self, url, *, origin=None, subprotocols=None):
         params = {"timeout": 1, "header": ["User-Agent: " + self.headers["User-Agent"]],
                   "http_no_proxy": [] if self.proxy else ["*"]}
         if origin:
             params["origin"] = origin
+        if subprotocols:
+            params['subprotocols'] = subprotocols
         # httpx scopes cookies to the target host/path before WebSocket upgrade.
         request = self.client.build_request("GET", url.replace("wss://", "https://", 1))
         if request.headers.get("cookie"):

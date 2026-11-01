@@ -30,13 +30,21 @@ from .state.app_state import AppState
 from .services.download_executor import DownloadExecutor
 from .services.download_archive import TaskArchiveSession
 from .services.nicochannel_auth import NicochannelAuthService
+from .platforms.rplay import AuthWorkspace as RplayAuthWorkspace
 from .services.download_manager import DownloadManager
+from .services.routed_executor import RoutedDownloadExecutor
+from .platforms.fanbox.archive import ArchiveApplication
+from .platforms.fanbox.executor import FanboxExecutor
+from .platforms.fanbox.controller import FanboxController
+from .tasks.context import TaskAppState
+from types import SimpleNamespace
 from .services.network_diagnostics import NetworkDiagnostics
 from .services.po_token_provider import PoTokenProviderService
 from .services.storage import StorageService
 from .services.tools import ToolService
 from .services.updater import UpdaterService
 from .tasks import TaskManager
+from .tasks.manager import TaskCallbacks
 from .web.handler import HttpHandlerDependencies, HttpService, create_handler
 from .web.rendering import render_html_page, serve_static_file
 
@@ -160,7 +168,7 @@ class AppContainer:
                 app_state.progress_data["status"] = status
             app_state.progress_data["speed"] = speed
             app_state.progress_data["eta"] = eta
-            if stage in {"video", "audio"}:
+            if stage in {"video", "audio", "content"}:
                 app_state.progress_data["stage"] = stage
             app_state.publish({"type": "progress", "data": dict(app_state.progress_data)})
 
@@ -175,6 +183,7 @@ class AppContainer:
 
         # ---- NicoChannel Auth ----
         nicochannel_auth = NicochannelAuthService(log=add_log)
+        rplay_auth = RplayAuthWorkspace(self._paths)
 
         # ---- 命令构建 ----
         def build_command(url: str, *, is_live: bool = False,
@@ -213,6 +222,7 @@ class AppContainer:
                 thumbnail_only=thumbnail_only,
                 custom_args=custom_args,
                 po_token_base_url=po_token_base_url,
+                rplay_auth_dir=rplay_auth.directory(cfg) if effective_platform == 'Rplay' else None,
             )
 
         def build_subtitle_command(url: str, *, subtitle_type: str, subtitle_langs: str) -> list[str]:
@@ -263,6 +273,7 @@ class AppContainer:
         )
 
         # ---- 下载执行器 ----
+        fanbox_application=ArchiveApplication(self._paths.download_dir/'Fanbox',publish=app_state.publish)
         po_token_provider = PoTokenProviderService(tool_dir=tool_dir, log=add_log)
         download_executor = DownloadExecutor(
             tool_dir=tool_dir,
@@ -301,7 +312,7 @@ class AppContainer:
                 finally:
                     on_finished(handle)
 
-            return DownloadExecutor(
+            video_executor = DownloadExecutor(
                 tool_dir=tool_dir,
                 exe_suffix=exe_suffix,
                 app_state=task_state,
@@ -322,6 +333,22 @@ class AppContainer:
                 save_twitcasting_password=storage.save_twitcasting_password,
                 forget_twitcasting_password=storage.forget_twitcasting_password,
             )
+            return RoutedDownloadExecutor(video_executor,FanboxExecutor(fanbox_application,
+                tool_dir=tool_dir,app_state=task_state,download_manager=manager,callbacks=callbacks,
+                on_finished=on_finished,job_id=task.selection.get('fanbox_job_id'),
+                preview=task.selection.get('fanbox_preview',False),selection=task.selection.get('fanbox_selection')))
+
+        download_executor=RoutedDownloadExecutor(download_executor,FanboxExecutor(fanbox_application,
+            tool_dir=tool_dir,app_state=app_state,download_manager=download_manager,
+            callbacks=TaskCallbacks(log=add_log,update_progress=update_progress,add_history=add_history,
+                broadcast_download_state=broadcast_download_state,emit_event=emit_event,
+                cancel_idle_timer=cancel_idle_timer,start_idle_timer=start_idle_timer)),
+            manager=download_manager,
+            callbacks=TaskCallbacks(log=add_log,update_progress=update_progress,add_history=add_history,
+                broadcast_download_state=broadcast_download_state,emit_event=emit_event,
+                cancel_idle_timer=cancel_idle_timer,start_idle_timer=start_idle_timer),
+            batch_factory=lambda manager,callbacks,finished,config:make_task_executor(SimpleNamespace(selection={}),
+                TaskAppState(app_state,None,config),manager,callbacks,finished))
 
         task_manager = TaskManager(
             base_app_state=app_state,
@@ -341,6 +368,29 @@ class AppContainer:
                 return int(app_state.config_snapshot().get("TASK_MODE", 1)) == 1
             except (TypeError, ValueError):
                 return True
+
+        def start_fanbox_job(job_id,url,preview,selection):
+            if task_mode_enabled():
+                return task_manager.submit([url],selection={'fanbox_job_id':job_id,'fanbox_preview':preview,
+                                                           'fanbox_selection':selection})
+            def exclusive():
+                executor=FanboxExecutor(fanbox_application,tool_dir=tool_dir,app_state=app_state,
+                    download_manager=download_manager,callbacks=download_executor.callbacks,
+                    job_id=job_id,preview=preview,selection=selection)
+                result=executor.start_download(url)
+                if result.get('ok'):download_executor.active=executor
+                return result
+            return task_manager.start_exclusive(exclusive)
+
+        def pause_fanbox_job(job_id,target):
+            if target!='exclusive':return task_manager.cancel(target)
+            if getattr(download_executor.active,'job_id',None)==job_id:
+                return download_executor.stop_download()
+            return {'ok':True}
+
+        fanbox_controller=FanboxController(fanbox_application,tool_dir=tool_dir,
+            config_getter=app_state.config_snapshot,start=start_fanbox_job,cancel=pause_fanbox_job,
+            publish=app_state.publish)
 
         # ---- 直播 WAIT 服务 ----
         probe_service = ProbeService(
@@ -546,12 +596,14 @@ class AppContainer:
             return live_watch_service.cancel(job_id)
 
         def request_exit() -> None:
+            fanbox_controller.stop()
             download_executor.stop_download()
             network_diagnostics.stop()
             live_watch_service.stop()
             task_manager.stop()
             download_executor.wait_for_live_finalization()
             po_token_provider.stop()
+            rplay_auth.close()
             app_state.publish({"type": "exit"})
             exit_event.set()
 
@@ -613,6 +665,7 @@ class AppContainer:
                 wav_to_mp3=wav_to_mp3,
                 audio_convert=tool_service.audio_convert,
                 stop_audio_tool=tool_service.stop_audio_tool,
+                fanbox=fanbox_controller,
                 audio_loudnorm=audio_loudnorm,
                 audio_volume=audio_volume,
                 request_exit=request_exit,
