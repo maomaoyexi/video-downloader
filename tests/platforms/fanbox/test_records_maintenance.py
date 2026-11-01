@@ -11,6 +11,9 @@ from video_downloader.platforms.fanbox.records import preview_records
 from video_downloader.platforms.fanbox.repository import Repository
 from .test_archive_io import setup_io,Body,DATE,DATA
 from .test_controller import setup_controller,preview
+from .test_content import post as source_post
+from .test_scan import FakeTransport
+from video_downloader.platforms.fanbox.archive import ArchiveApplication
 from video_downloader.platforms.fanbox.exporters import export_post
 from video_downloader.platforms.fanbox.options import import_plugin_settings
 
@@ -44,12 +47,12 @@ def test_completed_volume_and_received_bytes_use_distinct_local_days(tmp_path):
 def test_version_two_migration_preserves_data_and_backup(tmp_path):
     path=tmp_path/'library.sqlite';repo=Repository(path)
     with repo.connect() as db:
-        db.execute('DROP TABLE url_records');db.execute('DROP TABLE success_traffic');db.execute('DROP TABLE metadata');db.execute('DROP INDEX jobs_source')
+        db.execute('DROP TABLE url_records');db.execute('DROP TABLE success_traffic');db.execute('DROP TABLE metadata');db.execute('DROP TABLE verifications');db.execute('DROP INDEX jobs_source')
         db.execute('PRAGMA user_version=2')
     repo=Repository(path)
     assert path.with_suffix('.sqlite.v2.bak').is_file()
     with sqlite3.connect(path.with_suffix('.sqlite.v2.bak')) as db:assert db.execute('PRAGMA user_version').fetchone()[0]==2
-    with repo.connect() as db:assert db.execute('PRAGMA user_version').fetchone()[0]==3
+    with repo.connect() as db:assert db.execute('PRAGMA user_version').fetchone()[0]==Repository.VERSION
 
 
 def test_cache_cleanup_only_removes_known_partials_and_checks_version(setup_controller):
@@ -90,3 +93,16 @@ def test_comment_html_text_and_compatibility_report_are_explicit(tmp_path):
     assert '&lt;script&gt;' in html and '<script>' not in html and 'reply' in html and '评论未完整' in text
     _,report=import_plugin_settings({'userSetLang':'en','theme':'dark','showHowToUse':False})
     assert {row['key']:row['status'] for row in report}=={'userSetLang':'follows_application','theme':'follows_application','showHowToUse':'preserved_not_applied'}
+
+
+def test_restricted_post_can_save_its_public_cover_without_claiming_full_access(tmp_path):
+    value=source_post();value['body']=None;value['coverImageUrl']='https://pixiv.pximg.net/fanbox/public/cover.jpg'
+    class Transport(FakeTransport):
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+    binary=Body(b'\xff\xd8\xff'+DATA)
+    app=ArchiveApplication(tmp_path,transport_factory=lambda *a,**k:Transport([[value]]),binary_factory=lambda *a,**k:binary)
+    job=app.create('https://sample.fanbox.cc',{'network':{'api_interval_seconds':0,'file_start_interval_seconds':0}})
+    result=app.run(job['id'])
+    assert result['status']=='partial' and result['counts']['restricted']==1 and result['counts']['completed']==1
+    assert len(binary.requests)==1

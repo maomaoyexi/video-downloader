@@ -70,6 +70,17 @@ test('all settings render and one-run edits never mutate defaults',async()=>{
   }finally{await close();}
 });
 
+test('late verification snapshots cannot roll a completed report back',async()=>{
+  const {w,close}=await page();try{
+    w.document.getElementById('urlInput').value='https://sample.fanbox.cc';w.FanboxUI.sync();
+    const job={id:'b'.repeat(32),source:'https://sample.fanbox.cc',version:4,status:'completed',created_at:1,counts:{completed:1},
+      verification:{version:2,status:'completed',checked:1,total:1}};
+    w.FanboxUI.event(job);w.FanboxUI.event({...job,verification:{version:1,status:'running',checked:0,total:1}});
+    assert.ok(w.document.getElementById('fanboxJobs').textContent.includes('资源校验 · 已完成'));
+    assert.ok(!w.document.getElementById('fanboxJobs').textContent.includes('停止校验'));
+  }finally{await close();}
+});
+
 test('FANBOX console isolates logs, history groups URLs and opens detailed runs',async()=>{
   const {w,close}=await page();
   try{

@@ -93,7 +93,7 @@ def test_pause_recovery_and_bad_selection(setup_controller):
 def test_migration_keeps_v1_backup_and_job_state(tmp_path):
     path=tmp_path/'library.sqlite';repo=Repository(path)
     with repo.connect() as db:
-        db.execute('DROP TABLE requests');db.execute('DROP TABLE url_records');db.execute('DROP TABLE success_traffic');db.execute('DROP TABLE metadata')
+        db.execute('DROP TABLE requests');db.execute('DROP TABLE url_records');db.execute('DROP TABLE success_traffic');db.execute('DROP TABLE metadata');db.execute('DROP TABLE verifications')
         db.execute('DROP INDEX jobs_source');db.execute('PRAGMA user_version=1')
     upgraded=Repository(path)
     with upgraded.connect() as db:assert db.execute('PRAGMA user_version').fetchone()[0]==Repository.VERSION

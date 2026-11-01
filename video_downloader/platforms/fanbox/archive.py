@@ -244,10 +244,10 @@ class ArchiveApplication:
                             log(f"{label} · 投稿 {post.id} · {asset.name[:160]}",'warn' if result['status'] in {'failed','degraded'} else 'info')
                             stats();save()
 
-                    assets=[a for a in post.assets if a.selected and
+                    assets=[a for a in post.assets if a.selected and (post.access!='restricted' or a.kind=='cover') and
                             (chosen_assets is None or post.id+':'+a.id+':'+a.variant in chosen_assets)
                             and post.id+':'+a.id+':'+a.variant not in state['selection'].get('exclude_asset_ids',[])]
-                    if post.access!='restricted':
+                    if assets:
                         with ThreadPoolExecutor(max_workers=options['network']['file_concurrency']) as workers:
                             futures=[workers.submit(one,asset) for asset in assets]
                             errors=[]

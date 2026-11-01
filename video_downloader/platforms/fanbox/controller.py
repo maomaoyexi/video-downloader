@@ -21,6 +21,7 @@ from .runtime import health
 from .presentation import asset_rows,manifest,naming_preview
 from .records import preview_records,resource_record_key
 from .maintenance import clear_resume_cache
+from .verification import VerificationService,report_header
 
 
 class FanboxController:
@@ -29,6 +30,7 @@ class FanboxController:
         self.config=config_getter;self.start=start;self.cancel=cancel
         self.publish=publish or (lambda event:None)
         self.lock=threading.RLock();self.active={}
+        self.verifier=VerificationService(application,self._verification_event)
         self._snapshot=[];self.access_error=None
         self.stopping=threading.Event()
         self.thread=threading.Thread(target=self._loop,name='fanbox-recovery',daemon=True)
@@ -37,6 +39,16 @@ class FanboxController:
     def stop(self):
         self.stopping.set()
         self.thread.join(timeout=2)
+        self.verifier.stop()
+
+    def _verification_event(self,job_id,report):
+        values=self.application.repository.summaries(job_id=job_id,limit=1)
+        if values:self.publish({'type':'fanbox_job','data':values[0]})
+
+    def _summary(self,state):
+        value=summary(state)
+        value['verification']=report_header(self.application.repository.verification(state['id']),state['version'])
+        return value
 
     def _loop(self):
         while not self.stopping.wait(1):
@@ -69,6 +81,10 @@ class FanboxController:
         with self.lock:
             result=[]
             for state in self.application.repository.summaries():
+                verification=state.get('verification')
+                if verification and verification['status']=='running' and not self.application.repository.has_lease('job:'+state['id']):
+                    report=self.application.repository.verification(state['id']);report['status']='interrupted'
+                    self.application.repository.save_verification(state['id'],report);state['verification']=report_header(report)
                 if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+state['id']):
                     self.active.pop(state['id'],None)
                 if state['status'] in {'running','queued'} and state['id'] not in self.active and not self.application.repository.has_lease('job:'+state['id']):
@@ -76,7 +92,7 @@ class FanboxController:
                     state['status']='paused';state['phase']='paused'
                     state['error']={'code':'interrupted','message':'任务已中断，可继续','retry_after':None}
                     self.application.repository.save_job(state)
-                    result.append(summary(state))
+                    result.append(self._summary(state))
                 else:result.append(state)
             return result
 
@@ -159,7 +175,10 @@ class FanboxController:
     def manifest(self,job_id):
         state=self.application.repository.job(job_id)
         if state is None:raise FanboxError('job_not_found','归档任务不存在')
-        return manifest(state)
+        value=manifest(state);value['verification']=self.application.repository.verification(job_id)
+        if value['verification'] and value['verification']['job_version']!=state['version']:value['verification']['status']='stale'
+        if value['verification'] and value['verification']['job_version']!=state['version']:value['verification']['status']='stale'
+        return value
 
     def naming_preview(self,data):
         return naming_preview(data.get('options',self.config().get('FANBOX_OPTIONS','{}')),
@@ -180,7 +199,7 @@ class FanboxController:
             paths=[resource_record_key(asset.url) for asset in model.assets]
             hints=self.application.repository.imported_hints(paths)
             for asset,path in zip(assets,paths):asset['history_hint']=path in hints
-            return {'job':summary(state),'post':{k:copy.deepcopy(value[k]) for k in
+            return {'job':self._summary(state),'post':{k:copy.deepcopy(value[k]) for k in
                      ('id','title','type','published_at','fee','access','blocks','links','comments','comments_complete','warnings')},'assets':assets}
         if type(offset) is not int or type(limit) is not int or offset<0 or not 1<=limit<=100:
             raise FanboxError('invalid_request','分页参数无效')
@@ -190,8 +209,10 @@ class FanboxController:
             items.append({k:p[k] for k in ('id','title','type','published_at','fee','access')})
             items[-1].update(resources=len(selected),links=len(p['links']),known_bytes=sum(a['size'] or 0 for a in selected),
                              unknown_sizes=sum(a['size'] is None for a in selected))
-        return {'job':summary(state),'posts':items,'total':len(posts),'offset':offset,'limit':limit,
-                'options':state['options'],'fan_cards':copy.deepcopy(state.get('fan_cards',[]))}
+        verification=self.application.repository.verification(job_id)
+        if verification and verification['job_version']!=state['version']:verification['status']='stale'
+        return {'job':self._summary(state),'posts':items,'total':len(posts),'offset':offset,'limit':limit,
+                'options':state['options'],'fan_cards':copy.deepcopy(state.get('fan_cards',[])),'verification':verification}
 
     def action(self,data):
         job_id=data.get('id');action=data.get('action')
@@ -200,6 +221,12 @@ class FanboxController:
         with self.lock:
             state=self.application.repository.job(job_id)
             if not state:raise FanboxError('job_not_found','归档任务不存在')
+            if action in {'verify','cancel_verification'}:
+                if action=='verify':
+                    if type(data.get('version')) is not int:raise FanboxError('invalid_request','缺少任务版本')
+                    self.verifier.start(job_id,data['version'])
+                else:self.verifier.cancel(job_id)
+                return {'ok':True,'job':self._summary(self.application.repository.job(job_id))}
             if action=='pause':
                 target=self.active.get(job_id)
                 if target:self.cancel(job_id,target)

@@ -10,7 +10,7 @@ const {chromium}=await import(process.env.FANBOX_PLAYWRIGHT_MODULE||pathToFileUR
 const root=process.cwd(),data=JSON.parse(execFileSync('python',['-c','import json;from video_downloader.core.constants import DEFAULT_CONFIG;from video_downloader.platforms.fanbox.options import normalize_options;print(json.dumps(dict(config=DEFAULT_CONFIG,options=normalize_options())))'],{encoding:'utf8'}));
 let config=structuredClone(data.config),options=data.options,created=[],jobs=[];
 let recordCount=0;
-const job={id:'a'.repeat(32),source:'https://www.fanbox.cc/@sample',status:'preview_ready',version:1,created_at:1793376000,phase:'preview',counts:{posts:1},scope:{list_complete:true}};
+const job={id:'a'.repeat(32),source:'https://www.fanbox.cc/@sample',status:'preview_ready',version:1,created_at:1793376000,phase:'preview',counts:{posts:1,completed:1},scope:{list_complete:true}};
 const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');let body='';for await(const chunk of req)body+=chunk;
   if(url.pathname.startsWith('/api/')){
@@ -23,7 +23,8 @@ const server=http.createServer(async(req,res)=>{
     if(name==='/api/fanbox/auth')result={runtime:{available:true},status:'anonymous'};
     if(name==='/api/fanbox/jobs')result={jobs};
     if(name==='/api/fanbox/create'){created.push(JSON.parse(body));jobs=[job];result={job};}
-    if(name==='/api/fanbox/job')result={job,options,posts:[{id:'1',title:'Sample post',fee:500,published_at:'2026-10-31',access:'accessible',resources:0,known_bytes:0}],total:1};
+    if(name==='/api/fanbox/job')result={job,options,verification:job.verification,posts:[{id:'1',title:'Sample post',fee:500,published_at:'2026-10-31',access:'accessible',resources:0,known_bytes:0}],total:1};
+    if(name==='/api/fanbox/action'){job.verification={version:1,status:'completed',job_version:1,checked:1,total:1,ok:1,missing:0,modified:0,unreadable:0,unverified:0,busy:0,bytes_read:100,issues:[]};result={job};}
     if(name==='/api/fanbox/logs')result={logs:[]};
     if(name==='/api/fanbox/records'){
       if(body){const input=JSON.parse(body);result={accepted:input.records?.length||0,rejected:0,duplicates:0,inserted:input.records?.length||0};
@@ -68,6 +69,8 @@ try{
   assert.equal(JSON.parse(config.FANBOX_OPTIONS).filters.fee.maximum,null);
   await page.locator('.ni[data-page="history"]').click();await page.locator('.fb-history').click();await page.locator('#fanboxHistoryDialog .fb-post').waitFor({state:'attached'});
   assert.equal(await page.locator('#fanboxDownloadSelected').isVisible(),false);assert.equal(await page.locator('#fanboxSelectAll').isVisible(),false);
+  await page.locator('#fanboxVerify').click();await page.locator('#fanboxVerification').waitFor();
+  assert.ok((await page.locator('#fanboxVerificationStatus').textContent()).includes('通过 1'));
   await page.locator('#fanboxHistoryDialog [data-fb-close]').click();
   for(const theme of ['light','dark']){
     await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);

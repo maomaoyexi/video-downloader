@@ -175,9 +175,9 @@
           <div class="fb-toolbar"><b>内容归档</b><span class="rule"></span><button class="btn sm gh" id="fanboxRefresh">刷新</button></div>
           <div id="fanboxJobs" aria-live="polite"></div>
           <section id="fanboxDetail" class="fb-detail" hidden aria-label="帖子预览">
-            <div class="fb-toolbar"><b id="fanboxDetailTitle"></b><button class="btn sm gh" id="fanboxOpenArchive" hidden>打开归档</button><button class="btn sm gh" id="fanboxCopyLinks">复制外链</button><button class="btn sm gh" id="fanboxExportManifest">导出清单</button><button class="btn sm gh" id="fanboxCloseDetail">收起</button></div>
+            <div class="fb-toolbar"><b id="fanboxDetailTitle"></b><button class="btn sm gh" id="fanboxOpenArchive" hidden>打开归档</button><button class="btn sm gh" id="fanboxVerify" hidden>校验资源文件</button><button class="btn sm gh" id="fanboxCopyLinks">复制外链</button><button class="btn sm gh" id="fanboxExportManifest">导出清单</button><button class="btn sm gh" id="fanboxCloseDetail">收起</button></div>
             <div class="fb-toolbar"><input class="ctl" id="fanboxSearch" aria-label="筛选帖子标题" placeholder="筛选帖子标题"><label><input type="checkbox" id="fanboxSelectAll" checked>全选筛选结果</label><button class="btn pri sm" id="fanboxDownloadSelected">下载所选</button></div>
-            <div id="fanboxScope" class="dim"></div><div id="fanboxPosts"></div>
+            <div id="fanboxScope" class="dim"></div><div id="fanboxVerification" class="fb-verification" hidden><p id="fanboxVerificationStatus" role="status"></p><div id="fanboxVerificationIssues"></div></div><div id="fanboxPosts"></div>
             <div class="fb-toolbar"><button class="btn sm" id="fanboxPrevious">上一页</button><span id="fanboxPage"></span><button class="btn sm" id="fanboxNext">下一页</button></div>
           </section>
         </section>

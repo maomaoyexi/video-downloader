@@ -18,7 +18,7 @@ from .errors import FanboxError
 
 
 class Repository:
-    VERSION = 3
+    VERSION = 4
 
     def __init__(self, path, *, clock=time.time):
         self.path = Path(path)
@@ -69,6 +69,13 @@ class Repository:
                     db.execute("INSERT INTO metadata VALUES('success_since',?)",(str(self.clock()),))
                     db.execute("CREATE INDEX jobs_source ON jobs(json_extract(state,'$.source'))")
                     db.execute('PRAGMA user_version=3')
+                if db.execute('PRAGMA user_version').fetchone()[0]==3:
+                    if version==3:
+                        backup=self.path.with_suffix(self.path.suffix+'.v3.bak')
+                        if backup.exists() or backup.is_symlink():backup=self.path.with_suffix('.v3.'+uuid.uuid4().hex+'.bak')
+                        with sqlite3.connect(self.path) as source,sqlite3.connect(backup) as target:source.backup(target)
+                    db.execute('CREATE TABLE verifications(job TEXT PRIMARY KEY, state TEXT NOT NULL)')
+                    db.execute('PRAGMA user_version=4')
                 db.commit()
             except BaseException:
                 db.rollback()
@@ -142,17 +149,33 @@ class Repository:
             return [json.loads(row[0]) for row in db.execute(
                 'SELECT state FROM jobs ORDER BY updated DESC LIMIT ?', (limit,))]
 
-    def summaries(self,source=None,limit=100):
+    def summaries(self,source=None,limit=100,job_id=None):
         keys=('id','source','status','version','created_at','updated_at','counts','error','scope','output','phase','outcome','resume_after')
-        expression=','.join("'"+key+"',json_extract(state,'$."+key+"')" for key in keys)
-        query="SELECT json_object("+expression+",'notify',json_extract(state,'$.options.notifications.on_complete')) FROM jobs"
-        args=[]
-        if source is not None:query+=" WHERE json_extract(state,'$.source')=?";args.append(source)
-        query+=' ORDER BY updated DESC LIMIT ?';args.append(limit)
+        expression=','.join("'"+key+"',json_extract(j.state,'$."+key+"')" for key in keys)
+        query="SELECT json_object("+expression+",'notify',json_extract(j.state,'$.options.notifications.on_complete'),'verification',json_remove(v.state,'$.issues')) FROM jobs j LEFT JOIN verifications v ON v.job=j.id"
+        args=[];conditions=[]
+        if source is not None:conditions.append("json_extract(j.state,'$.source')=?");args.append(source)
+        if job_id is not None:conditions.append('j.id=?');args.append(job_id)
+        if conditions:query+=' WHERE '+' AND '.join(conditions)
+        query+=' ORDER BY j.updated DESC LIMIT ?';args.append(limit)
         with self.connect() as db:
             values=[json.loads(row[0]) for row in db.execute(query,args)]
-        for value in values:value['notify']=bool(value['notify'])
+        for value in values:
+            value['notify']=bool(value['notify'])
+            report=value.get('verification')
+            if report and report['job_version']!=value['version']:report['status']='stale'
         return values
+
+    def verification(self,job_id):
+        with self.connect() as db:
+            row=db.execute('SELECT state FROM verifications WHERE job=?',(job_id,)).fetchone()
+            return json.loads(row[0]) if row else None
+
+    def save_verification(self,job_id,report):
+        with self.transaction() as db:
+            previous=db.execute("SELECT json_extract(state,'$.version') FROM verifications WHERE job=?",(job_id,)).fetchone()
+            report['version']=(previous[0] if previous else 0)+1
+            db.execute('INSERT OR REPLACE INTO verifications VALUES(?,?)',(job_id,json.dumps(report,ensure_ascii=False)))
 
     def allocate(self, key, candidate, *, conflict='uniquify', exists=lambda p: False):
         """Freeze paths in SQL before IO; never steal another asset's filename."""
