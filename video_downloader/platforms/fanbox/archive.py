@@ -187,7 +187,7 @@ class ArchiveApplication:
                 binary=self.binary_factory(credentials,proxy=proxy,
                     speed=int(float(config.get('SPEED_LIMIT',0))*1024*1024/options['network']['file_concurrency']))
                 downloader=Downloader(self.root,self.repository,gate,binary,progress=progress)
-                state['archives']=[]
+                state['archives']=state['archives'] if state.get('retry_only') else []
                 if options['fan_cards']['enabled']:
                     log('开始保存粉丝卡')
                     state['fan_cards']=[]
@@ -253,7 +253,7 @@ class ArchiveApplication:
                             if errors:
                                 raise next((e for e in errors if e.code!='cancelled'),errors[0])
                     entry=export_post(self.root,self.repository,post,options,state['task_date'],results)
-                    state['archives'].append(entry)
+                    state['archives']=[old for old in state['archives'] if old['post_id']!=post.id]+[entry]
                     stats();save()
                 stats()
                 counts=state['counts']

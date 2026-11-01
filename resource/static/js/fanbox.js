@@ -6,6 +6,7 @@
   let options = null, defaults = null, selectedJob = '', offset = 0, total = 0, requestVersion = 0;
   let starting = false, retryRequest = null, searchTimer = null;
   let taskDraft=null,taskUrl='',historyMode=false,consoleMode=null,replayingLogs=false;
+  let resumeJob='',resumeVersion=0;
   const consoleEntries=[],logKeys=new Set(),notified=new Set();
   const statusNames = {queued:'排队中',running:'进行中',preview_ready:'待选择',completed:'已完成',
     partial:'部分完成',failed:'失败',paused:'已暂停',reused:'已复用',degraded:'缩略图',skipped:'已跳过',pending:'待下载'};
@@ -63,10 +64,19 @@
       ['fan_cards.show_username','在粉丝卡显示我的用户名','bool']
     ]]
   ];
-  function renderSettings(host=$('fanboxSettingsFields'),model=options) {
+  const occasional=path=>path.startsWith('filters.')||path.startsWith('fan_cards.')||
+    ['workflow.auto_download','content.comments','content.comment_max_pages','content.image_fallback','naming.conflict'].includes(path);
+  const resumePaths=new Set(['content.image_fallback','naming.conflict','quota.enabled','quota.limit_gib','quota.timezone','quota.on_limit']);
+  function renderSettings(host=$('fanboxSettingsFields'),model=options,allowed=null) {
     if(!model)return;
-    host.replaceChildren();
-    groups.forEach(([title,fields],index)=>{
+    const opened=new Set([...host.querySelectorAll('details[open][data-fb-fold]')].map(el=>el.dataset.fbFold));
+    host.replaceChildren();let folded,regular=host;
+    if(!allowed){folded=element('details',null,{className:'fb-settings-fold'});folded.dataset.fbFold='occasional';
+      folded.open=opened.has('occasional')||host.id==='fanboxTaskFields';folded.append(element('summary','单次下载选项'));
+      if(host.id==='fanboxTaskFields'){regular=element('details',null,{className:'fb-settings-fold'});regular.dataset.fbFold='defaults';
+        regular.open=opened.has('defaults');regular.append(element('summary','其他下载设置'));}}
+    function group(title,fields,target){
+      if(!fields.length)return;
       const group=element('section',null,{className:'fb-settings-group'});
       group.append(element('h4',title));const grid=element('div',null,{className:'fb-settings-list'});
       fields.forEach(([path,label,type])=>{
@@ -103,13 +113,26 @@
           if(model===taskDraft&&path==='workflow.auto_download')$('fanboxTaskConfirm').textContent=value?'确认下载':'确认预览';
           if(path==='notifications.on_complete'&&value&&'Notification' in window&&Notification.permission==='default')Notification.requestPermission();
         });row.append(input);grid.append(row);
-      });group.append(grid);host.append(group);
+      });group.append(grid);target.append(group);
+    }
+    groups.forEach(([title,fields])=>{
+      if(allowed)group(title,fields.filter(([path])=>allowed.has(path)),host);
+      else {group(title,fields.filter(([path])=>!occasional(path)),regular);group(title,fields.filter(([path])=>occasional(path)),folded);}
     });
+    if(folded)host.append(folded);
+    if(regular!==host)host.append(regular);
+    if(allowed)return;
     const row=element('label',null,{className:'fb-field'}),select=element('select',null,{className:'ctl'});
     row.append(element('span','应用图片命名收藏'));select.append(element('option','选择收藏',{value:''}));
     (model.naming.favorites||[]).forEach(value=>select.append(element('option',value,{value})));
     select.onchange=()=>{if(select.value){set('naming.images',select.value,model);host.querySelector('[data-fanbox-option="naming.images"]').value=select.value;}};
-    row.append(select);host.append(row);
+    row.append(select);regular.append(row);
+    const preview=element('pre',null,{className:'fb-name-preview',hidden:true});
+    regular.append(button('命名预览',async()=>{try{
+      const url=$('urlInput').value.trim().split(/\s+/)[0];
+      const result=await api('/api/fanbox/naming-preview',{method:'POST',body:JSON.stringify({options:model,...(url&&matches(url)?{url}:{})})});
+      preview.textContent=[result.directory,...result.files].join('\n');preview.hidden=false;
+    }catch(e){showToast(e.message,'error');}}),preview);
   }
   function applyConfig(config) {
     $('fanboxEnabled').checked=String(config.FANBOX_ENABLED??1)==='1';
@@ -155,7 +178,8 @@
       actions.append(button('详情',()=>{historyMode=false;$('fanboxRuns').replaceChildren();openDetail(job.id);},job.id+'-detail'));
       if(['queued','running'].includes(job.status))actions.append(button('暂停',()=>action(job.id,'pause'),job.id+'-pause'));
       else if(job.status==='preview_ready')actions.append(button('选择帖子',()=>openDetail(job.id),job.id+'-select'));
-      else if(['paused','partial','failed'].includes(job.status))actions.append(button('继续',()=>action(job.id,'continue'),job.id+'-continue'));
+      else if(['paused','partial','failed'].includes(job.status))actions.append(button('继续',()=>resume(job.id),job.id+'-continue'));
+      if((counts.failed||0)+(counts.degraded||0)>0&&!['running','queued'].includes(job.status))actions.append(button('重试失败文件',()=>action(job.id,'retry_failed'),job.id+'-retry'));
       if(job.output)actions.append(button('打开归档',()=>action(job.id,'open'),job.id+'-open'));
       row.append(actions);host.append(row);
     });
@@ -182,23 +206,42 @@
     if(!options){showToast('设置尚未加载','error');return;}
     if(preview===true)return enqueue(url,true,options);
     if($('fanboxTaskDialog').open)return;
-    taskDraft=structuredClone(options);taskUrl=url;
+    resumeJob='';taskDraft=structuredClone(options);taskUrl=url;$('fanboxTaskTitle').textContent='本次 FANBOX 下载';
     $('fanboxTaskConfirm').textContent=taskDraft.workflow.auto_download?'确认下载':'确认预览';
     renderSettings($('fanboxTaskFields'),taskDraft);$('fanboxTaskDialog').showModal();
   }
-  async function action(id,name,selection) {
-    try {
-      const result=await api('/api/fanbox/action',{method:'POST',body:JSON.stringify({id,action:name,version:jobs.get(id)?.version, ...(selection?{selection}:{})})});
-      if(result.job)accept(result.job);loadTasks();
+  async function resume(id) {
+    try{const data=await api('/api/fanbox/job?id='+encodeURIComponent(id));
+      resumeJob=id;resumeVersion=data.job.version;taskDraft=structuredClone(data.options);
+      $('fanboxTaskTitle').textContent='继续 FANBOX 任务';$('fanboxTaskConfirm').textContent='确认继续';
+      renderSettings($('fanboxTaskFields'),taskDraft,resumePaths);$('fanboxTaskDialog').showModal();
     }catch(e){showToast(e.message,'error');}
-    await loadJobs();if(selectedJob===id)loadDetail();
+  }
+  async function action(id,name,selection,policies=null,version=null) {
+    let success=false;
+    try {
+      const result=await api('/api/fanbox/action',{method:'POST',body:JSON.stringify({id,action:name,version:version??jobs.get(id)?.version,
+        ...(selection?{selection}:{}),...(policies?{options:policies}:{})})});
+      if(result.job)accept(result.job);loadTasks();success=true;
+    }catch(e){showToast(e.message,'error');}
+    await loadJobs();if(selectedJob===id)loadDetail();return success;
   }
   async function openDetail(id) {
+    if(!historyMode)$('fanboxHistoryTitle').textContent='FANBOX 下载详情';
     selectedJob=id;offset=0;$('fanboxSearch').value='';draft();$('fanboxDetail').hidden=false;
     if(!$('fanboxHistoryDialog').open)$('fanboxHistoryDialog').showModal();
     try{const records=await api('/api/fanbox/logs?id='+encodeURIComponent(id));records.logs.forEach(acceptLog);}catch(e){showToast(e.message,'error');}
     await loadDetail();
   }
+  async function resultData(){return api('/api/fanbox/manifest?id='+encodeURIComponent(selectedJob));}
+  async function copyLinks(){try{
+    const data=await resultData(),links=[...new Set(data.posts.flatMap(post=>post.links.map(link=>link.url)))];
+    await navigator.clipboard.writeText(links.join('\n'));showToast(`已复制 ${links.length} 个链接`,'success');
+  }catch(e){showToast(e.message,'error');}}
+  async function exportManifest(){try{
+    const data=await resultData(),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    const anchor=element('a',null,{href:url,download:'fanbox-'+selectedJob+'.json'});anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){showToast(e.message,'error');}}
   async function loadDetail() {
     if(!selectedJob)return;
     const id=selectedJob,version=++requestVersion,q=$('fanboxSearch').value;
@@ -282,10 +325,14 @@
     $('fanboxPreview').onclick=()=>start($('urlInput').value.trim(),true);
     $('fanboxHistoryContent').append($('fanboxDetail'));
     document.querySelectorAll('[data-fb-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-    $('fanboxTaskConfirm').onclick=async()=>{const b=$('fanboxTaskConfirm');b.disabled=true;try{if(await enqueue(taskUrl,!taskDraft.workflow.auto_download,taskDraft))$('fanboxTaskDialog').close();}finally{b.disabled=false;}};
+    $('fanboxTaskConfirm').onclick=async()=>{const b=$('fanboxTaskConfirm');b.disabled=true;try{
+      const ok=resumeJob?await action(resumeJob,'continue',null,taskDraft,resumeVersion):await enqueue(taskUrl,!taskDraft.workflow.auto_download,taskDraft);
+      if(ok)$('fanboxTaskDialog').close();
+    }finally{b.disabled=false;}};
     $('fanboxHistoryDialog').addEventListener('close',()=>{selectedJob='';requestVersion++;historyMode=false;});
     $('fanboxRefresh').onclick=loadJobs;$('fanboxCloseDetail').onclick=()=>$('fanboxHistoryDialog').close();
     $('fanboxOpenArchive').onclick=()=>action(selectedJob,'open');
+    $('fanboxCopyLinks').onclick=copyLinks;$('fanboxExportManifest').onclick=exportManifest;
     $('fanboxUsage').onclick=async()=>{try{const data=await api('/api/fanbox/usage');$('fanboxRuns').replaceChildren();$('fanboxHistoryTitle').textContent='FANBOX 下载流量';$('fanboxDetail').hidden=true;
       data.days.forEach(day=>$('fanboxRuns').append(element('p',day.date+' · '+fmt(day.bytes))));$('fanboxHistoryDialog').showModal();}catch(e){showToast(e.message,'error');}};
     $('fanboxAuthCheck').onclick=async()=>{await saveSettingsNoAlert();auth();};

@@ -45,9 +45,11 @@ try{
   await page.locator('.ni[data-page="settings"]').click();
   await page.locator('#set-fanbox').scrollIntoViewIfNeeded();
 
-  const checkboxes=await page.locator('#set-fanbox .fb-switch').evaluateAll(items=>items.map(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})));
+  const checkboxes=await page.locator('#set-fanbox .fb-switch').evaluateAll(items=>items.filter(el=>el.getClientRects().length).map(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})));
   assert.ok(checkboxes.every(box=>box.width===32&&box.height===18));
-  const rows=await page.locator('#fanboxSettingsFields .fb-field').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().y));
+  assert.equal(await page.locator('#fanboxSettingsFields [data-fb-fold="occasional"]').getAttribute('open'),null);
+  await page.locator('#fanboxSettingsFields [data-fb-fold="occasional"]>summary').click();
+  const rows=await page.locator('#fanboxSettingsFields .fb-field').evaluateAll(items=>items.filter(el=>el.getClientRects().length).map(el=>el.getBoundingClientRect().y));
   assert.ok(rows.every((y,i)=>i===0||y>rows[i-1]));
   await page.locator('.ni[data-page="download"]').click();await page.locator('#urlInput').fill('https://sample.fanbox.cc');
   await page.locator('#btnStart').click();await page.locator('#fanboxTaskDialog').waitFor({state:'visible'});

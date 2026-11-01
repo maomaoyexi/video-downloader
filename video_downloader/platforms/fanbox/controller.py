@@ -14,10 +14,11 @@ import webbrowser
 from .archive import summary
 from .auth import load_credentials
 from .errors import FanboxError
-from .naming import asset_path,confined
+from .naming import confined
 from .models import Post
 from .options import normalize_options,import_plugin_settings
 from .runtime import health
+from .presentation import asset_rows,manifest,naming_preview
 
 
 class FanboxController:
@@ -134,6 +135,15 @@ class FanboxController:
         if state is None:raise FanboxError('job_not_found','归档任务不存在')
         return {'logs':copy.deepcopy(state.get('logs',[]))}
 
+    def manifest(self,job_id):
+        state=self.application.repository.job(job_id)
+        if state is None:raise FanboxError('job_not_found','归档任务不存在')
+        return manifest(state)
+
+    def naming_preview(self,data):
+        return naming_preview(data.get('options',self.config().get('FANBOX_OPTIONS','{}')),
+                              data.get('url') or 'https://www.fanbox.cc/@creator')
+
     def detail(self,job_id,*,offset=0,limit=25,post_id=None,query=''):
         state=self.application.repository.job(job_id)
         if not state:raise FanboxError('job_not_found','归档任务不存在')
@@ -145,13 +155,7 @@ class FanboxController:
             if value is None:raise FanboxError('post_not_found','投稿不存在')
             model=Post.from_dict(value)
             effective_options=normalize_options(state['options'])
-            assets=[]
-            for a in model.assets:
-                record=state['files'].get(model.id,{}).get(a.id+':'+a.variant,{})
-                assets.append({'id':model.id+':'+a.id+':'+a.variant,'name':a.name,'kind':a.kind,'variant':a.variant,
-                               'size':a.size,'selected':a.selected,'reason':a.skip_reason,'status':record.get('status','pending'),
-                               'error':record.get('error'),
-                               'path':record.get('path') or asset_path(model,a,effective_options,state['task_date'])})
+            assets=asset_rows(state,model,effective_options)
             return {'job':summary(state),'post':{k:copy.deepcopy(value[k]) for k in
                      ('id','title','type','published_at','fee','access','blocks','links','comments','comments_complete','warnings')},'assets':assets}
         if type(offset) is not int or type(limit) is not int or offset<0 or not 1<=limit<=100:
@@ -182,16 +186,22 @@ class FanboxController:
                 if not path.is_file():raise FanboxError('output_missing','归档文件已移走')
                 webbrowser.open(path.resolve().as_uri())
                 return {'ok':True}
-            if action not in {'download','continue'} or type(data.get('version')) is not int:
+            if action not in {'download','continue','retry_failed'} or type(data.get('version')) is not int:
                 raise FanboxError('invalid_request','任务操作或版本无效')
             if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+job_id):
                 self.active.pop(job_id,None)
             if state['status'] in {'running','queued'} or job_id in self.active:
                 raise FanboxError('job_busy','任务已在运行或排队')
             selection=data.get('selection',state.get('selection',{}))
+            if action=='retry_failed':
+                failed=[post_id+':'+key for post_id,files in state['files'].items()
+                        for key,record in files.items() if record.get('status') in {'failed','degraded'}]
+                if not failed:raise FanboxError('nothing_to_retry','没有可单独重试的失败文件')
+                selection={'asset_ids':failed,'post_ids':list(dict.fromkeys(key.split(':')[0] for key in failed))}
             self._selection(selection,state)
             if action=='download':selection=dict(selection,accessible_only=True) if isinstance(selection,dict) else selection
             state['selection']=selection
+            state['retry_only']=action=='retry_failed'
             # Runtime policies may be revised while content and names remain
             # frozen; this makes quota/fallback/conflict decisions actionable.
             current=normalize_options(data.get('options',state['options']))

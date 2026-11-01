@@ -44,9 +44,12 @@ test('all settings render and one-run edits never mutate defaults',async()=>{
     assert.equal(d.querySelectorAll('#fanboxSettingsFields textarea').length,5);
     assert.equal(d.querySelector('#fanboxSettingsFields [data-fanbox-option="fan_cards.scope"]').value,'current');
     assert.equal(d.getElementById('fanboxImportButton'),null);
+    assert.equal(d.querySelector('#fanboxSettingsFields details[data-fb-fold="occasional"]').open,false);
     assert.equal(d.getElementById('fanboxPreview').nextElementSibling.id,'btnStart');
     ui.start('https://sample.fanbox.cc');
     assert.ok(d.getElementById('fanboxTaskDialog').open);
+    assert.equal(d.querySelector('#fanboxTaskFields details[data-fb-fold="occasional"]').open,true);
+    assert.equal(d.querySelector('#fanboxTaskFields details[data-fb-fold="defaults"]').open,false);
     assert.equal(calls.filter(c=>c.path==='/api/fanbox/create').length,0);
     const maximum=d.querySelector('#fanboxTaskFields [data-fanbox-option="filters.fee.maximum"]');
     maximum.value='1000';maximum.dispatchEvent(new w.Event('change'));
