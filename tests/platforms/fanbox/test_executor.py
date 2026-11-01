@@ -62,8 +62,8 @@ def test_start_failure_and_duplicate_start_do_not_leak_slots(tmp_path,monkeypatc
 
 
 def test_router_keeps_fanbox_out_of_video_fallback():
-    video=SimpleNamespace(start_download=lambda *a,**kw:{'video':True},stop_download=lambda:1)
-    fanbox=SimpleNamespace(start_download=lambda *a,**kw:{'fanbox':True},stop_download=lambda:2,last_result={'status':'partial'})
+    video=SimpleNamespace(start_download=lambda *a,**kw:{'ok':True,'video':True},stop_download=lambda:1)
+    fanbox=SimpleNamespace(start_download=lambda *a,**kw:{'ok':True,'fanbox':True},stop_download=lambda:2,last_result={'status':'partial'})
     router=RoutedDownloadExecutor(video,fanbox)
     assert router.start_download('https://www.fanbox.cc')['fanbox']
     assert router.stop_download()==2 and router.last_result['status']=='partial'

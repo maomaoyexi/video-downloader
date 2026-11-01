@@ -1,17 +1,21 @@
-# 多平台视频下载工具 v2.6.0 WebUI
+# 多平台视频下载工具 v2.7.0 WebUI
 
-支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter 八个平台的视频/直播下载，并提供 Withny 已授权历史存档 HAR 保存及直播监控录制功能。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
+支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter / Rplay 的视频或直播下载，并提供 FANBOX 内容扫描与归档、Withny 已授权历史存档 HAR 保存及直播监控录制功能。具体能力与限制按平台区分。Release 的 EXE 绿色版无需安装 Python；源码运行版使用 Python 3 启动。
 
-![Version](https://img.shields.io/badge/version-v2.6.0%20WebUI-purple)
+![Version](https://img.shields.io/badge/version-v2.7.0%20WebUI-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+> v2.7.0 整合 PR #18；其中 Rplay 与 FANBOX 等该 PR 的全部新增功能由 [ErgouTree (@ergou10086)](https://github.com/ergou10086) 贡献。当前已知问题及下载文件 SHA-256 见 [发布说明](RELEASE_NOTES.md)。
 
 > v2.5.0 由 [DarkKandaoMaster](https://github.com/DarkKandaoMaster) 重构 WebUI 视觉与交互体系；[ErgouTree (@ergou10086)](https://github.com/ergou10086) 完善设置控件、TwitCasting 下载与进度、YouTube PO Token Provider 集成及运行目录收拢。本版同时支持自定义 yt-dlp 参数，并修复关闭代理后仍可能继承系统代理的问题。
 
 ## ✨ 功能特性
 
 - 🌐 **全新WebUI界面** - 内置HTTP服务器，自动打开浏览器，深色主题，响应式设计
-- 🎬 **八平台支持** - YouTube、Bilibili、Twitch、Niconico、NicoChannel、Fantia、TwitCasting、Twitter，自动识别平台
+- 🎬 **多平台支持** - YouTube、Bilibili、Twitch、Niconico、NicoChannel、Fantia、TwitCasting、Twitter、Rplay，自动识别支持的链接
+- 📡 **Rplay 支持** - 单个 HLS 点播、已接入的直播源与 Twitch 转播，支持独立 Firefox 登录设置
+- 🗃️ **FANBOX 内容归档** - 扫描、帖子预览、筛选所选下载、正文与附件归档、文件校验、粉丝卡及流量记录
 - 📦 **Withny 支持** - 从 HAR 保存已授权历史存档，也可通过 withny-dl 配置监控和录制直播
 - 📺 **Bilibili 支持** - 支持普通视频、直播和多 P 分集选择
 - 🎮 **直播录制** - 支持直播模式选择（自动/追开播/从当前时刻/蹲开播）；开始前按平台检查直播状态并提示开播时间/已开播时长，蹲开播会在开播后自动开始录制
@@ -30,27 +34,29 @@
 - 🧩 **自定义 yt-dlp 参数** - 支持仅本次任务参数与每次下载默认参数
 - ⚡ **硬件加速** - 支持NVIDIA NVENC、Intel QSV、AMD AMF
 - 🔄 **自动更新** - 启动后通过 GitHub Releases 检查新版本，校验通过后自动更新替换
-- 🧰 **工具箱** - 内置WAV转MP3、yt-dlp更新、临时文件清理等8个工具
+- 🧰 **工具箱** - 内置WAV转MP3、yt-dlp更新、临时文件清理等多项工具
 - 🛡️ **进程管理** - 关闭网页30秒后自动退出，无残留进程
 
 ## 🚀 快速开始
 
-1. 安装 Python 3，并确保 `python` 命令可用。
-2. 保持 `视频下载工具v2.6.0-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 位于同一目录。
-3. 确认 `dependency/` 中的下载工具已准备好。
-4. 使用下方源码启动命令运行，程序会自动打开浏览器界面。
+### Windows EXE 绿色版（推荐）
 
-> 💡 **提示**：依赖包的 `dependency/` 包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe、deno.exe、fantiadl.exe、withny-dl-windows-amd64.exe 和 `yt-dlp-plugins` 目录。NicoChannel 还需要单独准备 `nicochannel.zip` 并放入 `dependency/`。首次运行会自动生成 `download/`、归档及日志目录。
+1. 下载正式版 `video-downloader-v2.7.0-GUI.exe` 和 `video-downloader-v2.7.0-dependencies.zip`。
+2. 将 EXE 放入单独文件夹，并将依赖包中的 `dependency/` 完整解压到 EXE 同一目录。
+3. 双击 EXE，程序会自动打开浏览器 WebUI；无需安装 Python。
+4. 老用户先退出旧程序，再替换 EXE 并完整更新依赖包，保留原有配置、Cookie、密码表和 `download/`。
+
+> 💡 **提示**：正式 Release 仅提供 EXE 和依赖包，不提供单独源码附件；实际附件以 Release 页面为准。依赖包包含 yt-dlp、FFmpeg、ffprobe、Deno、Fantia/Withny 工具、NicoChannel 插件、Rplay 插件、Provider 及本版运行依赖。首次运行会生成下载、归档和日志目录。
 
 ### 源码运行版
 
-保持 `视频下载工具v2.6.0-GUI.py`、`video_downloader/` 与 `dependency/` 位于同一目录，安装 Python 3 后运行：
+保持 `视频下载工具v2.7.0-GUI.py`、`video_downloader/`、`resource/` 与 `dependency/` 位于同一目录，安装 Python 3 后运行：
 
 ```powershell
-python ".\视频下载工具v2.6.0-GUI.py"
+python ".\视频下载工具v2.7.0-GUI.py"
 ```
 
-源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本与 `video_downloader/` 目录。
+源码运行版不会用下载到的 EXE 自动覆盖 Python 源码；升级源码时请手动替换主脚本、`video_downloader/` 与 `resource/` 目录。
 
 ## 📖 使用说明
 
@@ -66,9 +72,9 @@ python ".\视频下载工具v2.6.0-GUI.py"
 
 任务间默认并行 2 个，最多 5 个。任务内默认开启直播与视频并行：每个任务默认录制 2 路直播（可设 2–5 路），同时下载 1 条视频（可设 1–5 条），两类额度互不占用，避免直播和普通下载相互阻塞。关闭任务内并行开关后，全部链接按输入顺序串行。排序只影响排队任务，不中断运行中的任务；任务内设置在提交时固定，任务间并行数与排序对队列实时生效。
 
-「设置 → 网络与代理 → 快速检测网络」会按当前代理设置测量单/多连接吞吐、HTTP 首字节延迟、抖动、失败率和负载延迟，约 20 秒，最多 32 MiB 测试数据（不含协议开销）。检测完成后可预览并应用「高性能」或「高可靠」方案；高可靠保持每任务视频串行，并通过仅限普通 yt-dlp 视频的独立限速为直播留出带宽。开始检测及应用方案前需先完成或取消活跃任务。详见 [任务并发与网络自动调整](docs/任务并发与网络自动调整.md)。
+「设置 → 网络与代理 → 快速检测网络」会按当前代理设置测量单/多连接吞吐、HTTP 首字节延迟、抖动、失败率和负载延迟，约 20 秒，最多 32 MiB 测试数据（不含协议开销）。检测完成后可预览并应用「高性能」或「高可靠」方案；高可靠保持每任务视频串行，并通过仅限普通 yt-dlp 视频的独立限速为直播留出带宽。开始检测及应用方案前需先完成或取消活跃任务。操作步骤见 [使用教程](docs/使用教程.txt)。
 
-任务列表保留本次运行中最近 100 个已结束任务，程序重启后不恢复普通队列；全局下载历史照常保存。相同的活跃链接会拒绝重复提交。关闭任务模式后，需先完成或取消现有队列，才能启动旧单任务流程；“停止”会处理实际活跃任务。蹲开播仍通过等待开播面板管理。实现检查和当前边界见 [任务模式检查报告](docs/任务模式检查报告.md)。
+任务列表保留本次运行中最近 100 个已结束任务，程序重启后不恢复普通队列；全局下载历史照常保存。相同的活跃链接会拒绝重复提交。关闭任务模式后，需先完成或取消现有队列，才能启动旧单任务流程；“停止”会处理实际活跃任务。蹲开播仍通过等待开播面板管理。当前边界和已知问题见 [发布说明](RELEASE_NOTES.md)。
 
 ### 批量下载
 
@@ -81,7 +87,7 @@ python ".\视频下载工具v2.6.0-GUI.py"
 
 在「设置 → 直播设置」选择全局模式，并可分别为 YouTube/Twitch 设置默认录制方式。任务前检查和实际执行都会核验条件：YouTube 需要可追播 DASH；Twitch 需要可访问的本场 VOD。未满足条件时会说明原因并从当前时刻录制。Twitch 会先录实时尾部、独立回填历史；只有轨道兼容且音视频包指纹确认重叠后才生成合并文件，无法验证时保留原件并报告缺口。未开播时可选择蹲开播，并在下载页「等待开播」面板取消。
 
-直播媒体、会话记录和完整性报告保存在 `download/.live-jobs/<job-id>/`。报告验证容器、轨道、全文件时间戳和首尾解码，不承诺平台已删除的历史分片仍能取得。实现、来源与实测边界见 [直播录制 P4 与部分 P5](temp/plan/live_record/step/直播录制-P4-P5.md)。
+直播媒体、会话记录和完整性报告保存在 `download/.live-jobs/<job-id>/`。报告验证容器、轨道、全文件时间戳和首尾解码，不承诺平台已删除的历史分片仍能取得。请结合完整性报告检查实际输出，不把实现范围视作所有平台均已实测通过。
 
 ### YouTube / Niconico 直播录制
 
@@ -95,11 +101,32 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 
 粘贴 Bilibili 视频或直播链接后程序会自动识别。直播默认从当前时刻录制（普通观看侧无 DVR，不支持追开播）；多 P 视频可按设置下载全部分集或弹出分集选择器；1080P 及以上画质通常需要在程序目录配置 `cookies.txt`。
 
-如需直播弹幕，在「设置 → 直播设置」开启「录制直播弹幕」，可选择 SRT、ASS 或两者。本轮读取录播姬原生 XML，结束后为每个媒体分段生成同名字幕；其他直播引擎的评论采集暂未接入。源码版先运行 `python scripts/install_live_dependencies.py`，脚本会校验固定版本并将 `pysubs2`、`defusedxml` 放入 `dependency/live-python/`。匿名化只作用于派生事件库和字幕，原始 XML 仍含原始身份信息。
+如需直播弹幕，在「设置 → 直播设置」开启「录制直播弹幕」，可选择 SRT、ASS 或两者。现有实现接入 Bilibili 录播姬 XML、YouTube `live_chat`、Withny 原生聊天，以及 Twitch、TwitCasting、NicoChannel、Niconico、Rplay 的评论采集路径；平台权限、源时间精度与实测范围不同，请查看 `comments-report.json`，不保证所有平台都能取得评论或精确同步。源码版可运行 `python scripts/install_live_dependencies.py` 准备受管依赖。匿名化只作用于派生事件库和字幕，原始采集文件仍可能包含账号信息。
 
 ### Withny 历史存档
 
 在下载页面选择 Withny，点击「选择 HAR 并下载」，依次选择浏览器导出的包含内容 HAR 和输出文件。程序只处理已授权的普通未加密 HLS，检测到 DRM、加密 HLS、缺失媒体清单正文或签名 Cookie 时会拒绝下载。HAR 可能包含登录信息，使用后应立即删除。
+
+### Rplay 点播、直播与 Twitch 转播
+
+点播使用单个 `https://rplay.live/play/<内容ID>` 链接；直播使用 `/live/<创作者ID>` 或 `/creatorhome/<创作者ID>`。需要登录时，先在 Firefox 登录 Rplay，再在「设置」中选择「Rplay 登录来源 → Firefox」并指定所需配置。Rplay 授权不以普通 `cookies.txt` 代替。
+
+点播仅处理当前支持的普通 HLS；直播按可用源从当前时刻录制，也可等待开播。平台返回 Twitch 转播时会解析源 Twitch 频道，需源频道仍在直播且具有观看权限。DRM、未知加密、未接入的授权协议和无权限内容会拒绝处理。Rplay HLS 暂不支持分离音画，请选择合并或受支持的音频输出组合。
+
+### FANBOX 扫描、预览与内容归档
+
+在「设置 → 平台专项 → FANBOX」检查启用状态、凭据文件和匿名访问选项。输入创作者主页或单帖链接后，可先「预览」检查帖子列表，再筛选并下载所选内容；开始前可调整本次任务选项。登录账号还可按赞助或关注范围扫描，结果始终受当前账号权限限制。
+
+可归档正文（HTML/TXT/Markdown）、原始 JSON、图片、附件、封面、外链清单和可选评论，并提供命名模板、资源筛选、同名处理、已验证文件复用、归档文件校验、每日流量额度与下载记录。粉丝卡可按当前作者或赞助作者处理。外链只收集，不代表已下载外部平台内容；受限帖的公开封面也不代表正文可访问。默认目录为 `download/Fanbox/`。
+
+独立扫描命令仅生成清单，不下载附件；匿名扫描必须显式使用 `--anonymous`：
+
+```powershell
+python ".\视频下载工具v2.7.0-GUI.py" --fanbox-scan "https://www.fanbox.cc/@creator" --output ".\fanbox-manifest.json" --anonymous
+python ".\视频下载工具v2.7.0-GUI.py" --fanbox-download "https://www.fanbox.cc/@creator" --preview --anonymous
+```
+
+本版已修复跨 FANBOX 后的单任务停止路由，仍保留六项已知问题，包括队列 `queued` 卡住、混合批量重新下载确认、缩略图格式校验、预览后受限帖封面遗漏、请求间隔达到 120 秒的租约状态，以及独立扫描 CLI 的 `FANBOX_ANONYMOUS` 配置读取。完整条件和规避建议见 [发布说明](RELEASE_NOTES.md#已知问题待后续修复)。建议先以少量帖子确认权限和输出，FANBOX 与其他平台分开提交任务，请求间隔避免达到或超过 120 秒。
 
 ### 配置预设
 
@@ -138,20 +165,20 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 4. 将导出的文件重命名为 `cookies.txt`，放到exe同目录
 5. 重启程序即可生效
 
-> ⚠️ **注意**：Fantia仅支持cookies.txt文件模式，不支持浏览器提取。Cookie仅传递登录态，不能绕过付费墙。
+> ⚠️ **注意**：Fantia 仅支持 `cookies.txt` 文件模式。FANBOX 使用对应账号 Cookie，也可匿名访问公开内容；Rplay 登录需独立配置 Firefox。Cookie 和登录态不能绕过付费、地区或 DRM 限制。
 
 ## 📂 目录结构
 
 ```
 工具目录/
-├── 视频下载工具v2.6.0-GUI.exe # 主程序
+├── video-downloader-v2.7.0-GUI.exe # 正式版主程序
 ├── dependency/              # 所有第三方依赖，可整体替换
 │   ├── yt-dlp.exe           # 下载核心
 │   ├── ffmpeg.exe           # 音视频处理
 │   ├── ffprobe.exe          # 媒体信息探测
 │   ├── deno.exe             # JavaScript运行时
 │   ├── fantiadl.exe         # Fantia下载器（可选）
-│   ├── nicochannel.zip      # NicoChannel插件（可选）
+│   ├── nicochannel.zip      # NicoChannel插件（依赖包已含）
 │   ├── yt-dlp-plugins/
 │   │   └── bgutil-ytdlp-pot-provider.zip
 │   └── bgutil-ytdlp-pot-provider/
@@ -160,7 +187,7 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 ├── presets.json             # 预设配置（自动生成）
 ├── cookies.txt              # Cookie文件（自行放置）
 ├── urls.txt                 # 批量下载链接（自行编辑）
-├── changelog.html           # 更新日志
+├── RELEASE_NOTES.md         # 发布说明与更新日志
 ├── CREDITS.txt              # 作者与贡献者
 ├── docs/                    # 帮助文档
 │   ├── 使用教程.txt
@@ -180,6 +207,8 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
     ├── Bilibili/            # Bilibili视频、直播及多P目录
     ├── Fantia/              # Fantia下载目录
     ├── Twitter/             # Twitter/X下载目录
+    ├── Rplay/               # Rplay点播与直播目录
+    ├── Fanbox/              # FANBOX内容归档、记录与校验数据
     ├── Withny/              # Withny历史存档目录
     └── TwitCasting/         # TwitCasting下载目录
 ```
@@ -221,7 +250,7 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 
 **Q: 可以同时下载多个视频吗？**
 
-> A: 同一时间只能运行一个下载任务，但批量下载会按顺序自动下载所有链接。
+> A: 任务模式支持 1–5 个任务并行（默认 2），每任务的直播与视频使用独立并发额度；关闭任务内并行后按链接顺序执行。请结合带宽设置限速。
 
 **Q: 关闭浏览器会中断下载吗？**
 
@@ -233,7 +262,7 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 
 **Q: 老用户如何升级？**
 
-> A: 下载 `video-downloader-v2.6.0-GUI.exe` 替换旧版 exe，并使用 v2.6.0 依赖包补齐新增插件；原有配置和下载记录无需改动。
+> A: 退出旧程序，下载 `video-downloader-v2.7.0-GUI.exe` 替换旧版 exe，并完整解压 `video-downloader-v2.7.0-dependencies.zip`；原有配置、Cookie、密码表和下载记录无需删除。
 
 ## 📚 详细文档
 
@@ -244,14 +273,21 @@ YouTube 使用 `/live` 直播链接，Niconico 使用 `live.nicovideo.jp`、`liv
 - [🍪 Cookie配置指南](docs/cookies问题答疑.txt) - Cookie配置详细说明和常见问题
 - [❓ 常见问题答疑](docs/常见问题答疑.txt) - 常见问题的解决方案
 - [⚠️ 错误码说明手册](docs/错误码.txt) - 下载错误码详解和排查流程
-- [📋 更新日志](resource/templates/changelog.html) - 版本更新历史
+- [📋 更新日志](RELEASE_NOTES.md) - 版本更新历史
 
 ## 📋 版本更新
 
-v2.6.0 的完整更新内容和升级说明请查看：
+v2.7.0 的完整更新内容和升级说明请查看：
 
 - [发布说明](RELEASE_NOTES.md)
 - [版本更新日志](RELEASE_NOTES.md)
+
+## ⚠️ 使用注意
+
+- 推荐将下载限速设置为 **5–10 MB/s**。高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担。
+- 使用过程中不要关闭后端控制台；彻底退出请使用右上角「✕ 退出」。
+- HAR、Cookie、密码表、原始评论及归档文件可能包含账号信息，请勿作为公开反馈附件。
+- 新增平台的实现范围不等于所有账号、内容和网络环境均已实测；本版其余六项已知问题待后续修复，详见 [发布说明](RELEASE_NOTES.md)。
 
 ## ⚠️ 免责声明
 
@@ -276,6 +312,7 @@ v2.6.0 的完整更新内容和升级说明请查看：
 - v2.4.0 字幕功能修复与合并适配：[猫猫葉汐A_spy（GitHub：@maomaoyexi）](https://github.com/maomaoyexi)
 - v2.5.0 WebUI 视觉与交互体系重构：[DarkKandaoMaster](https://github.com/DarkKandaoMaster)
 - v2.5.0 设置控件、TwitCasting 下载与进度、BgUtils Provider 及目录收拢：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
+- v2.7.0 PR #18 全部新增功能（Rplay、FANBOX 及相关界面与命令行）：[ErgouTree（GitHub：@ergou10086）](https://github.com/ergou10086)
 - v2.6.0 上游修复：[@maomaoyexi](https://github.com/maomaoyexi) 的 Cookie 模板、TwitCasting 密码表、HLS 路径和恢复、文件对话框回退与相关测试，按本分支直播架构整合。
 
 ## 致谢

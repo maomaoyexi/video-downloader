@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 
-MAIN_SCRIPT = PROJECT_ROOT / "视频下载工具v2.6.0-GUI.py"
+MAIN_SCRIPT = PROJECT_ROOT / "视频下载工具v2.7.0-GUI.py"
 
 
 class MainEntrypointTests(unittest.TestCase):

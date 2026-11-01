@@ -25,6 +25,8 @@ https://github.com/ZheYi101
 - 猫猫葉汐A_spy：v2.6.0 YouTube、Bilibili、Twitch、Niconico、NicoChannel、TwitCasting、Twitter/X Spaces 各平台直播入口识别、直播录制策略、断流处理与实时状态展示；任务页「本次 yt-dlp 参数」和「直播录制设置」两个按钮及相关设置功能、Cookie 模板修复、TwitCasting 密码表及失效记录清理、HLS 回退、完成后 `.ytdl` 清理、回归测试与相关文档整理
 - ErgouTree（@ergou10086）：PR #15 下载归档选择、独立批量封面及 PO Token Provider 启动改进
 
+- ErgouTree（@ergou10086）：v2.7.0 PR #18 的全部新增功能，包括 Rplay 点播、直播、Twitch 转播、Firefox 授权，以及 FANBOX 扫描、预览、内容归档、筛选、命名、粉丝卡、流量记录和相关 WebUI／命令行功能
+
 第三方组件
 - BgUtils POT Provider（Brainicism 等贡献者，GPL-3.0-only）
   https://github.com/Brainicism/bgutil-ytdlp-pot-provider
@@ -33,6 +35,9 @@ https://github.com/ZheYi101
 - PR #15「feat: improve archive workflows and provider startup」，作者 ErgouTree（@ergou10086），于 2026-10-13 在上游合并。
 - 2026-10-20 将该 PR 的下载归档选择、独立批量封面及 PO Token 启动改进整合到 v2.6.0 直播录制版，原有作者与贡献者署名保留；v2.6.0 直接作为正式版发布到 GitHub Release。
   https://github.com/maomaoyexi/video-downloader/pull/15
+
+- PR #18 已合并并整合到 v2.7.0；该 PR 的全部新增功能由 ErgouTree（@ergou10086）贡献，历史作者与贡献者署名继续保留。
+  https://github.com/maomaoyexi/video-downloader/pull/18
 
 项目仓库
 https://github.com/maomaoyexi/video-downloader

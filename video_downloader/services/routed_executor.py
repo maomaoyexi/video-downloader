@@ -37,9 +37,26 @@ class RoutedDownloadExecutor:
     def last_result(self):
         return getattr(self.active,'last_result',None)
 
+    def _start_and_route(self,executor,start,*args,**kwargs):
+        result=start(*args,**kwargs)
+        # 只有新任务真正启动后才切换停止目标；取消、失败及唤醒原批量任务均保留原路由。
+        if result.get('ok') and not result.get('cancelled') and result.get('mode')!='batch_retry':
+            self.active=executor
+        return result
+
     def start_download(self,url,**kwargs):
-        self.active=self.fanbox if is_fanbox(url) else self.video
-        return self.active.start_download(url,**kwargs)
+        executor=self.fanbox if is_fanbox(url) else self.video
+        return self._start_and_route(executor,executor.start_download,url,**kwargs)
+
+    def start_withny_archive(self):
+        return self._start_and_route(self.video,self.video.start_withny_archive)
+
+    def start_withny_live(self):
+        return self._start_and_route(self.video,self.video.start_withny_live)
+
+    def submit_password(self,url,password,request_id=None):
+        return self._start_and_route(self.video,self.video.submit_password,
+                                     url,password,request_id=request_id)
 
     def stop_download(self):
         if self.batch_handle is not None:
@@ -56,7 +73,8 @@ class RoutedDownloadExecutor:
 
     def batch_download(self,urls,bili_parts_map=None,custom_args=None):
         if not any(is_fanbox(url) for url in urls):
-            return self.video.batch_download(urls,bili_parts_map=bili_parts_map,custom_args=custom_args)
+            return self._start_and_route(self.video,self.video.batch_download,urls,
+                                         bili_parts_map=bili_parts_map,custom_args=custom_args)
         if self.batch_factory is None:return {'error':'当前执行器不支持混合批量入口'}
         handle=self.manager.begin('fanbox_batch')
         if handle is None:return {'error':'当前已有任务'}
