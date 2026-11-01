@@ -3,13 +3,15 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const jobs = new Map(), drafts = new Map();
+  const baseTitle=document.title;
   let options = null, defaults = null, selectedJob = '', offset = 0, total = 0, requestVersion = 0;
   let starting = false, retryRequest = null, searchTimer = null;
   let taskDraft=null,taskUrl='',historyMode=false,consoleMode=null,replayingLogs=false;
   let resumeJob='',resumeVersion=0;
+  let recordBatches=null,recordEpoch=0,recordBusy=false;
   const consoleEntries=[],logKeys=new Set(),notified=new Set();
   const statusNames = {queued:'排队中',running:'进行中',preview_ready:'待选择',completed:'已完成',
-    partial:'部分完成',failed:'失败',paused:'已暂停',reused:'已复用',degraded:'缩略图',skipped:'已跳过',pending:'待下载'};
+    partial:'部分完成',failed:'失败',paused:'已暂停',reused:'已复用',degraded:'缩略图',skipped:'已跳过',pending:'待下载',excluded:'按规则排除'};
   const phases = {scanning:'抓取帖子',downloading:'下载文件',preview:'待选择',finished:'已结束',paused:'已暂停',queued:'排队中'};
   const element = (tag,text,attrs={}) => Object.assign(document.createElement(tag),attrs,text==null?{}:{textContent:text});
   const button = (text,action,key) => {
@@ -26,6 +28,7 @@
   function set(path,value,model=options) {const parts=path.split('.');let node=model;parts.slice(0,-1).forEach(key=>node=node[key]);node[parts.at(-1)]=value;if(model===options)sync();}
   const groups = [
     ['保存内容',[
+      ['workflow.scope','抓取范围',{source:'当前链接',supporting:'所有赞助',following:'所有关注'}],
       ['workflow.auto_download','抓取后自动下载','bool'],['content.body','帖子正文','bool'],
       ['content.body_formats','正文格式',['html','txt','md']],['content.raw_snapshot','原始 JSON','bool'],
       ['content.cover','封面','bool'],['content.links','链接清单','bool'],['content.comments','评论','bool'],
@@ -65,7 +68,7 @@
     ]]
   ];
   const occasional=path=>path.startsWith('filters.')||path.startsWith('fan_cards.')||
-    ['workflow.auto_download','content.comments','content.comment_max_pages','content.image_fallback','naming.conflict'].includes(path);
+    ['workflow.scope','workflow.auto_download','content.comments','content.comment_max_pages','content.image_fallback','naming.conflict'].includes(path);
   const resumePaths=new Set(['content.image_fallback','naming.conflict','quota.enabled','quota.limit_gib','quota.timezone','quota.on_limit']);
   function renderSettings(host=$('fanboxSettingsFields'),model=options,allowed=null) {
     if(!model)return;
@@ -155,10 +158,14 @@
     document.querySelector('.task-args-row').style.display=pure?'none':'';
     if(pure)$('btnStartLabel').textContent='抓取并下载';
     if(consoleMode!==pure){consoleMode=pure;renderConsole();}
+    updateTitle();
   }
+  function updateTitle(){const active=[...jobs.values()].filter(job=>['running','queued'].includes(job.status));
+    document.title=consoleMode&&active.length?`FANBOX · ${active.length} 个任务 · ${baseTitle}`:baseTitle;}
   function accept(job) {
     if(!job?.id||Number(jobs.get(job.id)?.version||0)>Number(job.version||0))return;
     const previous=jobs.get(job.id);jobs.set(job.id,job);renderJobs();
+    updateTitle();
     if(previous&&previous.status!==job.status&&job.status==='completed'&&job.notify&&!notified.has(job.id)) {
       notified.add(job.id);showToast('FANBOX 下载完成','success');
       if('Notification' in window&&Notification.permission==='granted')new Notification('FANBOX 下载完成',{body:job.source});
@@ -181,6 +188,7 @@
       else if(['paused','partial','failed'].includes(job.status))actions.append(button('继续',()=>resume(job.id),job.id+'-continue'));
       if((counts.failed||0)+(counts.degraded||0)>0&&!['running','queued'].includes(job.status))actions.append(button('重试失败文件',()=>action(job.id,'retry_failed'),job.id+'-retry'));
       if(job.output)actions.append(button('打开归档',()=>action(job.id,'open'),job.id+'-open'));
+      if(!['running','queued'].includes(job.status))actions.append(button('清空恢复缓存',()=>{if(confirm('清空这个任务的恢复缓存？'))action(job.id,'clear_cache');},job.id+'-cache'));
       row.append(actions);host.append(row);
     });
     if(focus)host.querySelector(`[data-fb-focus="${CSS.escape(focus)}"]`)?.focus({preventScroll:true});
@@ -223,6 +231,7 @@
       const result=await api('/api/fanbox/action',{method:'POST',body:JSON.stringify({id,action:name,version:version??jobs.get(id)?.version,
         ...(selection?{selection}:{}),...(policies?{options:policies}:{})})});
       if(result.job)accept(result.job);loadTasks();success=true;
+      if(result.cache)showToast(`已清理 ${result.cache.removed} 个缓存文件 · 使用中 ${result.cache.busy}`,'success');
     }catch(e){showToast(e.message,'error');}
     await loadJobs();if(selectedJob===id)loadDetail();return success;
   }
@@ -239,9 +248,45 @@
     await navigator.clipboard.writeText(links.join('\n'));showToast(`已复制 ${links.length} 个链接`,'success');
   }catch(e){showToast(e.message,'error');}}
   async function exportManifest(){try{
-    const data=await resultData(),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
-    const anchor=element('a',null,{href:url,download:'fanbox-'+selectedJob+'.json'});anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    downloadJson(await resultData(),'fanbox-'+selectedJob+'.json');
   }catch(e){showToast(e.message,'error');}}
+
+  function downloadJson(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    element('a',null,{href:url,download:name}).click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  async function recordCounts(){const data=await api('/api/fanbox/records');
+    $('fanboxRecordCounts').textContent=`URL 记录 ${data.urls} · 导入 ${data.imported} · 已校验文件 ${data.verified}`;}
+  async function importRecordFile(event){try{
+    if(recordBusy)return;const epoch=++recordEpoch;
+    recordBatches=null;$('fanboxRecordConfirm').hidden=true;
+    const file=event.target.files[0];if(!file)return;if(file.size>16*1024*1024)throw new Error('记录文件超过 16 MiB');
+    const records=JSON.parse(await file.text());if(!Array.isArray(records)||records.length>100000)throw new Error('记录文件必须是最多 100000 项的数组');
+    const batches=[];let batch=[],bytes=0;
+    records.forEach(record=>{const size=new TextEncoder().encode(JSON.stringify(record)).length;
+      if(size>16000)throw new Error('单条记录过大');
+      if(batch.length&&(bytes+size>58000||batch.length>=500)){batches.push(batch);batch=[];bytes=0;}
+      batch.push(record);bytes+=size+1;});if(batch.length)batches.push(batch);
+    const total={accepted:0,rejected:0,duplicates:0};
+    for(const rows of batches){const report=await api('/api/fanbox/records',{method:'POST',body:JSON.stringify({action:'preview',records:rows})});
+      if(epoch!==recordEpoch)return;
+      Object.keys(total).forEach(key=>total[key]+=report[key]);}
+    recordBatches=batches;$('fanboxRecordReport').textContent=`有效 ${total.accepted} · 重复 ${total.duplicates} · 拒绝 ${total.rejected}`;
+    $('fanboxRecordConfirm').hidden=!total.accepted;
+  }catch(e){showToast(e.message,'error');}finally{event.target.value='';}}
+  async function confirmRecords(){if(recordBusy)return;recordBusy=true;const epoch=recordEpoch,button=$('fanboxRecordConfirm');
+    const controls=['fanboxRecordConfirm','fanboxRecordImport','fanboxRecordClear'];controls.forEach(id=>$(id).disabled=true);
+    try{let inserted=0;for(const rows of recordBatches||[]){if(epoch!==recordEpoch)break;
+        const report=await api('/api/fanbox/records',{method:'POST',body:JSON.stringify({action:'import',records:rows})});inserted+=report.inserted;}
+      if(epoch===recordEpoch){recordBatches=null;button.hidden=true;$('fanboxRecordReport').textContent=`已导入 ${inserted} 条`;await recordCounts();}
+    }catch(e){showToast(e.message,'error');}finally{recordBusy=false;controls.forEach(id=>$(id).disabled=false);}}
+  async function showUsage(){try{const data=await api('/api/fanbox/usage'),host=$('fanboxRuns');host.replaceChildren();
+    $('fanboxHistoryTitle').textContent='FANBOX 下载流量 · '+data.timezone;$('fanboxDetail').hidden=true;
+    const today=data.days.at(-1)||{},received=data.days.reduce((sum,day)=>sum+day.bytes,0),completed=data.days.reduce((sum,day)=>sum+day.completed_bytes,0);
+    host.append(element('p',`今日接收 ${fmt(today.bytes||0)} · 今日完成 ${fmt(today.completed_bytes||0)} · 30 日接收 ${fmt(received)} · 已记录完成 ${fmt(completed)}`));
+    const chart=element('div',null,{className:'fb-usage-bars',role:'img'});chart.setAttribute('aria-label','近 30 日接收流量');
+    const max=Math.max(1,...data.days.map(day=>day.bytes));data.days.forEach(day=>{const bar=element('span',null,{title:day.date+' · '+fmt(day.bytes)});bar.style.height=Math.max(2,day.bytes/max*100)+'%';chart.append(bar);});host.append(chart);
+    const table=element('table',null,{className:'fb-usage-table'}),head=element('tr');['日期','接收流量','完成体积'].forEach(text=>head.append(element('th',text)));table.append(head);
+    [...data.days].reverse().forEach(day=>{const row=element('tr');[day.date,fmt(day.bytes),fmt(day.completed_bytes)].forEach(text=>row.append(element('td',text)));table.append(row);});host.append(table);
+    $('fanboxHistoryDialog').showModal();}catch(e){showToast(e.message,'error');}}
   async function loadDetail() {
     if(!selectedJob)return;
     const id=selectedJob,version=++requestVersion,q=$('fanboxSearch').value;
@@ -252,6 +297,8 @@
       $('fanboxSelectAll').checked=draft().all;
       const counts=data.job.counts||{};
       $('fanboxScope').textContent=`${total} 帖 · 文件 ${(counts.completed||0)+(counts.reused||0)} · 失败 ${(counts.failed||0)+(counts.fan_cards_failed||0)} · 粉丝卡 ${counts.fan_cards||0} · ${data.job.scope?.limit_reached?'已达帖子上限':data.job.scope?.list_complete?'列表完整':'列表未完整'}`;
+      const reasons={fee_type:'免费/付费',fee_range:'赞助金额',post_id:'投稿 ID',published_at:'日期',keyword_excluded:'排除关键词',keyword_required:'包含关键词'};
+      Object.entries(data.job.scope?.filtered||{}).forEach(([key,count])=>$('fanboxScope').append(document.createTextNode(` · ${reasons[key]||'筛选'}排除 ${count}`)));
       $('fanboxOpenArchive').hidden=!data.job.output;
       $('fanboxPage').textContent=`${Math.floor(offset/25)+1} / ${Math.max(1,Math.ceil(total/25))}`;
       $('fanboxPrevious').disabled=offset===0;$('fanboxNext').disabled=offset+25>=total;
@@ -265,9 +312,8 @@
         checkbox.hidden=historyMode;checkbox.setAttribute('aria-label','选择 '+post.title);checkbox.checked=checkbox.checked&&!checkbox.disabled;
         checkbox.onchange=()=>{if(draft().all)checkbox.checked?draft().excluded.delete(post.id):draft().excluded.add(post.id);else checkbox.checked?draft().included.add(post.id):draft().included.delete(post.id);};
         const info=element('div'),title=element('div',null,{className:'fb-post-title'});
-        const match=get('ui.bold_keywords',data.options)&&q&&post.title.toLowerCase().indexOf(q.toLowerCase());
-        if(typeof match==='number'&&match>=0){title.append(document.createTextNode(post.title.slice(0,match)),element('mark',post.title.slice(match,match+q.length)),document.createTextNode(post.title.slice(match+q.length)));}
-        else title.textContent=post.title;info.append(title);
+        const terms=get('ui.bold_keywords',data.options)?[q,...(data.options.filters.title.include_enabled?data.options.filters.title.include:[])]:[];
+        highlight(title,post.title,terms);info.append(title);
         info.append(element('div',`${post.published_at.slice(0,10)} · ${post.access==='restricted'?'受限':post.fee?'付费 · 可访问':'公开'} · ${post.resources} 文件 · ${fmt(post.known_bytes)}${post.unknown_sizes?' + '+post.unknown_sizes+' 个未知大小':''}`,{className:'fb-post-meta'}));
         head.append(checkbox,info);row.append(head);
         const details=element('details');details.append(element('summary','正文 · 文件 · 链接'));
@@ -285,7 +331,7 @@
               const line=element('label',null,{className:'fb-asset'}),check=element('input',null,{type:'checkbox',checked:asset.selected&&!draft().assets.has(asset.id),disabled:!asset.selected||post.access==='restricted'});
               check.onchange=()=>check.checked?draft().assets.delete(asset.id):draft().assets.add(asset.id);
               check.hidden=historyMode;
-              line.append(check,element('span',`${asset.name} · ${asset.variant==='original'?'原始文件':'缩略图'} · ${fmt(asset.size)} · ${statusNames[asset.status]||asset.status} · ${asset.path}${asset.error?' · '+asset.error.message:''}`));details.append(line);
+              line.append(check,element('span',`${asset.name} · ${asset.variant==='original'?'原始文件':'缩略图'} · ${fmt(asset.size)} · ${statusNames[asset.status]||asset.status}${asset.history_hint?' · 导入记录':''} · ${asset.path}${asset.error?' · '+asset.error.message:''}`));details.append(line);
             });
             (detail.post.links||[]).forEach(link=>{
               let safe;try{safe=new URL(link.url);if(!['http:','https:'].includes(safe.protocol))return;}catch(e){return;}
@@ -305,6 +351,13 @@
       if(data.runs.length)await openDetail(data.runs[0].id);
       else showToast('该链接没有可用的归档记录','error');
     }catch(e){showToast(e.message,'error');}
+  }
+  function highlight(host,value,terms){const spans=[],seen=new Set(),lower=value.toLowerCase();
+    for(const term of terms){if(!term)continue;let start=0,at;while((at=lower.indexOf(term.toLowerCase(),start))>=0&&spans.length<10000){
+      const end=at+term.length,key=at+':'+end;if(!seen.has(key)){seen.add(key);spans.push([at,end]);}start=end;}}
+    spans.sort((a,b)=>a[0]-b[0]);const merged=[];for(const span of spans){const last=merged.at(-1);if(last&&span[0]<=last[1])last[1]=Math.max(last[1],span[1]);else merged.push([...span]);}
+    let offset=0;for(const [start,end] of merged){host.append(document.createTextNode(value.slice(offset,start)),element('mark',value.slice(start,end)));offset=end;}
+    host.append(document.createTextNode(value.slice(offset)));
   }
   function consoleEntry(entry) {
     if(!replayingLogs){consoleEntries.push(entry);if(consoleEntries.length>1200)consoleEntries.shift();}
@@ -333,8 +386,13 @@
     $('fanboxRefresh').onclick=loadJobs;$('fanboxCloseDetail').onclick=()=>$('fanboxHistoryDialog').close();
     $('fanboxOpenArchive').onclick=()=>action(selectedJob,'open');
     $('fanboxCopyLinks').onclick=copyLinks;$('fanboxExportManifest').onclick=exportManifest;
-    $('fanboxUsage').onclick=async()=>{try{const data=await api('/api/fanbox/usage');$('fanboxRuns').replaceChildren();$('fanboxHistoryTitle').textContent='FANBOX 下载流量';$('fanboxDetail').hidden=true;
-      data.days.forEach(day=>$('fanboxRuns').append(element('p',day.date+' · '+fmt(day.bytes))));$('fanboxHistoryDialog').showModal();}catch(e){showToast(e.message,'error');}};
+    $('fanboxUsage').onclick=showUsage;
+    $('fanboxRecords').onclick=async()=>{try{recordEpoch++;recordBatches=null;$('fanboxRecordReport').textContent='';$('fanboxRecordConfirm').hidden=true;await recordCounts();$('fanboxRecordsDialog').showModal();}catch(e){showToast(e.message,'error');}};
+    $('fanboxRecordsDialog').addEventListener('close',()=>{recordEpoch++;recordBatches=null;});
+    $('fanboxRecordImport').onclick=()=>$('fanboxRecordFile').click();$('fanboxRecordFile').onchange=importRecordFile;
+    $('fanboxRecordConfirm').onclick=confirmRecords;
+    $('fanboxRecordExport').onclick=async()=>{try{downloadJson((await api('/api/fanbox/records?export=1')).records,'fanbox-url-records.json');}catch(e){showToast(e.message,'error');}};
+    $('fanboxRecordClear').onclick=async()=>{if(recordBusy||!confirm('清空所有 FANBOX URL 记录？'))return;try{recordEpoch++;recordBatches=null;$('fanboxRecordConfirm').hidden=true;$('fanboxRecordReport').textContent='';await api('/api/fanbox/records',{method:'POST',body:JSON.stringify({action:'clear'})});await recordCounts();}catch(e){showToast(e.message,'error');}};
     $('fanboxAuthCheck').onclick=async()=>{await saveSettingsNoAlert();auth();};
     $('fanboxSelectAll').onchange=()=>{draft().all=$('fanboxSelectAll').checked;draft().excluded.clear();draft().included.clear();loadDetail();};
     $('fanboxPrevious').onclick=()=>{offset=Math.max(0,offset-25);loadDetail();};$('fanboxNext').onclick=()=>{offset+=25;loadDetail();};

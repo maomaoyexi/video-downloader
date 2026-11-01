@@ -372,6 +372,7 @@
               <label class="fb-field"><span>凭据文件</span><span class="fb-control"><input class="ctl mono" id="fanboxCookieFile" autocomplete="off" placeholder="cookies.txt"><button class="btn sm" type="button" id="fanboxAuthCheck">检查</button><span id="fanboxSettingsStatus" role="status"></span></span></label>
               <div id="fanboxSettingsFields"></div>
               <button class="btn sm gh" type="button" id="fanboxUsage">下载流量</button>
+              <button class="btn sm gh" type="button" id="fanboxRecords">下载记录</button>
             </section>
             </section>
 
@@ -796,6 +797,11 @@
 <dialog id="fanboxHistoryDialog" class="fb-dialog" aria-labelledby="fanboxHistoryTitle">
   <header class="fb-dialog-head"><b id="fanboxHistoryTitle">FANBOX 下载详情</b><button class="btn sm gh" type="button" data-fb-close>关闭</button></header>
   <div class="fb-dialog-body"><div id="fanboxRuns"></div><div id="fanboxHistoryContent"></div></div>
+</dialog>
+<dialog id="fanboxRecordsDialog" class="fb-dialog" aria-labelledby="fanboxRecordsTitle">
+  <header class="fb-dialog-head"><b id="fanboxRecordsTitle">FANBOX 下载记录</b><button class="btn sm gh" type="button" data-fb-close>关闭</button></header>
+  <div class="fb-dialog-body"><div id="fanboxRecordCounts" role="status"></div><div id="fanboxRecordReport" role="status"></div><input id="fanboxRecordFile" type="file" accept="application/json,.json" hidden></div>
+  <footer class="fb-dialog-foot"><button class="btn" type="button" id="fanboxRecordClear">清空 URL 记录</button><button class="btn" type="button" id="fanboxRecordExport">导出记录</button><button class="btn" type="button" id="fanboxRecordImport">导入记录</button><button class="btn pri" type="button" id="fanboxRecordConfirm" hidden>确认导入</button></footer>
 </dialog>
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/audio-convert.js"></script>

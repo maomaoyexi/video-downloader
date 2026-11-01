@@ -19,6 +19,8 @@ from .models import Post
 from .options import normalize_options,import_plugin_settings
 from .runtime import health
 from .presentation import asset_rows,manifest,naming_preview
+from .records import preview_records,resource_record_key
+from .maintenance import clear_resume_cache
 
 
 class FanboxController:
@@ -66,14 +68,16 @@ class FanboxController:
             return []
         with self.lock:
             result=[]
-            for state in self.application.repository.jobs():
+            for state in self.application.repository.summaries():
                 if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+state['id']):
                     self.active.pop(state['id'],None)
                 if state['status'] in {'running','queued'} and state['id'] not in self.active and not self.application.repository.has_lease('job:'+state['id']):
+                    state=self.application.repository.job(state['id'])
                     state['status']='paused';state['phase']='paused'
                     state['error']={'code':'interrupted','message':'任务已中断，可继续','retry_after':None}
                     self.application.repository.save_job(state)
-                result.append(summary(state))
+                    result.append(summary(state))
+                else:result.append(state)
             return result
 
     def options(self):
@@ -127,8 +131,25 @@ class FanboxController:
     def history(self,source):
         from .urls import parse_source
         source=parse_source(source).url
-        runs=[state for state in self.application.repository.jobs(10000) if state['source']==source]
-        return {'source':source,'runs':[summary(state) for state in runs]}
+        return {'source':source,'runs':self.application.repository.summaries(source,10000)}
+
+    def records(self,export=False):
+        repository=self.application.repository
+        result=repository.record_stats()
+        if export:result['records']=[{'url':row['path'].lstrip('/')} for row in repository.url_records()]
+        return result
+
+    def usage(self):
+        zone=self.options()['options']['quota']['timezone']
+        return {'timezone':zone,'days':self.application.repository.usage_history(zone)}
+
+    def record_command(self,data):
+        action=data.get('action');repository=self.application.repository
+        if action=='clear':return {'removed':repository.clear_url_records(),**repository.record_stats()}
+        if action not in {'preview','import'}:raise FanboxError('invalid_request','记录操作无效')
+        paths,report=preview_records(data.get('records'))
+        if action=='import':report['inserted']=repository.import_url_records(paths)
+        return report
 
     def logs(self,job_id):
         state=self.application.repository.job(job_id)
@@ -156,6 +177,9 @@ class FanboxController:
             model=Post.from_dict(value)
             effective_options=normalize_options(state['options'])
             assets=asset_rows(state,model,effective_options)
+            paths=[resource_record_key(asset.url) for asset in model.assets]
+            hints=self.application.repository.imported_hints(paths)
+            for asset,path in zip(assets,paths):asset['history_hint']=path in hints
             return {'job':summary(state),'post':{k:copy.deepcopy(value[k]) for k in
                      ('id','title','type','published_at','fee','access','blocks','links','comments','comments_complete','warnings')},'assets':assets}
         if type(offset) is not int or type(limit) is not int or offset<0 or not 1<=limit<=100:
@@ -186,6 +210,10 @@ class FanboxController:
                 if not path.is_file():raise FanboxError('output_missing','归档文件已移走')
                 webbrowser.open(path.resolve().as_uri())
                 return {'ok':True}
+            if action=='clear_cache':
+                if type(data.get('version')) is not int:raise FanboxError('invalid_request','缺少任务版本')
+                updated,report=clear_resume_cache(self.application,job_id,data['version'])
+                return {'ok':True,'job':summary(updated),'cache':report}
             if action not in {'download','continue','retry_failed'} or type(data.get('version')) is not int:
                 raise FanboxError('invalid_request','任务操作或版本无效')
             if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+job_id):

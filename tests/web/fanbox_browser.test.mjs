@@ -9,6 +9,7 @@ import {pathToFileURL} from 'node:url';
 const {chromium}=await import(process.env.FANBOX_PLAYWRIGHT_MODULE||pathToFileURL('temp/fanbox-ui-qa/node_modules/playwright/index.mjs').href);
 const root=process.cwd(),data=JSON.parse(execFileSync('python',['-c','import json;from video_downloader.core.constants import DEFAULT_CONFIG;from video_downloader.platforms.fanbox.options import normalize_options;print(json.dumps(dict(config=DEFAULT_CONFIG,options=normalize_options())))'],{encoding:'utf8'}));
 let config=structuredClone(data.config),options=data.options,created=[],jobs=[];
+let recordCount=0;
 const job={id:'a'.repeat(32),source:'https://www.fanbox.cc/@sample',status:'preview_ready',version:1,created_at:1793376000,phase:'preview',counts:{posts:1},scope:{list_complete:true}};
 const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');let body='';for await(const chunk of req)body+=chunk;
@@ -24,6 +25,12 @@ const server=http.createServer(async(req,res)=>{
     if(name==='/api/fanbox/create'){created.push(JSON.parse(body));jobs=[job];result={job};}
     if(name==='/api/fanbox/job')result={job,options,posts:[{id:'1',title:'Sample post',fee:500,published_at:'2026-10-31',access:'accessible',resources:0,known_bytes:0}],total:1};
     if(name==='/api/fanbox/logs')result={logs:[]};
+    if(name==='/api/fanbox/records'){
+      if(body){const input=JSON.parse(body);result={accepted:input.records?.length||0,rejected:0,duplicates:0,inserted:input.records?.length||0};
+        if(input.action==='import')recordCount+=input.records.length;if(input.action==='clear')recordCount=0;
+      }else result={urls:recordCount,imported:recordCount,verified:1,records:[]};
+    }
+    if(name==='/api/fanbox/usage')result={timezone:'Asia/Shanghai',days:[{date:'2026-11-01',bytes:100,completed_bytes:80}]};
     if(name==='/api/fanbox/history')result={runs:[job]};
     if(name==='/api/history')result={history:[{platform:'Fanbox',url:job.source,title:'sample',time:'2026-10-31'}]};
     if(name==='/api/tasks')result={tasks:[],version:0};
@@ -73,6 +80,17 @@ try{
       const modal=await page.locator('#fanboxTaskDialog').evaluate(el=>({right:el.getBoundingClientRect().right,width:innerWidth,body:el.scrollWidth,client:el.clientWidth}));
       assert.ok(modal.right<=modal.width&&modal.body<=modal.client+1,`${theme}/${width}: dialog overflow`);
       await page.locator('#fanboxTaskDialog [data-fb-close]').first().click();
+      await page.evaluate(()=>setActivePage('settings'));await page.locator('#fanboxRecords').click();
+      await page.locator('#fanboxRecordFile').setInputFiles({name:'records.json',mimeType:'application/json',buffer:Buffer.from('[{"url":"files/sample.zip"}]')});
+      await page.locator('#fanboxRecordConfirm').waitFor({state:'visible'});await page.locator('#fanboxRecordConfirm').click();
+      await page.locator('#fanboxRecordConfirm').waitFor({state:'hidden'});
+      assert.ok((await page.locator('#fanboxRecordCounts').textContent()).includes('已校验文件 1'));
+      const recordSize=await page.locator('#fanboxRecordsDialog').evaluate(el=>({scroll:el.scrollWidth,client:el.clientWidth}));
+      assert.ok(recordSize.scroll<=recordSize.client+1,`${theme}/${width}: records overflow`);
+      await page.locator('#fanboxRecordsDialog [data-fb-close]').click();
+      await page.locator('#fanboxUsage').click();await page.locator('.fb-usage-table').waitFor();
+      assert.equal(await page.locator('.fb-usage-bars>span').count(),1);
+      await page.locator('#fanboxHistoryDialog [data-fb-close]').click();
     }
   }
   assert.deepEqual(errors,[]);console.log('PASS: full page init, task overrides, grouped history, native controls, 6 theme/viewport layouts; no JS errors');

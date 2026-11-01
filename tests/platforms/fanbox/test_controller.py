@@ -93,9 +93,10 @@ def test_pause_recovery_and_bad_selection(setup_controller):
 def test_migration_keeps_v1_backup_and_job_state(tmp_path):
     path=tmp_path/'library.sqlite';repo=Repository(path)
     with repo.connect() as db:
-        db.execute('DROP TABLE requests');db.execute('PRAGMA user_version=1')
+        db.execute('DROP TABLE requests');db.execute('DROP TABLE url_records');db.execute('DROP TABLE success_traffic');db.execute('DROP TABLE metadata')
+        db.execute('DROP INDEX jobs_source');db.execute('PRAGMA user_version=1')
     upgraded=Repository(path)
-    with upgraded.connect() as db:assert db.execute('PRAGMA user_version').fetchone()[0]==2
+    with upgraded.connect() as db:assert db.execute('PRAGMA user_version').fetchone()[0]==Repository.VERSION
     backup=path.with_suffix('.sqlite.v1.bak')
     with sqlite3.connect(backup) as db:
         assert db.execute('PRAGMA user_version').fetchone()[0]==1
@@ -129,12 +130,19 @@ def test_http_routes_keep_origin_token_and_version_guards(setup_controller):
         assert request('POST','/api/fanbox/create',{},origin='https://evil.test')[0]==403
         assert request('GET','/api/fanbox/options')[0]==200
         assert request('GET','/api/fanbox/auth')[0]==200
+        assert request('GET','/api/fanbox/records',token=False)[0]==403
+        assert request('GET','/api/fanbox/usage')[0]==200
+        assert request('POST','/api/fanbox/records',{'action':'import','records':[{'url':'files/sample.zip?secret=x'}]},origin='https://evil.test')[0]==403
+        assert request('POST','/api/fanbox/records',{'action':'import','records':[{'url':'files/sample.zip?secret=x'}]})[0]==200
+        assert b'secret=' not in request('GET','/api/fanbox/records?export=1')[1]
         assert request('POST','/api/fanbox/create',{'url':True})[0]==400
         response=request('POST','/api/fanbox/create',{'url':'https://sample.fanbox.cc','request_id':'http-request','preview':True})
         assert response[0]==200
         job=json.loads(response[1])['job']['id'];app.run(job,preview=True);controller.list()
         assert request('GET','/api/fanbox/job?id='+job+'&offset=-1')[0]==400
         assert request('GET','/api/fanbox/job?id='+job)[0]==200
+        assert request('GET','/api/fanbox/manifest?id='+job)[0]==200
+        assert request('POST','/api/fanbox/naming-preview',{'options':{}})[0]==200
         assert request('POST','/api/fanbox/action',{'id':job,'action':'download','version':0})[0]==409
         assert request('POST','/api/fanbox/import-settings',{'settings':{'saveText':False}})[0]==200
         assert request('GET','/api/fanbox/jobs')[0]==200

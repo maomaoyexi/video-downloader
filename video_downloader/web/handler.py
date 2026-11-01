@@ -251,7 +251,8 @@ def create_handler(dependencies):
                 elif path=='/api/fanbox/history':result=service.history(query.get('source',[''])[0])
                 elif path=='/api/fanbox/logs':result=service.logs(query.get('id',[''])[0])
                 elif path=='/api/fanbox/manifest':result=service.manifest(query.get('id',[''])[0])
-                elif path=='/api/fanbox/usage':result={'days':service.application.repository.usage_history(service.options()['options']['quota']['timezone'])}
+                elif path=='/api/fanbox/records':result=service.records(export=query.get('export',['0'])[0]=='1')
+                elif path=='/api/fanbox/usage':result=service.usage()
                 elif path=='/api/fanbox/job':
                     result=service.detail(query.get('id',[''])[0],offset=int(query.get('offset',['0'])[0]),
                         limit=int(query.get('limit',['25'])[0]),post_id=query.get('post_id',[None])[0],query=query.get('q',[''])[0])
@@ -267,6 +268,7 @@ def create_handler(dependencies):
                 if path=='/api/fanbox/create':result=service.create(data)
                 elif path=='/api/fanbox/action':result=service.action(data)
                 elif path=='/api/fanbox/naming-preview':result=service.naming_preview(data)
+                elif path=='/api/fanbox/records':result=service.record_command(data)
                 elif path=='/api/fanbox/import-settings':
                     from video_downloader.platforms.fanbox.options import import_plugin_settings
                     options,report=import_plugin_settings(data.get('settings'))

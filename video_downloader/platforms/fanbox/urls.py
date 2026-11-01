@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit,quote,unquote
 
 from .errors import FanboxError
 
 API_HOST = "api.fanbox.cc"
 API_ENDPOINTS = frozenset({"creator.get", "post.paginateCreator", "post.listCreator",
-                           "post.info", "post.getComments", "plan.listSupporting", "legacy/support/creator"})
+                           "post.info", "post.getComments", "plan.listSupporting", "legacy/support/creator",
+                           "creator.listFollowing", "post.listSupporting", "post.listTagged"})
 _SLUG = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,99}\Z")
 _RESERVED = {"www", "api", "downloads", "static", "help", "fanbox"}
 
@@ -20,6 +21,7 @@ class Source:
     creator_id: str
     scope: str = "creator"
     post_id: str | None = None
+    tag: str | None = None
 
 
 def split_http_url(value: str):
@@ -42,6 +44,10 @@ def parse_source(value: str) -> Source:
     path = parsed.path.rstrip("/")
     parts = path.strip("/").split("/") if path else []
     if host in ("fanbox.cc", "www.fanbox.cc"):
+        if path in {'/home/supporting','/creators/supporting'}:
+            return Source('https://www.fanbox.cc/creators/supporting','','supporting')
+        if path=='/creators/following':
+            return Source('https://www.fanbox.cc/creators/following','','following')
         if not parts or not parts[0].startswith("@"):
             raise FanboxError("scope_required", "请提供创作者主页或单篇投稿链接")
         creator, rest = parts[0][1:], parts[1:]
@@ -59,7 +65,23 @@ def parse_source(value: str) -> Source:
         return Source(canonical, creator)
     if len(rest) == 2 and rest[0] == "posts" and re.fullmatch(r"[1-9][0-9]*", rest[1]):
         return Source(f"{canonical}/posts/{rest[1]}", creator, "post", rest[1])
-    raise FanboxError("unsupported_scope", "当前阶段仅支持创作者主页和单篇投稿")
+    if len(rest)==2 and rest[0]=='tags':
+        try:
+            if re.search(r'%(?![0-9a-fA-F]{2})',rest[1]):raise ValueError
+            tag=unquote(rest[1],errors='strict')
+            if not tag or len(tag)>2000 or any(ord(c)<32 for c in tag):raise ValueError
+        except (ValueError,UnicodeError):raise FanboxError('invalid_url','标签链接编码无效') from None
+        return Source(canonical+'/tags/'+quote(tag,safe=''),creator,'tag',tag=tag)
+    raise FanboxError("unsupported_scope", "不支持该 FANBOX 页面范围")
+
+
+def source_for_options(url,options):
+    mode=options['workflow'].get('scope','source')
+    if mode=='source':return parse_source(url)
+    parsed=split_http_url(url.strip())
+    if not (parsed.hostname.lower() in {'fanbox.cc','www.fanbox.cc'} and parsed.path in {'','/','/home'}):
+        parse_source(url)
+    return parse_source('https://www.fanbox.cc/creators/'+mode)
 
 
 def validate_api_url(value: str, *, endpoints=API_ENDPOINTS) -> str:

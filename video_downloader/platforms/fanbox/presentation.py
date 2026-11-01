@@ -4,7 +4,7 @@ from __future__ import annotations
 from .models import Asset,Post
 from .naming import asset_path,post_directory
 from .options import normalize_options
-from .urls import parse_source
+from .urls import source_for_options
 
 
 def asset_rows(state,post,options):
@@ -13,7 +13,7 @@ def asset_rows(state,post,options):
         record=state.get('files',{}).get(post.id,{}).get(asset.id+':'+asset.variant,{})
         rows.append({'id':post.id+':'+asset.id+':'+asset.variant,'name':asset.name,'kind':asset.kind,
             'variant':asset.variant,'size':asset.size,'selected':asset.selected,'reason':asset.skip_reason,
-            'status':record.get('status','pending'),'error':record.get('error'),
+            'status':record.get('status','excluded' if not asset.selected else 'pending'),'error':record.get('error'),
             'path':record.get('path') or asset_path(post,asset,options,state['task_date'])})
     return rows
 
@@ -32,7 +32,7 @@ def manifest(state):
 
 def naming_preview(options,url='https://www.fanbox.cc/@creator'):
     options=normalize_options(options)
-    source=parse_source(url)
+    source=source_for_options(url,options)
     date='2026-01-02T03:04:05+00:00'
     post=Post(source.post_id or '12345',source.creator_id or 'collection','67890','示例投稿','image',date,date,500,[],'accessible')
     assets=[Asset('image','image','illustration','png','',index=1),Asset('file','archive','attachment','zip','',index=2)]

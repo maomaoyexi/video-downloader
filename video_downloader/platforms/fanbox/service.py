@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from collections import Counter
 
 from .client import FanboxClient
 from .errors import FanboxError
@@ -15,7 +16,8 @@ from .links import LinkCollector
 from .models import Post
 from .options import normalize_options, options_json
 from .parsers import parse_post
-from .urls import parse_source
+from .urls import parse_source,source_for_options
+from .listing import list_posts
 
 _STOP_ERRORS = {"cancelled", "rate_limited", "challenge_required", "access_denied"}
 _SUMMARY_KEYS = {"id", "creatorId", "title", "feeRequired", "publishedDatetime",
@@ -41,8 +43,8 @@ class ScanService:
         self.client = client
 
     def scan(self, url, options=None, *, checkpoint=None, save_checkpoint=None, auth_scope="anonymous",notify=None):
-        source = parse_source(url)
         options = normalize_options(options)
+        source = source_for_options(url,options)
         digest = hashlib.sha256(options_json(options).encode()).hexdigest()
         if checkpoint is not None:
             state = self._restore(checkpoint, source.url, digest, auth_scope)
@@ -69,27 +71,7 @@ class ScanService:
                     state["summaries"].append({k:v for k,v in post.items() if k in _SUMMARY_KEYS})
                 state["list_complete"] = True
             else:
-                if state["pages"] is None:
-                    state["pages"] = self.client.pages(source.creator_id)
-                    save()
-                if len(state["pages"]) > 10000:
-                    raise FanboxError("page_limit", "分页数量超过本地保护上限")
-                seen = {item["id"] for item in state["summaries"]}
-                while state["page_index"] < len(state["pages"]):
-                    eligible = sum(post_reason(item, options) is None for item in state["summaries"])
-                    if maximum is not None and eligible >= maximum:
-                        state["limit_reached"] = True
-                        break
-                    page_url = state["pages"][state["page_index"]]
-                    batch = self.client.page(page_url, source.creator_id)
-                    for item in batch:
-                        if item["id"] not in seen:
-                            seen.add(item["id"])
-                            state["summaries"].append({k:v for k,v in item.items() if k in _SUMMARY_KEYS})
-                    state["page_index"] += 1
-                    if notify:notify('listing',{'pages':state['page_index'],'posts':len(state['summaries'])})
-                    save()
-                state["list_complete"] = state["page_index"] == len(state["pages"])
+                list_posts(self.client,source,state,options,save,notify,_SUMMARY_KEYS)
         except FanboxError as error:
             failure("listing", error)
             if error.code in _STOP_ERRORS:
@@ -109,7 +91,7 @@ class ScanService:
                 if state["posts"][post_id]["comments_complete"]:
                     continue
             try:
-                data = initial_details.get(post_id) or self.client.post(post_id, source.creator_id)
+                data = initial_details.get(post_id) or self.client.post(post_id, summary['creatorId'])
                 post = parse_post(data, options)
                 if options["content"]["comments"] and data.get("commentCount") != 0:
                     post.comments, post.comments_complete, warning = self.client.comments(
@@ -153,19 +135,37 @@ class ScanService:
                     or not (state["pages"] is None or isinstance(state["pages"], list))):
                 raise ValueError
             from .parsers import require_post
-            creator = parse_source(url).creator_id
+            source=parse_source(url)
+            creator=source.creator_id
+            members=state.get('members')
+            member_index=state.get('member_index',0)
+            if source.scope=='following':
+                if (members is not None and (not isinstance(members,list) or len(members)>10000)
+                        or type(member_index) is not int or member_index<0 or members is not None and member_index>len(members)):
+                    raise ValueError
+                for member in members or []:
+                    if parse_source('https://www.fanbox.cc/@'+member).creator_id!=member:raise ValueError
+            def allowed(value):
+                parsed=parse_source('https://www.fanbox.cc/@'+value)
+                return (value in (members or []) if source.scope=='following' else
+                        True if source.scope=='supporting' else parsed.creator_id==creator)
             for post in state["summaries"]:
                 require_post(post, detail=False)
-                if post["creatorId"] != creator: raise ValueError
+                if not allowed(post['creatorId']):raise ValueError
             for key, post in state["posts"].items():
                 parsed = Post.from_dict(post)
-                if key != parsed.id or parsed.creator_id != creator: raise ValueError
+                if key != parsed.id or not allowed(parsed.creator_id): raise ValueError
             if state["pages"] is not None:
                 if state["page_index"] > len(state["pages"]): raise ValueError
-                creator = parse_source(url).creator_id
+                if source.scope=='following':creator=members[member_index]
                 for page in state["pages"]: FanboxClient.page_url(page, creator)
+            if source.scope in {'tag','supporting'}:
+                if type(state.get('feed_started',False)) is not bool or not isinstance(state.get('visited',[]),list):raise ValueError
+                for page in state.get('visited',[]):
+                    if page!='first':FanboxClient.feed_url(page,source,state.get('tag_user_id'))
+                if state.get('next_url') is not None:FanboxClient.feed_url(state['next_url'],source,state.get('tag_user_id'))
             return state
-        except (KeyError, TypeError, ValueError, FanboxError):
+        except (KeyError, TypeError, ValueError,IndexError, FanboxError):
             raise FanboxError("invalid_checkpoint", "检查点无效，或来源、登录状态、配置已改变") from None
 
     @staticmethod
@@ -176,8 +176,9 @@ class ScanService:
         listing_done = state["list_complete"] or state["limit_reached"]
         status = "completed" if listing_done and not incomplete else "partial" if posts else "failed"
         filtered = sum(post_reason(item, options) is not None for item in state["summaries"])
+        reasons=dict(Counter(reason for item in state['summaries'] if (reason:=post_reason(item,options)) is not None))
         return {"schema_version":1, "source":state["source"], "status":status,
-            "coverage":{"list_complete":state["list_complete"], "limit_reached":state["limit_reached"]},
+            "coverage":{"list_complete":state["list_complete"], "limit_reached":state["limit_reached"],"filtered":reasons},
             "counts":{"posts_seen":len(state["summaries"]), "posts_parsed":len(posts), "posts_filtered":filtered,
                       "restricted":sum(post["access"] == "restricted" for post in posts),
                       "assets_selected":sum(asset["selected"] for post in posts for asset in post["assets"]),

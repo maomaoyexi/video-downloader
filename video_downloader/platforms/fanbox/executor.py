@@ -57,8 +57,9 @@ class FanboxExecutor:
                     output=str(confined(self.application.root,result['output'])) if result.get('output') else ''
                     if status in {'completed','partial','failed'}:
                         from .urls import parse_source
-                        source=parse_source(url)
-                        self.callbacks.add_history(source.url,source.creator_id,'Fanbox',{'completed':'success','partial':'partial','failed':'fail'}[status],output)
+                        source=parse_source(result.get('source',url))
+                        title=source.creator_id or {'supporting':'所有赞助','following':'所有关注'}.get(source.scope,'FANBOX')
+                        self.callbacks.add_history(source.url,title,'Fanbox',{'completed':'success','partial':'partial','failed':'fail'}[status],output)
                     self.callbacks.update_progress(1 if status=='completed' else -1,status,stage='content')
                 except BaseException:
                     self.last_result={'status':'failed','content_kind':'fanbox','content_stats':{},

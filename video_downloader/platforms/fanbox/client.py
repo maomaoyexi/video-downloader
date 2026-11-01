@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 from .errors import FanboxError
 from .parsers import require_post
-from .urls import validate_api_url
+from .urls import validate_api_url,parse_source
 
 
 class JsonTransport(Protocol):
@@ -57,6 +57,52 @@ class FanboxClient:
             return card
         except (KeyError,TypeError,ValueError,IndexError):
             raise FanboxError('schema_changed','粉丝卡响应结构变化') from None
+
+    def following_creators(self):
+        url='https://api.fanbox.cc/creator.listFollowing';seen=set();creators=[]
+        while url:
+            url=validate_api_url(url,endpoints={'creator.listFollowing'})
+            if url in seen or len(seen)>=10000:raise FanboxError('pagination_cycle','关注列表分页无法继续')
+            seen.add(url);data=self.transport.get_json(url)['body']
+            values=data.get('creators') if isinstance(data,dict) else None
+            if not isinstance(values,list):raise FanboxError('schema_changed','关注作者列表响应结构变化')
+            for value in values:
+                if not isinstance(value,dict) or not isinstance(value.get('creatorId'),str):
+                    raise FanboxError('schema_changed','关注作者字段结构变化')
+                creators.append(parse_source('https://www.fanbox.cc/@'+value['creatorId']).creator_id)
+            if len(creators)>10000:raise FanboxError('page_limit','关注作者数量超过本地保护上限')
+            url=data.get('nextUrl')
+            if url is not None and not isinstance(url,str):raise FanboxError('schema_changed','关注分页地址结构变化')
+        return list(dict.fromkeys(creators))
+
+    @staticmethod
+    def feed_url(url,source,user_id=None):
+        endpoint='post.listTagged' if source.scope=='tag' else 'post.listSupporting'
+        url=validate_api_url(url,endpoints={endpoint});query=parse_qs(urlsplit(url).query)
+        if source.scope=='tag' and (query.get('userId')!=[user_id] or query.get('tag')!=[source.tag]):
+            raise FanboxError('unsafe_api_url','标签分页与当前作者或标签不匹配')
+        if 'limit' in query and (len(query['limit'])!=1 or not query['limit'][0].isdigit() or not 1<=int(query['limit'][0])<=300):
+            raise FanboxError('unsafe_api_url','分页大小超出允许范围')
+        return url
+
+    def feed_page(self,source,url=None,user_id=None):
+        if url is None:
+            endpoint='post.listTagged' if source.scope=='tag' else 'post.listSupporting'
+            params={'userId':user_id,'tag':source.tag} if source.scope=='tag' else {'limit':100}
+            url='https://api.fanbox.cc/'+endpoint+'?'+urlencode(params)
+        data=self.transport.get_json(self.feed_url(url,source,user_id))['body']
+        if not isinstance(data,dict) or not isinstance(data.get('items'),list) or 'nextUrl' not in data:
+            raise FanboxError('schema_changed','集合帖子列表响应结构变化')
+        next_url=data['nextUrl']
+        if next_url is not None:
+            if not isinstance(next_url,str):raise FanboxError('schema_changed','集合分页地址结构变化')
+            next_url=self.feed_url(next_url,source,user_id)
+        for post in data['items']:
+            require_post(post,detail=False)
+            creator=parse_source('https://www.fanbox.cc/@'+post['creatorId']).creator_id
+            if source.scope=='tag' and creator!=source.creator_id:
+                raise FanboxError('schema_changed','标签列表包含其他创作者')
+        return data['items'],next_url
 
     def pages(self, creator_id):
         data = self._get("post.paginateCreator", creatorId=creator_id)

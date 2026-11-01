@@ -13,6 +13,7 @@ from .errors import FanboxError
 from .naming import asset_path, confined
 from .service import write_json
 from .transport import retry_after
+from .records import resource_record_key
 
 
 def resource_key(post, asset):
@@ -207,7 +208,8 @@ class Downloader:
                     raise FanboxError('incomplete_file','附件响应长度不完整')
                 with part.open('rb') as file:valid_payload(asset,file.read(32))
                 result={'status':'completed','size':part.stat().st_size,'sha256':digest_file(part),
-                        'variant':asset.variant,'key':key,'path':relative}
+                        'variant':asset.variant,'key':key,'path':relative,
+                        'resource_path':resource_record_key(asset.url)}
                 # Recheck parent/link boundaries immediately before promotion.
                 target=confined(self.root,relative,create=True)
                 os.replace(part,target)

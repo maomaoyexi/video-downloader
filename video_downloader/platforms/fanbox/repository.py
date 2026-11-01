@@ -18,7 +18,7 @@ from .errors import FanboxError
 
 
 class Repository:
-    VERSION = 2
+    VERSION = 3
 
     def __init__(self, path, *, clock=time.time):
         self.path = Path(path)
@@ -58,6 +58,17 @@ class Repository:
                             source.backup(target)
                     db.execute('CREATE TABLE IF NOT EXISTS requests(key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, job TEXT NOT NULL)')
                     db.execute('PRAGMA user_version=2')
+                if db.execute('PRAGMA user_version').fetchone()[0]==2:
+                    if version==2:
+                        backup=self.path.with_suffix(self.path.suffix+'.v2.bak')
+                        if backup.exists() or backup.is_symlink():backup=self.path.with_suffix('.v2.'+uuid.uuid4().hex+'.bak')
+                        with sqlite3.connect(self.path) as source,sqlite3.connect(backup) as target:source.backup(target)
+                    db.execute('CREATE TABLE url_records(path TEXT PRIMARY KEY, origin TEXT NOT NULL)')
+                    db.execute('CREATE TABLE success_traffic(bucket INTEGER PRIMARY KEY, bytes INTEGER NOT NULL)')
+                    db.execute('CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+                    db.execute("INSERT INTO metadata VALUES('success_since',?)",(str(self.clock()),))
+                    db.execute("CREATE INDEX jobs_source ON jobs(json_extract(state,'$.source'))")
+                    db.execute('PRAGMA user_version=3')
                 db.commit()
             except BaseException:
                 db.rollback()
@@ -131,6 +142,18 @@ class Repository:
             return [json.loads(row[0]) for row in db.execute(
                 'SELECT state FROM jobs ORDER BY updated DESC LIMIT ?', (limit,))]
 
+    def summaries(self,source=None,limit=100):
+        keys=('id','source','status','version','created_at','updated_at','counts','error','scope','output','phase','outcome','resume_after')
+        expression=','.join("'"+key+"',json_extract(state,'$."+key+"')" for key in keys)
+        query="SELECT json_object("+expression+",'notify',json_extract(state,'$.options.notifications.on_complete')) FROM jobs"
+        args=[]
+        if source is not None:query+=" WHERE json_extract(state,'$.source')=?";args.append(source)
+        query+=' ORDER BY updated DESC LIMIT ?';args.append(limit)
+        with self.connect() as db:
+            values=[json.loads(row[0]) for row in db.execute(query,args)]
+        for value in values:value['notify']=bool(value['notify'])
+        return values
+
     def allocate(self, key, candidate, *, conflict='uniquify', exists=lambda p: False):
         """Freeze paths in SQL before IO; never steal another asset's filename."""
         with self.transaction() as db:
@@ -160,6 +183,40 @@ class Repository:
     def save_asset(self, key, state):
         with self.transaction() as db:
             db.execute('UPDATE assets SET state=? WHERE key=?', (json.dumps(state), key))
+            if state.get('status')=='completed':
+                if state.get('resource_path'):
+                    db.execute("INSERT OR REPLACE INTO url_records VALUES(?,'downloaded')",(state['resource_path'],))
+                if type(state.get('size')) is int and state['size']>=0:
+                    db.execute('INSERT INTO success_traffic VALUES(?,?) ON CONFLICT(bucket) DO UPDATE SET bytes=bytes+excluded.bytes',
+                               (int(self.clock()//60),state['size']))
+
+    def url_records(self):
+        with self.connect() as db:return [dict(row) for row in db.execute('SELECT path,origin FROM url_records ORDER BY path')]
+
+    def import_url_records(self,paths):
+        with self.transaction() as db:
+            before=db.total_changes
+            db.executemany("INSERT OR IGNORE INTO url_records VALUES(?,'imported')",((path,) for path in paths))
+            return db.total_changes-before
+
+    def clear_url_records(self):
+        with self.transaction() as db:return db.execute('DELETE FROM url_records').rowcount
+
+    def record_stats(self):
+        with self.connect() as db:
+            count=db.execute('SELECT COUNT(*) FROM url_records').fetchone()[0]
+            imported=db.execute("SELECT COUNT(*) FROM url_records WHERE origin='imported'").fetchone()[0]
+            verified=db.execute("SELECT COUNT(*) FROM assets WHERE json_extract(state,'$.status')='completed'").fetchone()[0]
+        return {'urls':count,'imported':imported,'verified':verified}
+
+    def imported_hints(self,paths):
+        result=set()
+        with self.connect() as db:
+            for offset in range(0,len(paths),500):
+                chunk=paths[offset:offset+500]
+                result.update(row[0] for row in db.execute("SELECT path FROM url_records WHERE origin='imported' AND path IN ("+
+                              ','.join('?' for _ in chunk)+')',chunk))
+        return result
 
     def acquire(self, kind, *, limit=1, interval=0, ttl=120):
         now, token = self.clock(), uuid.uuid4().hex
@@ -239,9 +296,14 @@ class Repository:
     def usage_history(self,zone,days=30):
         tz=ZoneInfo(zone)
         today=datetime.fromtimestamp(self.clock(),timezone.utc).astimezone(tz).date()
-        totals={str(today-timedelta(days=i)):0 for i in reversed(range(days))}
+        totals={str(today-timedelta(days=i)):{'bytes':0,'completed_bytes':0} for i in reversed(range(days))}
         with self.connect() as db:
-            for row in db.execute('SELECT bucket,bytes FROM traffic WHERE bucket>=?',(int((self.clock()-days*86400)//60),)):
-                date=str(datetime.fromtimestamp(row['bucket']*60,timezone.utc).astimezone(tz).date())
-                if date in totals:totals[date]+=row['bytes']
-        return [{'date':date,'bytes':count} for date,count in totals.items()]
+            since=float(db.execute("SELECT value FROM metadata WHERE key='success_since'").fetchone()[0])
+            first_day=str(datetime.fromtimestamp(since,timezone.utc).astimezone(tz).date())
+            for date in totals:
+                if date<first_day:totals[date]['completed_bytes']=None
+            for table,key in [('traffic','bytes'),('success_traffic','completed_bytes')]:
+                for row in db.execute('SELECT bucket,bytes FROM '+table+' WHERE bucket>=?',(int((self.clock()-days*86400)//60),)):
+                    date=str(datetime.fromtimestamp(row['bucket']*60,timezone.utc).astimezone(tz).date())
+                    if date in totals and totals[date][key] is not None:totals[date][key]+=row['bytes']
+        return [{'date':date,**counts} for date,counts in totals.items()]

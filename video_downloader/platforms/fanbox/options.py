@@ -10,7 +10,7 @@ from .errors import FanboxError
 
 DEFAULT_OPTIONS = {
     "schema_version": 1,
-    "workflow": {"auto_download": True},
+    "workflow": {"auto_download": True,"scope":"source"},
     "content": {"body": True, "body_formats": ["html"], "raw_snapshot": True,
                 "cover": True, "links": True, "comments": False, "comment_max_pages": 20,
                 "image_quality": "original", "image_fallback": "ask"},
@@ -38,6 +38,7 @@ DEFAULT_OPTIONS = {
 }
 
 _ENUMS = {
+    "workflow.scope": {"source","supporting","following"},
     "content.image_quality": {"original", "thumbnail"}, "content.image_fallback": {"ask", "never", "allow"},
     "fan_cards.scope": {"current", "all_supporting"},
     "filters.fee.op": {">=", "=", "<="}, "filters.post_id.op": {">", "<"},
@@ -222,6 +223,8 @@ def import_plugin_settings(value: dict) -> tuple[dict, list[dict]]:
             target = result
             for part in path[:-1]: target = target.setdefault(part, {})
             target[path[-1]] = raw
+            if key in {'userSetLang','theme','showAdvancedSettings'}:status='follows_application'
+            if key in {'tipCreateFolder','showHowToUse'}:status='preserved_not_applied'
         elif key in _LEGACY_UI:
             result.setdefault("compat", {}).setdefault("original_ui", {})[key] = raw
             status = "preserved_not_applied"

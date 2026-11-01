@@ -27,7 +27,7 @@ from .repository import Repository
 from .scheduling import AccountGate
 from .service import ScanService, write_json
 from .transport import CurlTransport, HttpTransport
-from .urls import parse_source
+from .urls import parse_source,source_for_options
 
 _PAUSES={'cancelled','quota_exceeded','quota_busy','rate_limited','challenge_required','access_denied','fallback_required','conflict_required'}
 
@@ -58,8 +58,9 @@ class ArchiveApplication:
             return self._repository
 
     def create(self,url,options=None,*,request_key=None,fingerprint=None):
-        source=parse_source(url)
-        state={'id':uuid.uuid4().hex,'source':source.url,'options':normalize_options(options),
+        options=normalize_options(options)
+        source=source_for_options(url,options)
+        state={'id':uuid.uuid4().hex,'source':source.url,'options':options,
                'created_at':time.time(),'task_date':datetime.now(timezone.utc).isoformat(),
                'status':'queued','phase':'queued','counts':{},'files':{},'archives':[],
                'checkpoint':None,'scan':None,'auth_scope':None,'selection':{},'error':None,
@@ -192,8 +193,11 @@ class ArchiveApplication:
                     log('开始保存粉丝卡')
                     state['fan_cards']=[]
                     try:
+                        current_source=parse_source(state['source'])
+                        if options['fan_cards']['scope']=='current' and not current_source.creator_id:
+                            raise FanboxError('card_scope_required','集合任务请明确选择所有赞助作者的粉丝卡')
                         creators=(client.supporting_creators() if options['fan_cards']['scope']=='all_supporting'
-                                  else [parse_source(state['source']).creator_id])
+                                  else [current_source.creator_id])
                         if not creators:raise FanboxError('no_supporting_creators','当前账号没有可用的赞助粉丝卡')
                     except FanboxError as error:
                         if error.code in _PAUSES:raise

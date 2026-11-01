@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import os
+import tempfile
 from pathlib import Path
 from urllib.parse import quote
 
@@ -13,10 +14,25 @@ from .service import write_json
 
 def write_text(path,text):
     path=Path(path)
-    temporary=path.with_name(path.name+'.tmp')
-    with temporary.open('w',encoding='utf-8',newline='\n') as file:
-        file.write(text);file.flush();os.fsync(file.fileno())
-    os.replace(temporary,path)
+    descriptor,name=tempfile.mkstemp(prefix=path.name+'.',suffix='.tmp',dir=path.parent)
+    temporary=Path(name)
+    try:
+        with os.fdopen(descriptor,'w',encoding='utf-8',newline='\n') as file:
+            file.write(text);file.flush();os.fsync(file.fileno())
+        os.replace(temporary,path)
+    finally:temporary.unlink(missing_ok=True)
+
+
+def comment_lines(items,depth=0):
+    if depth>=20:return
+    for item in items:
+        if not isinstance(item,dict):continue
+        user=item.get('user');name=user.get('name','') if isinstance(user,dict) else ''
+        value=item.get('body','')
+        if isinstance(value,str):yield ('  '*depth)+(name+': ' if isinstance(name,str) and name else '')+value
+        replies=item.get('replies',[])
+        if isinstance(replies,dict):replies=replies.get('items',[])
+        if isinstance(replies,list):yield from comment_lines(replies,depth+1)
 
 
 def paragraph_html(block):
@@ -45,7 +61,8 @@ def paragraph_html(block):
 
 def export_index(root,state):
     from .urls import parse_source
-    creator=parse_source(state['source']).creator_id
+    source=parse_source(state['source'])
+    creator=source.creator_id or '_collections/'+source.scope
     relative=f'{creator}/_jobs/{state["id"]}/index.html'
     target=confined(root,relative,create=True)
     titles={p['id']:p['title'] for p in state['scan']['posts']}
@@ -113,6 +130,12 @@ def export_post(root,repository,post,options,task_date,files):
                 text.append(url)
         else:
             body.append('<p class="missing">[未知内容]</p>')
+    if options['content']['comments']:
+        comments=list(comment_lines(post.comments))
+        if comments:
+            text.extend(['评论',*comments]);body.append('<section><h2>评论</h2>'+''.join('<p>'+escape(line).replace('\n','<br>')+'</p>' for line in comments)+'</section>')
+        if not post.comments_complete:
+            text.append('[评论未完整]');body.append('<p class="missing">评论未完整</p>')
     if options['content']['body']:
         for fmt in options['content']['body_formats']:
             if fmt in {'txt','md'}:
