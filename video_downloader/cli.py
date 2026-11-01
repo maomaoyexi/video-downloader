@@ -1,6 +1,7 @@
 """
 video_downloader.cli - 命令行模式
-直接传 URL 或 --batch 即可下载，使用默认配置，自动识别平台。
+直接传 URL 或 --batch 自动识别平台；普通 yt-dlp 下载使用默认配置。
+Rplay 与 FANBOX 使用各自专项入口并读取已保存配置；FANBOX 另提供扫描和归档命令。
 不依赖 AppContainer/HTTP/SSE，纯函数 + subprocess 轻量实现。
 """
 import os
@@ -23,6 +24,13 @@ def _print_help():
 用法:
   {sys.argv[0]} <URL>                  直接下载单个视频（自动识别平台）
   {sys.argv[0]} --batch [文件]         批量下载（默认读取 urls.txt）
+  {sys.argv[0]} --fanbox-scan <URL> --output <清单.json> [选项]
+                                      FANBOX 扫描清单，不下载附件
+  {sys.argv[0]} --fanbox-download <URL> [选项]
+                                      FANBOX 内容归档
+  {sys.argv[0]} --fanbox-scan --help    查看 FANBOX 扫描选项
+  {sys.argv[0]} --fanbox-download --help
+                                      查看 FANBOX 归档与恢复选项
   {sys.argv[0]} --help / -h            查看此帮助
   {sys.argv[0]}                        启动 WebUI 模式（无参数）
 
@@ -31,13 +39,22 @@ def _print_help():
   {sys.argv[0]} https://youtube.com/watch?v=dQw4w9WgXcQ
   {sys.argv[0]} --batch
   {sys.argv[0]} --batch my_links.txt
+  {sys.argv[0]} --fanbox-scan https://creator.fanbox.cc --output manifest.json --anonymous
+  {sys.argv[0]} --fanbox-download https://creator.fanbox.cc --preview
 
 说明:
-  - CLI 模式使用默认配置：最佳画质、H.264、MP4、4线程、Cookie 自动
-  - 平台根据 URL 域名自动识别，无需手动指定（支持 YouTube/Bilibili/Twitch/Niconico/NicoChannel/Fantia/TwitCasting/Twitter）
-  - 下载文件保存到工具目录下的「download/平台名/作者名/」文件夹
-  - 如需自定义配置（画质、编码、代理等），请启动 WebUI 在设置页面调整
-  - 依赖 yt-dlp.exe 和 ffmpeg.exe 需位于工具目录的 dependency 文件夹中
+  - URL 识别包含 YouTube/Bilibili/Twitch/Niconico/NicoChannel/Fantia/TwitCasting/Twitter/Rplay/FANBOX；各平台支持的链接和权限不同
+  - 普通 yt-dlp URL 和 --batch 中的普通视频使用 DEFAULT_CONFIG：最佳画质与编码、MP4、4线程，不读取 WebUI 保存的配置
+  - 普通 CLI 不会自动应用 WebUI 保存的 Cookie 设置；自定义画质、代理、登录及 Fantia 专项下载请使用 WebUI
+  - Rplay URL 使用专项入口读取 settings.ini；受限内容使用独立 Firefox 授权，普通 cookies.txt 不能替代；未完成文件重试会重新下载
+  - FANBOX URL 和 --fanbox-download 读取 settings.ini 中的专项配置；需指定 --cookies 凭据文件或 --anonymous 时，请使用 --fanbox-download
+  - --fanbox-scan 也读取配置，但当前忽略保存的 FANBOX_ANONYMOUS；匿名扫描必须显式传 --anonymous，不能只依赖 WebUI 设置
+  - FANBOX 扫描命令默认查找工具目录 cookies.txt；--fanbox-download 才读取 FANBOX_COOKIE_FILE；两者均可用 --cookies 指定文件
+  - FANBOX 正文、图片、附件和外链清单以当前权限为准；外链仅记录，不下载外站内容；不保证所有平台的列表/频道均可下载
+  - 普通视频保存到「download/平台名/作者名/」，FANBOX 默认归档到「download/Fanbox/」
+  - 普通视频依赖 dependency 中的 yt-dlp.exe 和 ffmpeg.exe，Rplay 还需 ffprobe.exe；FANBOX 使用独立运行依赖
+  - Withny HAR 存档和配置录制请使用 WebUI；此 CLI 没有对应 HAR 导入命令
+  - 推荐下载限速 5–10 MB/s；高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担
 """.strip())
     print()
 

@@ -26,6 +26,7 @@ https://github.com/ZheYi101
 - ErgouTree（@ergou10086）：PR #15 下载归档选择、独立批量封面及 PO Token Provider 启动改进
 
 - ErgouTree（@ergou10086）：v2.7.0 PR #18 的全部新增功能，包括 Rplay 点播、直播、Twitch 转播、Firefox 授权，以及 FANBOX 扫描、预览、内容归档、筛选、命名、粉丝卡、流量记录和相关 WebUI／命令行功能
+- 猫猫葉汐A_spy（@maomaoyexi）：v2.7.0 单任务执行器停止路由修复与回归测试、版本整合、打包及文档整理
 
 第三方组件
 - BgUtils POT Provider（Brainicism 等贡献者，GPL-3.0-only）

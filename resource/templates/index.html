@@ -556,17 +556,26 @@
           <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-rocket"></use></svg>快速开始</h3>
             <p><b>单个视频：</b>在下载页粘贴链接，回车即可，平台会自动识别。</p>
-            <p><b>播放列表 / 频道：</b>直接粘贴列表或频道 URL，会按顺序下载全部视频。</p>
+            <p><b>播放列表 / 频道：</b>支持情况由平台和链接类型决定，不能保证所有平台的列表或频道都能下载。Rplay 请使用单个点播或直播间入口；FANBOX 按创作者、帖子等归档入口处理。</p>
             <p><b>批量：</b>在输入框里每行粘一个链接；或把链接写进工具目录的 <span class="code">urls.txt</span>，用工具页的「TXT 混合批量下载」。</p>
+            <p><b>FANBOX 单独建任务：</b>不要把 FANBOX 与其他平台链接混在同一个任务内；不同任务仍可并行。</p>
           </div>
 
           <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-cookie"></use></svg>Cookie 配置</h3>
-            <p>Fantia 必须登录；YouTube / Twitch 的年龄限制与会员内容也需要。两种方式二选一：</p>
+            <p>登录只提供账号已有权限，不能绕过付费、会员、地区或 DRM 限制。普通视频平台按需选择以下 Cookie 方式：</p>
             <ol>
               <li><b>cookies.txt 文件</b> — 用浏览器扩展导出，改名放到工具目录。</li>
-              <li><b>浏览器提取（推荐）</b> — 在设置里选已登录的浏览器，每次下载前自动取最新 Cookie。</li>
+              <li><b>浏览器提取</b> — 在设置里选已登录且受支持的浏览器；实际可用性取决于浏览器及其登录状态。</li>
             </ol>
+            <p><b>平台差异：</b>Fantia 必须登录，专项下载仅支持 <span class="code">cookies.txt</span> 文件模式；Rplay 使用独立 Firefox 授权，普通 Cookie 文件不能替代；FANBOX 使用凭据文件或匿名访问，匿名只读取平台允许公开访问的内容。</p>
+            <p>YouTube / Twitch 等平台的年龄限制、会员内容需要相应观看权限；NicoChannel 的 Firefox JWT 方式见下方说明。</p>
+          </div>
+
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-list"></use></svg>任务与并发</h3>
+            <p>「设置 → 任务与并发」默认开启任务模式，任务间默认并行 2 个，可设 1–5 个；设为 1 时任务间串行。任务内直播与视频可使用独立额度，点击任务查看具体链接、进度和日志。</p>
+            <p>FANBOX 使用独立归档任务与专项文件并发设置，请与普通视频分开提交；不同任务仍可并行。普通任务队列仅保留在本次运行中，重启后不恢复。</p>
           </div>
 
           <div class="dsec">
@@ -581,14 +590,23 @@
             <p><b>直播模式：</b>在「设置 → 直播设置」选择全局模式，并可分别设置支持追开播的平台默认方式。开始直播任务前会检查状态：未开播可加入蹲开播；已开播会显示开播时间和已开播时长，并让你确认录制方式；追开播不可用时会提示原因并降级为从当前时刻。</p>
             <p><b>Bilibili：</b>粘贴 <span class="code">live.bilibili.com/房间号</span>，默认从当前时刻录制；普通观看侧无 DVR，不支持追开播。</p>
             <p><b>Twitch：</b>粘贴频道 URL 录制当前直播；仅当本场有可访问的增长中 VOD 时才可能追开播。<span class="code">/videos/</span> 链接是回放。</p>
-            <p><b>TwitCasting：</b>主播页默认从当前时刻录制；<span class="code">/movie/ID</span> 下载单条，<span class="code">/show</span> 拉取历史列表。密码保护内容会弹窗要求输入密码；在平台专项设置中可选择记住密码或保存到 XLSX，两项默认关闭。</p>
+            <p><b>TwitCasting：</b>主播页默认从当前时刻录制；<span class="code">/movie/ID</span> 下载单条，<span class="code">/show</span> 拉取历史列表。密码保护内容会弹窗要求输入密码；在平台专项设置中可选择记住密码或保存到 XLSX，两项默认关闭。XLSX 以明文保存密码，除非获得明确授权，请勿发送给其他人。</p>
+            <p><b>Rplay：</b>支持已接入直播源的状态检查、等待开播与录制；Twitch 转播要求源频道仍在直播且具有观看权限，Rplay 凭据不会转交给 Twitch。</p>
             <p>录制期间需保持工具运行；停止后先收尾，再验证音视频和文件完整性。恢复失败时会保留已录制内容与报告。</p>
           </div>
 
           <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-bookmark"></use></svg>Rplay / FANBOX</h3>
+            <p><b>Rplay 点播：</b>支持单个 HLS 点播；受限内容需在 Firefox 登录后，在「Cookie 登录」配置独立的 Rplay 登录来源与配置。暂不支持分离音画；未完成文件再次下载会重下，不能承诺断点接续。</p>
+            <p><b>FANBOX 归档：</b>支持创作者主页、单帖、标签及账号可访问的赞助/关注集合。下载前可预览和选择帖子、附件，本次设置不覆盖全局默认值。</p>
+            <p>可归档正文、图片、附件、封面、原始 JSON、可选评论和外链清单；外链仅记录，不下载外站内容。粉丝卡、评论、正文和附件是否可用取决于当前账号权限与平台返回，请核对清单和具体文件结果。</p>
+          </div>
+
+          <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-file-text"></use></svg>Withny 存档与录制</h3>
-            <p><b>历史存档：</b>选 Withny 平台，点「开始下载」，选浏览器导出的「包含内容」HAR。</p>
-            <p><b>直播录制：</b>把 withny-dl 可执行文件放在 dependency 目录，点「选择配置并录制」，选它的 YAML 配置，工具会持续监控频道。</p>
+            <p><b>历史存档：</b>选 Withny 平台，点「选择 HAR 并下载」，选浏览器导出的「包含内容」HAR。</p>
+            <p><b>直播录制：</b>完整保留依赖包中的 <span class="code">dependency/Withny/</span> 受管组件及配套 manifest，点「选择配置并录制」并选择 YAML 配置。受管组件不可用时可能回退旧工具，应核对任务记录和评论报告。</p>
+            <p><b>输出与配置：</b>程序生成当前会话的私有配置，不改写原配置；输出和部分收尾选项由本工具接管，请按任务记录与会话报告查找文件。</p>
             <p><b>限制与隐私：</b>仅处理未加密的普通 HLS 存档；检测到 DRM、加密或缺失签名会拒绝。HAR 含登录凭据，用完请删除，不要分享。</p>
           </div>
 
@@ -625,10 +643,24 @@
 
           <div class="dsec">
             <h3><svg class="ico s14"><use href="#i-wrench"></use></svg>常见问题</h3>
-            <p><b>速度慢：</b>检查代理，或把并发线程调高。</p>
-            <p><b>提示需要登录：</b>按上面的 Cookie 配置来。</p>
-            <p><b>中断了：</b>默认开启断点续传，重新下载会自动接上。</p>
-            <p><b>网站改版下不动：</b>工具页点「更新 yt-dlp」。</p>
+            <p><b>速度慢：</b>先检查线路、代理、平台限流和同时运行的任务，再调整并发。下载限速推荐 5–10 MB/s；高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担。</p>
+            <p><b>提示需要登录：</b>先确认账号在浏览器里能观看，再按对应平台的 Cookie、Firefox 或凭据文件方式配置。</p>
+            <p><b>中断了：</b>续传取决于平台、资源和下载方式。普通 yt-dlp 下载通常可复用未完成文件；TwitCasting 会校验并复用完整分片；FANBOX 按检查点及资源验证决定复用或重下；Rplay 未完成文件重试会重下。</p>
+            <p><b>关闭网页：</b>有任务时确认关闭后，任务继续在后台运行；无任务时关闭网页，程序会在 30 秒后退出。不要关闭后端控制台，彻底退出请用「✕ 退出」。</p>
+            <p><b>网站改版下不动：</b>普通 yt-dlp 提取失败可在工具页更新核心；Rplay 插件或 FANBOX 接口兼容问题还应检查程序与配套依赖版本，并保留相关日志。</p>
+          </div>
+
+          <div class="dsec">
+            <h3><svg class="ico s14"><use href="#i-wrench"></use></svg>当前已知问题</h3>
+            <p>已修复单任务模式下，跨 FANBOX 后新任务成功启动但停止仍指向旧执行器的问题。以下六项仍待修复：</p>
+            <ol>
+              <li>FANBOX 排队任务暂停或启动失败后，归档记录可能卡在 <span class="code">queued</span>；核对日志，必要时重启。</li>
+              <li>FANBOX 与其他平台混合批量时，重新下载确认可能失败；请独立建任务，不同任务仍可并行。</li>
+              <li>原图 PNG/GIF、缩略图 JPEG 时，FANBOX 缩略图可能按错误格式校验；暂用原图质量。</li>
+              <li>FANBOX 先预览再下载可能漏存受限帖公开封面；请人工核对结果。</li>
+              <li>FANBOX API 请求间隔达到或超过 120 秒可能使租约过期，中断后仍显示 <span class="code">running</span>；避免此设置，异常时核对日志并重启。</li>
+              <li>独立 <span class="code">--fanbox-scan</span> 忽略保存的 <span class="code">FANBOX_ANONYMOUS</span>，匿名扫描必须显式传 <span class="code">--anonymous</span>；WebUI 和归档下载 CLI 不受此项影响。</li>
+            </ol>
           </div>
 
         </div>
@@ -650,7 +682,7 @@
             <div class="sect">
               <div class="sh"><b>支持平台</b><span class="rule"></span></div>
               <div class="chips" id="aboutPlatforms"></div>
-              <p class="notice">Withny 提供已授权历史存档保存与直播监控录制。</p>
+              <p class="notice">Rplay 提供已接入的点播与直播支持；FANBOX 提供权限范围内的内容归档；Withny 提供已授权历史存档保存与直播监控录制。各平台支持的链接、认证和续传方式不同。</p>
             </div>
 
             <div class="sect">
@@ -665,7 +697,10 @@
                 <div class="specrow"><span class="k">v2.4.0 更新</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — 其他更新与修复</span></div>
                 <div class="specrow"><span class="k">v2.5.0 WebUI</span><span>DarkKandaoMaster <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a> — 视觉与交互体系重构</span></div>
                 <div class="specrow"><span class="k">v2.6.0 上游修复</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — Cookie 模板、TwitCasting 密码表、HLS 路径及恢复、文件对话框回退与相关测试</span></div>
+                <div class="specrow"><span class="k">v2.6.0 直播与任务设置</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — 各平台直播入口、录制策略、断流处理与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」两个按钮及相关功能</span></div>
                 <div class="specrow"><span class="k">v2.5.0 功能</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — 设置控件、TwitCasting、Provider 与目录收拢</span></div>
+                <div class="specrow"><span class="k">v2.7.0 PR #18</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — Rplay 点播、直播与 Firefox 授权；FANBOX 扫描、预览、归档及相关 WebUI / CLI</span></div>
+                <div class="specrow"><span class="k">v2.7.0 维护</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — 单任务停止路由修复、回归测试、版本整合与文档维护</span></div>
               </div>
             </div>
           </div>
