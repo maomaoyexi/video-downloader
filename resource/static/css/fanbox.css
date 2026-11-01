@@ -17,6 +17,7 @@
 .fb-platform-title{font-size:13px;font-weight:600;color:var(--fg2);margin:0 0 16px}
 .fb-settings-group{padding:14px 0 8px}.fb-settings-group h4{font-size:12px;font-weight:500;color:var(--fg3);margin:0 0 10px}
 .fb-settings-list{display:flex;flex-direction:column}
+.fb-settings-actions{margin:6px 0 12px}
 .fb-settings-fold{margin:16px 0;border-top:1px solid var(--line);padding-top:14px}.fb-settings-fold>summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--fg2);padding:4px 0}.fb-settings-fold[open]>summary{margin-bottom:10px}.fb-name-preview{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg2);font-size:12px;padding:10px;background:var(--surface2);border-radius:var(--r)}
 .fb-field{display:grid;grid-template-columns:minmax(180px,36%) minmax(0,1fr);align-items:center;gap:14px;min-height:46px;padding:6px 0;color:var(--fg2);font-size:13px}
 .fb-field>span:first-child{line-height:1.6;overflow-wrap:anywhere}.fb-field .ctl{width:100%;max-width:420px;min-width:0;height:34px;padding:6px 10px;font:inherit}

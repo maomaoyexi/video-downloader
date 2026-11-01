@@ -74,6 +74,7 @@
   function renderSettings(host=$('fanboxSettingsFields'),model=options,allowed=null) {
     if(!model)return;
     const opened=new Set([...host.querySelectorAll('details[open][data-fb-fold]')].map(el=>el.dataset.fbFold));
+    const settingsActions=host.id==='fanboxSettingsFields'?$('fanboxSettingsActions'):null;
     host.replaceChildren();let folded,regular=host;
     if(!allowed){folded=element('details',null,{className:'fb-settings-fold'});folded.dataset.fbFold='occasional';
       folded.open=opened.has('occasional')||host.id==='fanboxTaskFields';folded.append(element('summary','单次下载选项'));
@@ -123,8 +124,6 @@
       if(allowed)group(title,fields.filter(([path])=>allowed.has(path)),host);
       else {group(title,fields.filter(([path])=>!occasional(path)),regular);group(title,fields.filter(([path])=>occasional(path)),folded);}
     });
-    if(folded)host.append(folded);
-    if(regular!==host)host.append(regular);
     if(allowed)return;
     const row=element('label',null,{className:'fb-field'}),select=element('select',null,{className:'ctl'});
     row.append(element('span','应用图片命名收藏'));select.append(element('option','选择收藏',{value:''}));
@@ -132,11 +131,17 @@
     select.onchange=()=>{if(select.value){set('naming.images',select.value,model);host.querySelector('[data-fanbox-option="naming.images"]').value=select.value;}};
     row.append(select);regular.append(row);
     const preview=element('pre',null,{className:'fb-name-preview',hidden:true});
-    regular.append(button('命名预览',async()=>{try{
+    const previewButton=button('命名预览',async()=>{try{
       const url=$('urlInput').value.trim().split(/\s+/)[0];
       const result=await api('/api/fanbox/naming-preview',{method:'POST',body:JSON.stringify({options:model,...(url&&matches(url)?{url}:{})})});
       preview.textContent=[result.directory,...result.files].join('\n');preview.hidden=false;
-    }catch(e){showToast(e.message,'error');}}),preview);
+    }catch(e){showToast(e.message,'error');}});
+    if(settingsActions){
+      const utilities=[...settingsActions.querySelectorAll('#fanboxUsage, #fanboxRecords')];
+      settingsActions.replaceChildren(previewButton,...utilities);regular.append(settingsActions,preview);
+    }else regular.append(previewButton,preview);
+    if(folded)host.append(folded);
+    if(regular!==host)host.append(regular);
   }
   function applyConfig(config) {
     $('fanboxEnabled').checked=String(config.FANBOX_ENABLED??1)==='1';

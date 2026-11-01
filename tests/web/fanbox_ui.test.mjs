@@ -24,6 +24,7 @@ async function page(){
     if(path==='/api/fanbox/auth')return {runtime:{available:true},status:'anonymous'};
     if(path==='/api/fanbox/jobs')return {jobs:[]};
     if(path==='/api/fanbox/create')return {job};
+    if(path==='/api/fanbox/naming-preview')return {directory:'sample/post',files:['images/001.png']};
     if(path.startsWith('/api/fanbox/history'))return {runs:[job]};
     if(path.startsWith('/api/fanbox/logs'))return {logs:[]};
     if(path.startsWith('/api/fanbox/job'))return {job,posts:[{id:'1',title:'Match <script>',published_at:'2026-10-01',access:'accessible',resources:0}],total:1,options:defaults};
@@ -45,6 +46,19 @@ test('all settings render and one-run edits never mutate defaults',async()=>{
     assert.equal(d.querySelector('#fanboxSettingsFields [data-fanbox-option="fan_cards.scope"]').value,'current');
     assert.equal(d.getElementById('fanboxImportButton'),null);
     assert.equal(d.querySelector('#fanboxSettingsFields details[data-fb-fold="occasional"]').open,false);
+    const actions=d.getElementById('fanboxSettingsActions'),fold=d.querySelector('#fanboxSettingsFields [data-fb-fold="occasional"]');
+    assert.deepEqual([...actions.children].map(el=>el.textContent),['命名预览','下载流量','下载记录']);
+    assert.ok(actions.compareDocumentPosition(fold)&w.Node.DOCUMENT_POSITION_FOLLOWING);
+    assert.equal(actions.previousElementSibling.textContent,'应用图片命名收藏选择收藏');
+    await actions.firstElementChild.click();await tick();
+    assert.equal(actions.nextElementSibling.hidden,false);
+    assert.equal(actions.nextElementSibling.textContent,'sample/post\nimages/001.png');
+    const usage=d.getElementById('fanboxUsage'),handler=usage.onclick;
+    ui.applyConfig({FANBOX_OPTIONS:JSON.stringify(defaults)});
+    assert.equal(d.querySelectorAll('#fanboxSettingsActions').length,1);
+    assert.equal(d.getElementById('fanboxUsage'),usage);
+    assert.equal(usage.onclick,handler);
+    assert.equal(d.getElementById('fanboxSettingsActions').children.length,3);
     assert.equal(d.getElementById('fanboxPreview').nextElementSibling.id,'btnStart');
     ui.start('https://sample.fanbox.cc');
     assert.ok(d.getElementById('fanboxTaskDialog').open);

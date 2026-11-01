@@ -21,6 +21,7 @@ const server=http.createServer(async(req,res)=>{
     if(name==='/api/save-config'){config={...config,...JSON.parse(body)};result={ok:true};}
     if(name==='/api/fanbox/options')result={options,defaults:options,enabled:true,anonymous:true,cookie_file:''};
     if(name==='/api/fanbox/auth')result={runtime:{available:true},status:'anonymous'};
+    if(name==='/api/fanbox/naming-preview')result={directory:'sample/post',files:['images/001.png','attachments/file.zip']};
     if(name==='/api/fanbox/jobs')result={jobs};
     if(name==='/api/fanbox/create'){created.push(JSON.parse(body));jobs=[job];result={job};}
     if(name==='/api/fanbox/job')result={job,options,verification:job.verification,posts:[{id:'1',title:'Sample post',fee:500,published_at:'2026-10-31',access:'accessible',resources:0,known_bytes:0}],total:1};
@@ -78,6 +79,18 @@ try{
       await page.setViewportSize({width,height:900});await page.evaluate(()=>setActivePage('settings'));await page.locator('#set-fanbox').scrollIntoViewIfNeeded();
       const overflow=await page.locator('#set-fanbox').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
       assert.ok(overflow.scroll<=overflow.client+1,`${theme}/${width}: settings overflow ${JSON.stringify(overflow)}`);
+      const toolbar=page.locator('#fanboxSettingsActions');
+      await toolbar.getByRole('button',{name:'命名预览',exact:true}).click();
+      await page.locator('#fanboxSettingsFields .fb-name-preview').waitFor({state:'visible'});
+      const layout=await toolbar.evaluate(el=>{
+        const boxes=[...el.children].map(button=>button.getBoundingClientRect());
+        const fold=document.querySelector('#fanboxSettingsFields [data-fb-fold="occasional"]');
+        return {display:getComputedStyle(el).display,ys:boxes.map(box=>box.y),right:Math.max(...boxes.map(box=>box.right)),
+          edge:el.getBoundingClientRect().right,previewEnd:el.nextElementSibling.getBoundingClientRect().bottom,foldTop:fold.getBoundingClientRect().top};
+      });
+      assert.equal(layout.display,'flex');
+      assert.ok(layout.ys.every(y=>Math.abs(y-layout.ys[0])<1),`${theme}/${width}: buttons must share a row`);
+      assert.ok(layout.right<=layout.edge+1&&layout.previewEnd<=layout.foldTop,`${theme}/${width}: tools must precede one-run options`);
 
       await page.evaluate(()=>{setActivePage('download');FanboxUI.start('https://sample.fanbox.cc');});
       const modal=await page.locator('#fanboxTaskDialog').evaluate(el=>({right:el.getBoundingClientRect().right,width:innerWidth,body:el.scrollWidth,client:el.clientWidth}));
