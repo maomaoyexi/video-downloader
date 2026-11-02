@@ -41,6 +41,10 @@
 }
 .settings-toc-toggle:hover{border-color:var(--line2);color:var(--fg)}
 .settings-toc-nav{display:flex;flex-direction:column;gap:2px}
+.settings-section-toggle{cursor:pointer}
+.settings-section-toggle:focus-visible{outline:1px solid var(--fg);outline-offset:1px}
+.settings-section-chevron{color:var(--fg3);flex:none}
+.settings-section-toggle[aria-expanded="false"]>.settings-section-chevron{transform:rotate(-90deg)}
 .settings-toc-item{
   display:flex;
   align-items:center;
@@ -62,16 +66,18 @@
   font-family:var(--mono);
   font-style:normal;
   font-size:10px;
-  color:var(--fg3);
+  color:var(--fg2);
   width:16px;
   flex:none;
 }
 .settings-toc-item span{overflow:hidden;text-overflow:ellipsis}
+.settings-toc-item>.settings-section-chevron{margin-left:auto;color:var(--fg2)}
 .settings-toc-item:hover{background:var(--surface2);color:var(--fg)}
 .settings-toc-item.on{border-left-color:var(--fg);background:var(--surface3);color:var(--fg);font-weight:500}
 .settings-toc.collapsed .settings-toc-item{padding:0 6px;gap:0}
 .settings-toc.collapsed .settings-toc-item span{display:none}
 .settings-toc.collapsed .settings-toc-nav{gap:4px}
+.settings-toc.collapsed .settings-toc-item>.settings-section-chevron{display:none}
 
 .settings-stack{display:flex;flex-direction:column;min-width:0}
 .settings-section{
@@ -81,30 +87,105 @@
   padding:22px 0;
   border-bottom:1px solid var(--line);
 }
+.settings-section.has-section-toggle{gap:0;padding-top:0}
 .settings-section:first-child{padding-top:0}
 .settings-section:last-child{border-bottom:0;padding-bottom:4px}
 .settings-section>.sh{margin-bottom:2px}
+.settings-section>.settings-section-heading{
+  appearance:none;
+  width:100%;
+  height:auto;
+  padding:22px 0 12px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--fg2);
+  font:inherit;
+  text-align:left;
+  justify-content:flex-start;
+}
+.settings-section-heading:hover>b,
+.settings-section-heading:hover>.settings-section-chevron{color:var(--fg)}
+.settings-section:first-child>.settings-section-heading{padding-top:0}
+.settings-section.is-collapsed{padding-bottom:0}
+.settings-section.is-collapsed>.settings-section-heading{padding-bottom:22px}
+.settings-section.is-collapsed:last-child>.settings-section-heading{padding-bottom:4px}
+.settings-section-body{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:980px}
+.settings-section-body[hidden]{display:none}
+.settings-section-body .row{min-width:0}
+.settings-section-body .row>.lb{width:112px}
+.settings-section-body .row>.sel{max-width:340px}
+.settings-section-body .row>input[type=range]{flex:0 1 340px;max-width:340px}
+/* 较长的平台开关名称保留标签空间，路径和文本输入不套短选项宽度。 */
+#set-platform>.settings-section-body>.row>.lb{width:180px}
 
-.live-platform-modes{
+/* 直播参数与输出区使用同一密度，说明独占下一行，避免挤压控件。 */
+#set-live>.settings-section-body:not([hidden]){
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));
+  gap:12px 36px;
+  align-items:start;
+}
+#set-live>.settings-section-body>.row{flex-wrap:wrap;gap:4px 12px}
+#set-live>.settings-section-body>.row>.hint{flex:0 0 100%;padding-left:124px}
+#set-live>.settings-section-body>.sh,
+#set-live>.settings-section-body>.live-platform-modes{grid-column:1/-1}
+
+/* 输出区单独收紧，避免简短选项随整个设置页拉长。 */
+#set-output .output-settings-grid,
+#set-output .output-settings-switches{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px 36px;
+  max-width:980px;
+}
+#set-output .output-settings-group{
   display:flex;
   flex-direction:column;
-  border:1px solid var(--line);
-  border-radius:var(--r);
-  background:var(--surface);
-  overflow:hidden;
+  gap:12px;
+  min-width:0;
+}
+#set-output .row{min-width:0}
+#set-output .row>.lb{width:112px}
+#set-output .sel{max-width:340px}
+@media(max-width:900px){
+  #set-output .output-settings-grid,
+  #set-output .output-settings-switches{
+    grid-template-columns:minmax(0,1fr);
+    max-width:520px;
+  }
+  #set-live>.settings-section-body{max-width:520px}
+}
+@media(max-width:640px){
+  #set-output .row>.lb{width:100%}
+  .settings-section-body .row>.lb,
+  #set-platform>.settings-section-body>.row>.lb{width:100%}
+  #set-live>.settings-section-body>.row{gap:8px}
+  #set-live>.settings-section-body>.row>.hint{padding-left:0}
+}
+
+.live-platform-modes{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));
+  gap:12px 36px;
+  min-width:0;
+  max-width:980px;
 }
 .live-platform-row{
   display:flex;
   align-items:center;
   gap:12px;
-  min-height:40px;
-  padding:0 12px;
-  border-bottom:1px solid var(--line);
+  min-width:0;
+  min-height:34px;
 }
-.live-platform-row:last-child{border-bottom:0}
-.live-platform-row .lb{width:120px;flex:none;font-size:13px;color:var(--fg2)}
-.live-platform-row .sel{margin-left:auto}
-.live-platform-empty{padding:12px;color:var(--fg3);font-size:12.5px}
+.live-platform-row .lb{width:112px;flex:none;font-size:13px;color:var(--fg2)}
+.live-platform-row .sel{margin-left:0;max-width:340px}
+.live-platform-empty{grid-column:1/-1;color:var(--fg3);font-size:12.5px}
+@media(max-width:640px){
+  .live-platform-row{flex-wrap:wrap;gap:8px}
+  .live-platform-row .lb{width:100%}
+  .live-platform-row .sel{flex-basis:100%}
+}
 
 /* 任务列表：行背景填充百分比作为进度条 */
 .task-panel{display:flex;flex-direction:column;gap:8px;margin-top:2px}
@@ -169,8 +250,9 @@
   .settings-toc.collapsed{width:auto;padding-right:0}
   .settings-toc-toggle{display:none}
   .settings-toc-nav{flex-direction:row;gap:4px}
-  .settings-toc-item{border-left:0;border-bottom:2px solid transparent;border-radius:var(--r)}
+  .settings-toc-item{width:auto;flex:none;border-left:0;border-bottom:2px solid transparent;border-radius:var(--r)}
   .settings-toc-item.on{border-left:0;border-bottom-color:var(--fg)}
-  .settings-toc.collapsed .settings-toc-item{padding:0 9px}
+  .settings-toc.collapsed .settings-toc-item{padding:0 9px;gap:9px}
   .settings-toc.collapsed .settings-toc-item span{display:inline}
+  .settings-toc.collapsed .settings-toc-item>.settings-section-chevron{display:block}
 }

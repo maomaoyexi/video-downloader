@@ -8,7 +8,7 @@ from dataclasses import replace
 from contextlib import redirect_stderr
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from video_downloader.state.app_state import AppState
 from video_downloader.web.handler import HttpHandlerDependencies, HttpService, create_handler
@@ -152,6 +152,40 @@ class HttpServiceTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["command"], "yt-dlp https://example.com")
         self.assertEqual(headers["Cache-Control"], "no-store")
+
+    def test_help_error_manual_serves_fixed_document(self):
+        from video_downloader.web.rendering import read_error_manual
+        expected = read_error_manual()
+        self.assertIsNotNone(expected)
+        status, body, headers = self.request("/api/help/error-manual")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), expected)
+        self.assertEqual(headers["Cache-Control"], "no-store")
+
+    def test_help_error_manual_requires_token_before_reading(self):
+        with patch("video_downloader.web.handler.read_error_manual") as read:
+            with self.assertRaises(HTTPError) as error:
+                self.request("/api/help/error-manual", token=False)
+            self.assertEqual(error.exception.code, 403)
+            read.assert_not_called()
+
+    def test_help_error_manual_reports_missing_document_without_local_path(self):
+        with patch("video_downloader.web.handler.read_error_manual", return_value=None):
+            with self.assertRaises(HTTPError) as error:
+                self.request("/api/help/error-manual")
+        self.assertEqual(error.exception.code, 404)
+        result = json.loads(error.exception.read())
+        self.assertIn("完整错误手册暂不可用", result["error"])
+        self.assertNotIn("E:\\", result["error"])
+        self.assertNotIn("C:\\", result["error"])
+
+    def test_help_error_manual_rejects_client_file_or_url_parameters(self):
+        with patch("video_downloader.web.handler.read_error_manual") as read:
+            for query in ("path=..%2Fsettings.ini", "url=https%3A%2F%2Fexample.com", "path="):
+                with self.subTest(query=query), self.assertRaises(HTTPError) as error:
+                    self.request("/api/help/error-manual?" + query)
+                self.assertEqual(error.exception.code, 400)
+            read.assert_not_called()
 
     def test_expected_browser_disconnect_does_not_print_traceback(self):
         stderr = io.StringIO()

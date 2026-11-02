@@ -8,7 +8,7 @@ import threading
 
 from .archive import ArchiveApplication
 from .auth import load_credentials
-from .cli import read_config, _read_json
+from .cli import read_config, _read_json, _cookie_selection
 from .errors import FanboxError
 from .options import normalize_options
 
@@ -34,10 +34,8 @@ def main(argv=None,*,root=None):
         options=_read_json(args.options,65536) if args.options else json.loads(config.get('FANBOX_OPTIONS','{}'))
         options=normalize_options(options)
         if args.max_posts is not None:options.setdefault('filters',{})['max_posts']=args.max_posts
-        cookie=args.cookies or Path(config.get('FANBOX_COOKIE_FILE') or root/'cookies.txt')
-        if not cookie.is_absolute():cookie=root/cookie
-        use_cookies=not (args.anonymous or int(config.get('FANBOX_ANONYMOUS',0))) and (args.cookies is not None or int(config.get('USE_COOKIES',1)))
-        credentials=load_credentials(cookie if use_cookies and (cookie.exists() or args.cookies is not None) else None)
+        cookie,use_cookies=_cookie_selection(root,config,cookies=args.cookies,anonymous=args.anonymous)
+        credentials=load_credentials(cookie if use_cookies else None)
         application=ArchiveApplication(args.directory or root/'download'/'Fanbox')
         if args.resume:
             job_id=args.resume

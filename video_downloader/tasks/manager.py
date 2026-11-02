@@ -10,6 +10,7 @@ from typing import Callable
 from video_downloader.core.platform import clean_url, detect_platform
 from video_downloader.live import is_live_url
 from video_downloader.services.download_manager import DownloadManager
+from video_downloader.services.routed_executor import FANBOX_BATCH_ERROR, mixed_fanbox_batch
 from .context import TaskAppState
 from .models import Task, TaskStatus
 
@@ -88,6 +89,8 @@ class TaskManager:
         cleaned = list(dict.fromkeys(url for raw in (urls or []) if (url := clean_url(raw))))
         if not cleaned:
             return {"error": "没有有效的链接"}
+        if operation == "download" and mixed_fanbox_batch(cleaned):
+            return {"error": FANBOX_BATCH_ERROR}
         if str(live_mode or "").lower() == "wait":
             return {"error": "蹲开播任务请使用等待开播面板，不能加入任务队列"}
         config = self._base_app_state.config_snapshot()
@@ -125,6 +128,11 @@ class TaskManager:
     def has_active(self):
         with self._lock:
             return bool(self._runtimes) or any(not t.is_terminal for t in self._tasks.values())
+
+    def is_task_active(self, task_id):
+        with self._lock:
+            task = self._tasks.get(task_id)
+            return task is not None and not task.is_terminal
 
     def active_count(self):
         with self._lock:

@@ -33,3 +33,36 @@
 #fanboxRuns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 18px}#fanboxRuns:empty{display:none}.fb-history{cursor:pointer}.fb-history:focus-visible{outline:2px solid var(--fg2);outline-offset:2px}.fb-history-icon{display:grid;place-items:center;background:var(--surface2);color:var(--fg2);font-weight:600;letter-spacing:.04em;min-height:64px;border-radius:var(--r)}
 .hcard .fb-history-icon{aspect-ratio:16/9}.hitem .fb-history-icon{width:112px;flex-shrink:0}.fb-empty{padding:12px;color:var(--fg3)}
 @media(max-width:600px){.fb-panel{padding:12px}.fb-field{grid-template-columns:minmax(110px,43%) minmax(0,1fr);gap:10px}.fb-control>.ctl{min-width:80px}.fb-dialog{width:calc(100vw - 16px);max-height:94dvh}.fb-dialog-head,.fb-dialog-foot,.fb-dialog-body{padding-left:14px;padding-right:14px}.fb-toolbar .ctl{flex-basis:100%}.fb-post details{margin-left:0}.fb-actions .btn{min-height:34px}.fb-field .ctl{max-width:100%}}
+
+/* 平台设置页使用紧凑单列；任务和历史弹窗保留原有布局。 */
+#set-fanbox{width:100%;max-width:660px;margin-top:18px;padding-top:14px}
+#set-fanbox .fb-platform-title{margin-bottom:8px}
+#set-fanbox .fb-settings-group{padding:12px 0 4px}
+#set-fanbox .fb-settings-group h4{margin-bottom:6px}
+#set-fanbox .fb-field{grid-template-columns:164px minmax(0,1fr);gap:10px;min-height:40px;padding:3px 0}
+#set-fanbox .fb-field>.sel{
+  width:var(--settings-select-width,var(--lc-select-width,240px));
+  max-width:100%;
+  min-width:0;
+  justify-self:start;
+}
+#set-fanbox .fb-field select.ctl{width:100%;max-width:none;padding:0 28px 0 10px}
+#set-fanbox .fb-field input[type=number]{width:100px;max-width:100px;justify-self:start}
+#set-fanbox .fb-field input[type=datetime-local]{width:240px;max-width:100%;justify-self:start}
+#set-fanbox .fb-field input[type=text],
+#set-fanbox .fb-field input:not([type]),
+#set-fanbox .fb-field textarea.ctl{width:100%;max-width:420px}
+#set-fanbox .fb-field textarea.ctl{height:72px}
+#set-fanbox .fb-control{width:100%;max-width:420px}
+#set-fanbox .fb-control>.ctl{max-width:420px}
+#set-fanbox .fb-settings-fold{margin:12px 0;padding-top:12px}
+#set-fanbox .fb-settings-fold[open]>summary{margin-bottom:6px}
+#set-fanbox .fb-settings-actions{margin:6px 0 8px}
+@media(max-width:560px){
+  #set-fanbox .fb-field{grid-template-columns:minmax(0,1fr);align-items:start;gap:6px;padding:5px 0}
+  #set-fanbox .fb-field>.sel{max-width:100%}
+  #set-fanbox .fb-field input[type=text],
+  #set-fanbox .fb-field input:not([type]),
+  #set-fanbox .fb-field textarea.ctl,
+  #set-fanbox .fb-control{max-width:100%}
+}

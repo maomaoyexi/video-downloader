@@ -19,6 +19,7 @@ MAINTAINED_SCRIPTS = frozenset({
     'scripts/install_bililive.py', 'scripts/install_live_dependencies.py',
     'scripts/build_withny_dependency.py', 'scripts/check_live_release.py',
     'scripts/check_repository_layout.py',
+    'scripts/package_release_assets.py',
     'scripts/withny_patch/chat.go', 'scripts/withny_patch/chat_protocol.go',
     'scripts/withny_patch/lifecycle.go', 'scripts/withny_patch/probe_windows.go',
     'scripts/withny_patch/remux_windows.go',

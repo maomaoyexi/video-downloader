@@ -1,5 +1,5 @@
 YT-DLP 多平台视频下载工具 完整使用教程
-适配版本：v2.7.0 WebUI（Windows EXE／源码运行版）
+适配版本：v2.7.1 WebUI（开发版）（Windows EXE／源码运行版）
 支持平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter / Rplay / FANBOX
 特殊功能：Withny 已授权历史存档 HAR 保存与直播监控；FANBOX 扫描、预览和内容归档
 界面方式：浏览器WebUI（运行 Windows EXE 或 Python 主程序后自动打开浏览器）
@@ -7,13 +7,13 @@ YT-DLP 多平台视频下载工具 完整使用教程
 一、安装与依赖说明
 =====================================
 以下为 v2.7.0 安装包的文件命名；可下载版本以 GitHub Releases 实际发布内容为准：
-  1. video-downloader-v2.7.0-GUI.exe
-  2. video-downloader-v2.7.0-dependencies.zip
+  1. video-downloader-v2.7.1-GUI.exe
+  2. video-downloader-v2.7.1-dependencies.zip
 
 安装步骤（Windows EXE 绿色版）：
   1. 新建单独文件夹，将 EXE 放入其中，无需安装 Python
   2. 将依赖包中的 dependency 文件夹完整解压到 EXE 同一目录
-  3. 双击 video-downloader-v2.7.0-GUI.exe，浏览器自动打开 WebUI
+  3. 双击 video-downloader-v2.7.1-GUI.exe，浏览器自动打开 WebUI
   4. 按需要配置 Cookie、代理；Rplay 登录使用独立 Firefox 设置
 
 升级步骤（老用户）：
@@ -24,12 +24,12 @@ YT-DLP 多平台视频下载工具 完整使用教程
 
 源码运行方式（仓库源码，不另发源码附件）：
   1. 安装 Python 3，并确保 python 命令可用
-  2. 保持 视频下载工具v2.7.0-GUI.py、video_downloader/、resource/ 和 dependency/ 位于同一目录
+  2. 保持 视频下载工具v2.7.1-GUI.py、video_downloader/、resource/ 和 dependency/ 位于同一目录
   3. 在项目根目录准备锁定版本的直播与 FANBOX Python 运行库：
      python scripts/install_live_dependencies.py
      python -m video_downloader.platforms.fanbox.runtime --install
      直播运行库已存在且锁定版本有变化时，使用 python scripts/install_live_dependencies.py --upgrade
-  4. 运行：python ".\视频下载工具v2.7.0-GUI.py"
+  4. 运行：python ".\视频下载工具v2.7.1-GUI.py"
   5. 升级源码时同时更新主脚本、video_downloader/、resource/ 和对应依赖，保留个人配置与下载目录
 
 依赖说明：
@@ -45,7 +45,7 @@ YT-DLP 多平台视频下载工具 完整使用教程
 =====================================
 本工具仅用于个人学习研究，禁止商用、侵权传播下载内容。
 
-双击 video-downloader-v2.7.0-GUI.exe 启动；源码版运行「python 视频下载工具v2.7.0-GUI.py」。
+双击 video-downloader-v2.7.1-GUI.exe 启动；源码版运行「python 视频下载工具v2.7.1-GUI.py」。
 程序会自动启动内置HTTP服务器，并调用系统默认浏览器打开WebUI界面。
 首次运行自动生成各平台保存目录、配置文件settings.ini、历史记录文件。
 所有下载自动按【平台 / UP主 / 主播 / 创作者文件夹】分类整理。
@@ -223,7 +223,7 @@ PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效C
 2. 打开对应平台官网，登录你的账号；多平台使用可依次登录所有平台
 3. 在目标平台页面打开扩展 → 导出 Netscape 格式 cookies
 4. 导出文件命名为：cookies.txt
-5. 放到程序同级目录（与 视频下载工具v2.7.0-GUI.py 同目录）
+5. 放到程序同级目录（与 视频下载工具v2.7.1-GUI.py 同目录）
 
 支持浏览器提取的平台也可在设置页面选择浏览器 Cookie 来源（Chrome/Edge/Firefox 等）。Fantia 仅支持 cookies.txt 文件；FANBOX 使用专项设置指定的 Netscape Cookie 文件（未指定时默认 cookies.txt），匿名访问不使用 Cookie；Rplay 使用独立 Firefox 登录来源。
 
@@ -238,6 +238,9 @@ PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效C
 =====================================
 十、直播录制使用方法
 =====================================
+当前修复源码的「设置 → 直播设置」按录制方式、稳定性与资源、弹幕设置分组，配置值仍通过页面右上角「保存设置」保存。
+需要单独覆盖平台时，展开「各平台录制方式」或「各平台弹幕默认值」；长机制说明在对应「说明」内展开查看。
+
 YouTube直播录制：
   1. 粘贴YouTube的/live或/live/形式直播链接
   2. 在「设置 → 直播设置」选择全局/平台默认直播模式
@@ -322,7 +325,7 @@ Cookie模式：大多数平台使用 cookies.txt；Rplay 使用独立 Firefox �
 编码：兼容优先（H.264，所有设备可直接播放）
 代理：根据网络环境配置
 下载限速：推荐 5–10 MB/s。高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担
-运行方式：完整保留 dependency 目录及其子目录；源码版先按第一节准备运行库，再运行「python 视频下载工具v2.7.0-GUI.py」
+运行方式：完整保留 dependency 目录及其子目录；源码版先按第一节准备运行库，再运行「python 视频下载工具v2.7.1-GUI.py」
 关闭方式：使用「✕ 退出」按钮彻底关闭，不要直接关控制台窗口
 
 =====================================
@@ -376,32 +379,32 @@ TwitCasting 密码记忆（v2.6.0 起）：
 7. 「粉丝卡」支持当前作者或所有赞助作者范围，可选择仅下载粉丝卡；是否可取得仍取决于账号与平台返回。
 8. 「内容归档」中可查看帖子、打开归档、导出清单、复制外链和校验资源文件；默认目录为 download/Fanbox/。
 9. 外链只收集，不自动下载外部平台内容。已验证文件复用不等于所有目标帖子均已完整归档，请核对任务状态、清单与文件。
-10. 文件并发、API 间隔、文件启动间隔、代理策略和每日额度在 FANBOX 设置中单独控制；请求间隔避免达到或超过 120 秒，相关已知问题见第十九节。
+10. 文件并发、API 间隔、文件启动间隔、代理策略和每日额度在 FANBOX 设置中单独控制。当前源码会在等待期间每 20 秒续租，较长间隔的修复与发布状态见第十九节。
 11. 下载流量与下载记录可在 FANBOX 设置中查看。每日额度是本地计量策略，不代替平台限流规则。
 12. FANBOX 请独立建任务，不与其他平台混在同一任务；不同任务可并行，分别处理各自的归档确认。
 
 独立扫描（只输出清单，不下载附件）：
-  python ".\视频下载工具v2.7.0-GUI.py" --fanbox-scan "https://www.fanbox.cc/@creator" --output ".\fanbox-manifest.json" --anonymous
+  python ".\视频下载工具v2.7.1-GUI.py" --fanbox-scan "https://www.fanbox.cc/@creator" --output ".\fanbox-manifest.json" --anonymous
 
 归档预览：
-  python ".\视频下载工具v2.7.0-GUI.py" --fanbox-download "https://www.fanbox.cc/@creator" --preview --anonymous
+  python ".\视频下载工具v2.7.1-GUI.py" --fanbox-download "https://www.fanbox.cc/@creator" --preview --anonymous
 
---anonymous 只允许访问公开内容。独立扫描 CLI 目前忽略 FANBOX_ANONYMOUS，必须显式传 --anonymous；WebUI 与归档下载 CLI 不受此匿名问题影响。
+--anonymous 只允许访问公开内容。当前源码的扫描与归档 CLI 均读取 FANBOX_ANONYMOUS、FANBOX_COOKIE_FILE 和 USE_COOKIES；显式 --anonymous 或 --cookies PATH 优先于保存设置，只影响本次命令，且不能同时指定。凭据相对路径以工具目录为基准；WebUI 原有设置读取行为保持一致。
 
 =====================================
-十九、v2.7.0 已知问题（待后续修复）
+十九、FANBOX 六项源码修复与发布状态
 =====================================
 单任务跨平台切换后的停止路由已在 v2.7.0 修复：关闭任务模式后，完成 FANBOX 再成功启动普通视频批量或 Withny 任务，停止和当前命令查询会跟随实际执行器；启动失败、异常或取消选择不会切换路由。
 
-以下六项仍待修复：
-1. FANBOX 排队任务暂停或启动失败：归档记录可能卡在 queued，无法继续；核对日志，必要时重启程序。
-2. FANBOX 与其他平台混合批量：命中归档后的重新下载确认可能失败；请拆成独立任务，不同任务仍可并行。
-3. FANBOX 缩略图质量：原图 PNG/GIF、缩略图 JPEG 时可能按错误格式校验并提示 invalid_payload（图片文件头与预期类型不一致）；暂用原图质量，并人工核对图片。
-4. FANBOX 先预览再下载：可能漏存受限帖公开可见的封面；人工核对归档结果，公开封面不授予正文或附件权限。
-5. FANBOX 请求间隔达到或超过 120 秒：工作租约可能过期并出现 lease_expired，任务中断后仍显示 running；避免此设置，异常时核对日志并重启。
-6. FANBOX 独立扫描 CLI 匿名访问：当前忽略保存的 FANBOX_ANONYMOUS，仍可能使用 Cookie；匿名扫描必须显式加 --anonymous。该问题不影响 WebUI 和 --fanbox-download。
+以下六项已在当前源码修复：
+1. 排队任务暂停、从任务列表取消或启动失败后，会清理失效活动记录并恢复为可继续状态；修正配置后无需重启程序即可继续。
+2. FANBOX 与其他平台混合输入会在入口被拒绝；请分别创建独立任务，不同任务可并行，归档确认只发给所属执行器。
+3. 缩略图和封面按实际资源 URL 确定扩展名；旧失败资源续跑时可修复错误扩展名与路径。
+4. 预览后可选择受限帖公开封面；正文与附件仍按访问权限处理，显式 accessible_only 筛选继续排除受限帖。
+5. 等待期间每 20 秒续 job、file、asset 租约；异常结束原子保存终态，不再因 180 秒等较长间隔本身残留 running。
+6. 扫描 CLI 与归档 CLI 均沿用已保存的匿名和 Cookie 设置，显式 --anonymous 或 --cookies PATH 可覆盖本次设置，两者互斥；WebUI 原有行为保持一致。
 
-这六项问题待后续版本处理；完整发布说明与两项正式附件的 SHA-256 见 RELEASE_NOTES.md。queued/running 文字不能作为任务仍在正常执行的唯一依据。
+本轮没有重新构建、上传或替换已发布的 v2.7.0 EXE 与依赖包；旧附件仍包含原问题。原发布说明与附件 SHA-256 见 RELEASE_NOTES.md，复现及验证记录见 docs/fanbox-six-fixes-validation.md。仍应核对任务日志、归档清单和具体资源状态。
 
 =====================================
 二十、直播弹幕与任务日志检查

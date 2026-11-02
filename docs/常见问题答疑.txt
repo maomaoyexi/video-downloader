@@ -1,6 +1,6 @@
 YT-DLP 多平台视频下载工具 常见问题答疑合集
-适配版本：v2.7.0 WebUI（Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
-界面方式：浏览器WebUI（双击 video-downloader-v2.7.0-GUI.exe；源码版运行 视频下载工具v2.7.0-GUI.py）
+适配版本：v2.7.1 WebUI（开发版）（Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
+界面方式：浏览器WebUI（双击 video-downloader-v2.7.1-GUI.exe；源码版运行 视频下载工具v2.7.1-GUI.py）
 直播录制模式：在「设置 → 直播设置」选择自动、追开播、从当前时刻或蹲开播；默认自动，按平台能力核验后执行。
 =====================================
 一、启动与运行类
@@ -25,7 +25,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 1、确认dependency/yt-dlp.exe、dependency/ffmpeg.exe、dependency/ffprobe.exe存在
 2、检查杀毒软件是否隔离了程序文件，添加信任即可
 3、确认video_downloader文件夹与Python主程序同目录
-4、在命令行中运行「python 视频下载工具v2.7.0-GUI.py」查看具体报错信息
+4、在命令行中运行「python 视频下载工具v2.7.1-GUI.py」查看具体报错信息
 5、源码版同时需要 resource/ 和对应依赖；在项目根目录运行以下命令准备锁定版本的 Python 运行库：
    python scripts/install_live_dependencies.py
    python -m video_downloader.platforms.fanbox.runtime --install
@@ -82,7 +82,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 - 停止与进程启动并发发生时，新进程会被拒绝接管并立即清理
 - 批量下载停止后不会继续启动后续链接
 - v2.7.0 已修复关闭任务模式后跨 FANBOX 切换的停止路由：完成 FANBOX 再成功启动普通视频批量或 Withny 任务，停止和当前命令查询会跟随实际执行器；启动失败、异常或取消选择不会切换路由
-- FANBOX 仍需与其他平台拆成独立任务；不同任务可以并行，其他六项已知问题见第十节
+- FANBOX 需与其他平台拆成独立任务；不同任务可以并行，当前源码会在入口拒绝混合批次。六项修复与发布状态见第十节
 
 问题10：启动下载后弹出CMD黑窗口
 原因：Windows子进程默认分配控制台窗口（v1.9.3-p3已修复）
@@ -283,13 +283,13 @@ Cookie模式：大多数平台使用 cookies.txt；Rplay 使用独立 Firefox �
 代理：根据网络环境正确配置
 下载限速：推荐 5–10 MB/s。高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担
 WAV转MP3：320kbps，保留源文件（确认质量后再手动删除）
-运行方式：完整保留 dependency 目录及其子目录；源码版先按问题3准备运行库，再运行「python 视频下载工具v2.7.0-GUI.py」
+运行方式：完整保留 dependency 目录及其子目录；源码版先按问题3准备运行库，再运行「python 视频下载工具v2.7.1-GUI.py」
 关闭方式：使用右上角「✕ 退出」按钮彻底关闭
 =====================================
 九、v2.7.0 新增平台与升级
 =====================================
 问题41：正式版需要下载哪些文件？
-答：只需 video-downloader-v2.7.0-GUI.exe 和 video-downloader-v2.7.0-dependencies.zip。EXE 无需安装 Python，把完整 dependency 文件夹解压到 EXE 同目录即可。依赖包已含 NicoChannel 插件，不需另下 nicochannel.zip。升级前退出旧程序，保留设置、Cookie、密码表和 download/。
+答：只需 video-downloader-v2.7.1-GUI.exe 和 video-downloader-v2.7.1-dependencies.zip。EXE 无需安装 Python，把完整 dependency 文件夹解压到 EXE 同目录即可。依赖包已含 NicoChannel 插件，不需另下 nicochannel.zip。升级前退出旧程序，保留设置、Cookie、密码表和 download/。
 
 问题42：Rplay 已经有 cookies.txt，为什么仍提示登录？
 答：Rplay 使用独立 Firefox 登录来源，不能以普通 cookies.txt 替代。请先在 Firefox 登录，再在设置中选择 Rplay 登录来源与配置。账号仍须拥有目标内容权限；DRM、未知加密和未接入授权协议不在支持范围内。
@@ -301,7 +301,7 @@ WAV转MP3：320kbps，保留源文件（确认质量后再手动删除）
 答：预览先抓取帖子并供筛选；--fanbox-scan 只写清单，不下载附件；--fanbox-download 或 WebUI 下载所选会执行内容归档。可保存正文、JSON、可访问图片附件、封面、链接及可选评论，也支持粉丝卡。受限帖公开封面不代表正文可访问；外链只收集，不自动下载外部内容。
 
 问题45：FANBOX 的粉丝卡、文件复用和校验能保证完整吗？
-答：不能仅凭功能开关或父任务成功状态判断完整。结果取决于账号权限、平台返回和筛选条件，请查看归档清单、具体资源状态及校验报告。粉丝卡和评论可能不可用；本版缩略图格式校验与预览后封面遗漏仍有已知问题。
+答：不能仅凭功能开关或父任务成功状态判断完整。结果取决于账号权限、平台返回和筛选条件，请查看归档清单、具体资源状态及校验报告。粉丝卡和评论可能不可用；当前源码已修复缩略图扩展名误配和预览后遗漏公开封面，受限正文和附件仍按实际权限处理。
 
 问题46：能同时运行多个任务并分别看日志吗？
 答：任务模式默认开启，任务间默认并行 2 个、可设 1–5；任务内直播与视频使用独立额度。FANBOX 请独立建任务，不与其他平台混在同一任务；不同任务仍可并行。点击任务行查看具体链接、进度、历史和独立日志。普通队列重启后不恢复；持久化蹲开播由等待开播面板管理。带宽有限时降低并发并使用限速。
@@ -310,15 +310,15 @@ WAV转MP3：320kbps，保留源文件（确认质量后再手动删除）
 答：评论采集能力、登录权限、源平台时间和录制起点不同。程序提供 SRT/ASS 与 comments-report.json，请核对报告，不能把接入某个平台理解成该平台所有直播已验证或精确同步。原始评论文件可能含账号信息，公开反馈前请检查。
 
 =====================================
-十、v2.7.0 已知问题（待后续修复）
+十、FANBOX 六项源码修复与发布状态
 =====================================
-单任务跨平台切换后的停止路由已在 v2.7.0 修复，详见问题9。以下六项仍待修复：
+单任务跨平台切换后的停止路由已在 v2.7.0 修复，详见问题9。以下六项已在当前源码修复；本轮没有重新构建或替换已发布的 v2.7.0 EXE 和依赖包。
 
-1. FANBOX 排队任务暂停或启动失败：归档记录可能卡在 queued，无法继续；核对日志，必要时重启程序。
-2. FANBOX 与其他平台混合批量：命中归档后的重新下载确认可能失败；请拆成独立任务，不同任务仍可并行。
-3. FANBOX 缩略图质量：原图 PNG/GIF、缩略图 JPEG 时可能按错误格式校验并提示 invalid_payload（图片文件头与预期类型不一致）；暂用原图质量，并人工核对图片。
-4. FANBOX 先预览再下载：可能漏存受限帖公开可见的封面；人工核对归档结果，公开封面不授予正文或附件权限。
-5. FANBOX 请求间隔达到或超过 120 秒：工作租约可能过期并出现 lease_expired，任务中断后仍显示 running；避免此设置，异常时核对日志并重启。
-6. FANBOX 独立扫描 CLI 匿名访问：当前忽略保存的 FANBOX_ANONYMOUS，仍可能使用 Cookie；匿名扫描必须显式加 --anonymous。该问题不影响 WebUI 和 --fanbox-download。
+1. 排队任务取消或启动失败：失效活动记录会清理，归档转为可继续状态；修正启动配置后可继续，无需重启程序。
+2. 与其他平台混合批量：入口拒绝混合输入，请将 FANBOX 单独创建任务；不同任务可并行，归档确认路由到所属执行器。
+3. 缩略图与封面格式：按实际资源 URL 确定扩展名；旧失败资源续跑时可修复扩展名与路径不一致，无需因该问题改用原图质量。
+4. 预览后下载：可选择受限帖公开封面；正文和附件仍按权限处理，显式 accessible_only 筛选继续排除受限帖。
+5. 较长请求间隔：等待期间每 20 秒续 job、file、asset 租约，异常结束时原子保存终态；180 秒间隔本身不会再导致租约过期并残留 running。
+6. 独立扫描 CLI：--fanbox-scan 与 --fanbox-download 均读取保存的 FANBOX_ANONYMOUS、FANBOX_COOKIE_FILE 和 USE_COOKIES；显式 --anonymous 或 --cookies PATH 可覆盖本次设置，且不能同时指定。WebUI 原有行为保持一致。
 
-上述六项待后续版本处理，详见根目录 RELEASE_NOTES.md。请保留任务日志并避开已知触发条件，不要把 queued/running 文字当作下载仍正常执行的唯一依据。
+旧发布附件仍应按原问题处理；本轮源码修复不代表线上 EXE 已更新。发布附件与 SHA-256 见根目录 RELEASE_NOTES.md，复现及验证记录见 docs/fanbox-six-fixes-validation.md。任务是否完整仍需核对具体资源、日志与归档清单。

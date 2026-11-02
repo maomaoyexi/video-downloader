@@ -195,6 +195,8 @@ function init() {
   loadTasks();
   loadNetworkStatus();
   initSettingsToc();
+  initSettingsControls();
+  initHelpGuide();
   loadLiveCapabilities();
 
   // 页面关闭前提示用户下载仍在进行中
@@ -518,22 +520,167 @@ function collectLivePlatformModes() {
   return result;
 }
 
+function initHelpGuide() {
+  const guide = $('helpGuide'), toggle = $('helpToggleAll');
+  if(!guide || !toggle) return;
+  const topics = Array.from(guide.querySelectorAll('.help-topic'));
+  const sync = () => {
+    toggle.textContent = topics.every(topic => topic.open) ? '全部收起' : '全部展开';
+  };
+  toggle.onclick = () => {
+    const expanded = !topics.every(topic => topic.open);
+    topics.forEach(topic => { topic.open = expanded; });
+    sync();
+  };
+  guide.addEventListener('toggle', sync, true);
+  window.HelpSupport?.init({request:api, getVersion:() => $('aboutVer')?.textContent,
+    getPlatform:() => currentPlatform});
+  sync();
+}
+
+function initSettingsSectionToggles(items, onToggle) {
+  const storageKey = 'video-dl-settings-collapsed-sections';
+  const panels = new Map();
+  let saved = [];
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    if(Array.isArray(value)) saved = value;
+  } catch(e) {}
+  const setExpanded = (id, expanded, persist = true) => {
+    const panel = panels.get(id);
+    if(!panel) return;
+    panel.body.hidden = !expanded;
+    panel.section.classList.toggle('is-collapsed', !expanded);
+    for(const button of panel.buttons) {
+      button.setAttribute('aria-expanded', String(expanded));
+      button.title = (expanded ? '收起' : '展开') + panel.title;
+      button.setAttribute('aria-label', button.title);
+    }
+    if(persist) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify([...panels.values()]
+          .filter(value => value.body.hidden).map(value => value.section.id)));
+      } catch(e) {}
+    }
+  };
+  for(const item of items) {
+    const section = $(item.dataset.target);
+    let header = section?.querySelector(':scope > .sh');
+    if(!header) continue;
+    let body = section.querySelector(':scope > .settings-section-body');
+    if(!body) {
+      body = document.createElement('div');
+      body.className = 'settings-section-body';
+      body.id = section.id + '-body';
+      for(const child of [...section.childNodes]) if(child !== header) body.appendChild(child);
+      section.appendChild(body);
+    }
+    const row = item.closest('.settings-toc-row');
+    if(row) row.replaceWith(item);
+    if(header.tagName !== 'BUTTON') {
+      const button = document.createElement('button');
+      for(const attribute of [...header.attributes]) button.setAttribute(attribute.name, attribute.value);
+      button.append(...header.childNodes);
+      header.replaceWith(button);
+      header = button;
+    }
+    header.querySelectorAll(':scope > .settings-section-toggle').forEach(button => button.remove());
+    header.classList.add('settings-section-heading');
+    section.classList.add('has-section-toggle');
+    const buttons = [item, header].map(button => {
+      button.type = 'button';
+      button.classList.add('settings-section-toggle');
+      button.dataset.section = section.id;
+      button.setAttribute('aria-controls', body.id);
+      if(!button.querySelector(':scope > .settings-section-chevron')) {
+        button.insertAdjacentHTML(button === item ? 'beforeend' : 'afterbegin',
+          '<svg class="ico s14 settings-section-chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>');
+      }
+      button.onclick = () => onToggle(section);
+      return button;
+    });
+    const title = header.querySelector('b')?.textContent || item.textContent.trim();
+    panels.set(section.id, {section, body, buttons, title});
+  }
+  for(const id of panels.keys()) setExpanded(id, !saved.includes(id), false);
+  return {setExpanded, isExpanded:id => !panels.get(id)?.body.hidden};
+}
+
 function initSettingsToc() {
   const toc = $('settingsToc');
   if(!toc) return;
   const items = Array.from(toc.querySelectorAll('.settings-toc-item'));
   const sections = items.map(item => $(item.dataset.target)).filter(Boolean);
+  const pane = document.querySelector('.pad');
+  const settings = $('page-settings');
+  let activeTarget = items.find(item => item.classList.contains('on'))?.dataset.target;
+  let pendingTarget = null, interactionTarget = null, frame = 0, scrollTimer = 0;
   const setActive = target => {
+    if(activeTarget === target) return;
+    activeTarget = target;
     items.forEach(item => item.classList.toggle('on', item.dataset.target === target));
   };
-  items.forEach(item => {
-    item.onclick = () => {
-      const target = $(item.dataset.target);
-      if(!target) return;
-      setActive(item.dataset.target);
-      target.scrollIntoView({behavior:'smooth', block:'start'});
-    };
-  });
+  const clearPending = () => {
+    pendingTarget = null;
+    clearTimeout(scrollTimer);
+  };
+  const updateActive = () => {
+    frame = 0;
+    if(!pane || !settings?.classList.contains('active') || !sections.length) return;
+    // 导航或内部折叠期间保留所属章节，布局引起的滚动不抢占高亮。
+    if(pendingTarget || interactionTarget) { setActive(pendingTarget || interactionTarget); return; }
+    const marker = pane.getBoundingClientRect().top + Math.min(48, pane.clientHeight * .1);
+    let current = sections[0];
+    for(const section of sections) {
+      if(section.getBoundingClientRect().top > marker) break;
+      current = section;
+    }
+    if(pane.scrollTop > 0 && pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 2) {
+      current = sections[sections.length - 1];
+    }
+    setActive(current.id);
+  };
+  const scheduleActive = () => {
+    if(!frame) frame = requestAnimationFrame(updateActive);
+  };
+  const waitForScrollEnd = () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => { pendingTarget = null; }, 160);
+  };
+  const interruptScroll = () => {
+    const jumping = pendingTarget !== null;
+    clearPending();
+    interactionTarget = null;
+    if(jumping && pane) pane.scrollTo({top:pane.scrollTop, behavior:'instant'});
+    scheduleActive();
+  };
+  const disclosureSection = event => event.target?.closest?.('summary')?.closest('.settings-section');
+  const handlePointerStart = event => {
+    // 按下折叠按钮属于点击准备，不应在 click 前按阅读位置抢选首项。
+    if(event.target?.closest?.('.settings-section-toggle') || disclosureSection(event)) {
+      if(pendingTarget && pane) pane.scrollTo({top:pane.scrollTop, behavior:'instant'});
+      return;
+    }
+    interruptScroll();
+  };
+  const jumpToSection = target => {
+    if(!target) return;
+    interruptScroll();
+    sectionControls.setExpanded(target.id, !sectionControls.isExpanded(target.id));
+    pendingTarget = target.id;
+    setActive(target.id);
+    target.scrollIntoView({behavior:'smooth', block:'start'});
+    waitForScrollEnd();
+  };
+  const sectionControls = initSettingsSectionToggles(items, jumpToSection);
+  settings?.addEventListener('click', event => {
+    const section = disclosureSection(event);
+    if(!section) return;
+    // 先于原生 details 的高度变化保留章节，直到用户主动滚动或导航。
+    interruptScroll();
+    interactionTarget = section.id;
+    setActive(section.id);
+  }, true);
   try {
     if(localStorage.getItem('video-dl-settings-toc-collapsed') === '1') {
       toc.classList.add('collapsed');
@@ -548,15 +695,31 @@ function initSettingsToc() {
       } catch(e) {}
     };
   }
-  // 页面自身就是滚动容器，用 IntersectionObserver 更新当前章节。
-  if('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if(visible) setActive(visible.target.id);
-    }, {root: document.querySelector('.pad'), threshold:[0.15, 0.4, 0.7]});
-    sections.forEach(section => observer.observe(section));
+  // 每帧统一按所有章节标题的位置定位，避免局部可见性回调使高亮倒跳。
+  if(pane) {
+    pane.addEventListener('scroll', () => {
+      scheduleActive();
+      if(pendingTarget) waitForScrollEnd();
+    }, {passive:true});
+    pane.addEventListener('wheel', interruptScroll, {passive:true});
+    pane.addEventListener('touchmove', interruptScroll, {passive:true});
+    for(const type of ['touchstart','pointerdown']) {
+      pane.addEventListener(type, handlePointerStart, {passive:true});
+    }
+    pane.addEventListener('pointercancel', interruptScroll, {passive:true});
+    pane.addEventListener('keydown', event => {
+      if(event.key === ' ') { handlePointerStart(event); return; }
+      if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End','Tab'].includes(event.key)) interruptScroll();
+    });
   }
+  window.addEventListener('resize', interruptScroll);
+  if(settings && 'MutationObserver' in window) {
+    new MutationObserver(interruptScroll)
+      .observe(settings, {attributes:true, attributeFilter:['class']});
+  }
+  const stack = settings?.querySelector('.settings-stack');
+  if(stack && 'ResizeObserver' in window) new ResizeObserver(scheduleActive).observe(stack);
+  scheduleActive();
 }
 
 /** 从设置表单中收集当前全部配置项。 */

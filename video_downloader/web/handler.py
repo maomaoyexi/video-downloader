@@ -10,6 +10,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import parse_qs, urlparse
 
 from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS
+from video_downloader.web.rendering import read_error_manual
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,14 @@ def create_handler(dependencies):
                 self._forbidden()
             elif path == "/api/config":
                 self._json({"version": dependencies.version, "config": dependencies.app_state.config_snapshot()})
+            elif path == "/api/help/error-manual":
+                if set(parse_qs(parsed.query, keep_blank_values=True)) - {"token"}:
+                    self._json({"error": "完整错误手册接口不接受文件路径或其他查询参数"}, status=400)
+                    return
+                manual = read_error_manual()
+                self._json(manual if manual is not None else {
+                    "error": "完整错误手册暂不可用，请确认程序文件完整或查看程序目录中的 docs/错误码.txt"
+                }, status=200 if manual is not None else 404)
             elif path == "/api/deps":
                 self._json(dependencies.check_deps())
             elif path == "/api/presets":

@@ -54,6 +54,21 @@ def _get_static_path():
     return _STATIC_DIR
 
 
+def read_error_manual():
+    """读取固定的错误手册，不接受客户端文件路径；不可用时返回 None。"""
+    import sys
+    base = sys._MEIPASS if getattr(sys, "frozen", False) else _PROJECT_ROOT
+    path = os.path.join(base, "docs", "错误码.txt")
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as file:
+            text = file.read()
+    except (OSError, UnicodeError):
+        return None
+    if not text.strip():
+        return None
+    return {"title": "错误与排查手册", "text": text, "source": "docs/错误码.txt"}
+
+
 def render_html_page(token: str) -> bytes:
     """读取模板文件，替换 Session Token 并返回 HTML 内容。"""
     template_path = _get_template_path()

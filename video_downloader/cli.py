@@ -48,8 +48,8 @@ def _print_help():
   - 普通 CLI 不会自动应用 WebUI 保存的 Cookie 设置；自定义画质、代理、登录及 Fantia 专项下载请使用 WebUI
   - Rplay URL 使用专项入口读取 settings.ini；受限内容使用独立 Firefox 授权，普通 cookies.txt 不能替代；未完成文件重试会重新下载
   - FANBOX URL 和 --fanbox-download 读取 settings.ini 中的专项配置；需指定 --cookies 凭据文件或 --anonymous 时，请使用 --fanbox-download
-  - --fanbox-scan 也读取配置，但当前忽略保存的 FANBOX_ANONYMOUS；匿名扫描必须显式传 --anonymous，不能只依赖 WebUI 设置
-  - FANBOX 扫描命令默认查找工具目录 cookies.txt；--fanbox-download 才读取 FANBOX_COOKIE_FILE；两者均可用 --cookies 指定文件
+  - --fanbox-scan 和 --fanbox-download 均读取 FANBOX_ANONYMOUS、FANBOX_COOKIE_FILE 和 USE_COOKIES；未指定凭据路径时使用工具目录 cookies.txt
+  - 两个 FANBOX 命令的显式 --anonymous 或 --cookies 优先于保存设置，且彼此互斥；相对凭据路径以工具目录为基准
   - FANBOX 正文、图片、附件和外链清单以当前权限为准；外链仅记录，不下载外站内容；不保证所有平台的列表/频道均可下载
   - 普通视频保存到「download/平台名/作者名/」，FANBOX 默认归档到「download/Fanbox/」
   - 普通视频依赖 dependency 中的 yt-dlp.exe 和 ffmpeg.exe，Rplay 还需 ffprobe.exe；FANBOX 使用独立运行依赖

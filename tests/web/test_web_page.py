@@ -1,9 +1,13 @@
 from tests.helpers import PROJECT_ROOT
 import os
 import re
+import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from video_downloader.web.rendering import SESSION_TOKEN_PLACEHOLDER, render_html_page, serve_static_file
+from video_downloader.web.rendering import SESSION_TOKEN_PLACEHOLDER, read_error_manual, render_html_page, serve_static_file
 
 
 def _skip_if_frozen():
@@ -13,6 +17,26 @@ def _skip_if_frozen():
 
 
 class WebPageTests(unittest.TestCase):
+    def test_error_manual_preserves_current_document_text(self):
+        _skip_if_frozen()
+        expected = (Path(PROJECT_ROOT) / "docs" / "错误码.txt").read_bytes().decode("utf-8")
+        self.assertEqual(read_error_manual(), {
+            "title": "错误与排查手册", "text": expected, "source": "docs/错误码.txt"
+        })
+
+    def test_error_manual_uses_bundled_docs_in_frozen_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            docs = Path(directory) / "docs"
+            docs.mkdir()
+            (docs / "错误码.txt").write_bytes("测试手册\r\n原样保留换行\r\n".encode("utf-8"))
+            with patch.object(sys, "frozen", True, create=True), patch.object(sys, "_MEIPASS", directory, create=True):
+                self.assertEqual(read_error_manual()["text"], "测试手册\r\n原样保留换行\r\n")
+
+    def test_error_manual_unavailable_does_not_fall_back_to_user_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(sys, "frozen", True, create=True), patch.object(sys, "_MEIPASS", directory, create=True):
+                self.assertIsNone(read_error_manual())
+
     def test_render_replaces_session_token(self):
         token = "test-session-token"
         rendered = render_html_page(token)
@@ -21,6 +45,19 @@ class WebPageTests(unittest.TestCase):
         # Token is injected via window.SESSION_TOKEN inline script
         self.assertIn(f'window.SESSION_TOKEN = "{token}";', text)
         self.assertNotIn(SESSION_TOKEN_PLACEHOLDER, text)
+
+    def test_current_version_changelog_matches_about_and_bundle(self):
+        from pathlib import Path
+        from video_downloader.core.constants import VERSION
+        root = Path(PROJECT_ROOT)
+        version = VERSION.split()[0]
+        changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        html = (root / "resource/templates/index.html").read_text(encoding="utf-8")
+        spec = (root / f"视频下载工具{version}-GUI.spec").read_text(encoding="utf-8")
+        self.assertIn("## " + version + "\n", changelog)
+        self.assertIn(f'id="aboutReleaseTitle">{version} 本版更新', html)
+        self.assertIn('id="aboutReleaseDetails"', html)
+        self.assertIn('project_root / "CHANGELOG.md"', spec)
 
     def test_template_keeps_expected_structure(self):
         _skip_if_frozen()

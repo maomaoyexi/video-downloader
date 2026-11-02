@@ -335,7 +335,7 @@
       const host=$('fanboxPosts');host.replaceChildren();
       data.posts.forEach(post=>{
         const row=element('article',null,{className:'fb-post'}),head=element('div',null,{className:'fb-post-head'});
-        const checkbox=element('input',null,{type:'checkbox',checked:draft().all?!draft().excluded.has(post.id):draft().included.has(post.id),disabled:post.access==='restricted'});
+        const checkbox=element('input',null,{type:'checkbox',checked:draft().all?!draft().excluded.has(post.id):draft().included.has(post.id),disabled:post.access==='restricted'&&!post.resources});
         checkbox.hidden=historyMode;checkbox.setAttribute('aria-label','选择 '+post.title);checkbox.checked=checkbox.checked&&!checkbox.disabled;
         checkbox.onchange=()=>{if(draft().all)checkbox.checked?draft().excluded.delete(post.id):draft().excluded.add(post.id);else checkbox.checked?draft().included.add(post.id):draft().included.delete(post.id);};
         const info=element('div'),title=element('div',null,{className:'fb-post-title'});
@@ -355,7 +355,7 @@
               const replies=item.replies;comments(Array.isArray(replies)?replies:replies?.items,depth+1);
             });};comments(detail.post.comments);
             detail.assets.forEach(asset=>{
-              const line=element('label',null,{className:'fb-asset'}),check=element('input',null,{type:'checkbox',checked:asset.selected&&!draft().assets.has(asset.id),disabled:!asset.selected||post.access==='restricted'});
+              const line=element('label',null,{className:'fb-asset'}),check=element('input',null,{type:'checkbox',checked:asset.selected&&!draft().assets.has(asset.id),disabled:!asset.selected||post.access==='restricted'&&asset.kind!=='cover'});
               check.onchange=()=>check.checked?draft().assets.delete(asset.id):draft().assets.add(asset.id);
               check.hidden=historyMode;
               line.append(check,element('span',`${asset.name} · ${asset.variant==='original'?'原始文件':'缩略图'} · ${fmt(asset.size)} · ${statusNames[asset.status]||asset.status}${asset.history_hint?' · 导入记录':''} · ${asset.path}${asset.error?' · '+asset.error.message:''}`));details.append(line);

@@ -10,8 +10,11 @@
 <link rel="stylesheet" href="/static/css/dark.css">
 <link rel="stylesheet" href="/static/css/responsive.css">
 <link rel="stylesheet" href="/static/css/animations.css">
-<link rel="stylesheet" href="/static/css/settings.css?v=task-network-1">
+<link rel="stylesheet" href="/static/css/settings.css?v=settings-compact-1">
+<link rel="stylesheet" href="/static/css/settings-compact.css?v=all-settings-1">
+<link rel="stylesheet" href="/static/css/live-settings.css?v=live-compact-1">
 <link rel="stylesheet" href="/static/css/fanbox.css">
+<link rel="stylesheet" href="/static/css/help.css?v=help-topics-1">
 </head>
 <body>
 
@@ -151,10 +154,14 @@
             <b>Withny 提示：</b>历史存档选浏览器导出的「包含内容」HAR，直播录制选 withny-dl 的 YAML 配置。凭据可能含登录信息，请勿分享。<a href="#" onclick="setActivePage('help');return false;">查看教程 →</a>
           </div>
 
-          <div class="row task-args-row">
-            <span class="lb">本次 yt-dlp 参数</span>
-            <input type="text" class="ctl mono" id="task_ytdlp_args" maxlength="4000" autocomplete="off" spellcheck="false" placeholder='仅用于本次单条或批量任务，例如：--sleep-requests 1' style="flex:1">
-          </div>
+          <details class="task-args-row" id="taskArgsFold">
+            <summary class="btn sm task-args-toggle" id="taskArgsToggle" aria-controls="taskArgsBody">
+              <svg class="ico s14" aria-hidden="true"><use href="#i-chevron"></use></svg><span>本次 yt-dlp 参数</span>
+            </summary>
+            <div class="task-args-body" id="taskArgsBody">
+              <input type="text" class="ctl mono" id="task_ytdlp_args" aria-labelledby="taskArgsToggle" maxlength="4000" autocomplete="off" spellcheck="false" placeholder='仅用于本次单条或批量任务，例如：--sleep-requests 1'>
+            </div>
+          </details>
 
           <div class="compose">
             <textarea class="ta" id="urlInput" rows="1" placeholder="粘贴视频 / 播放列表 / 频道 / 直播链接，每行一个…"></textarea>
@@ -279,37 +286,109 @@
 
             <section class="settings-section" id="set-output">
               <div class="sh"><b>输出与画质</b><span class="rule"></span><span class="note">视频编码、音频与容器</span></div>
-              <div class="row"><span class="lb">分辨率上限</span><span class="sel"><select class="ctl" id="s_resolution"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">编码模式</span><span class="sel"><select class="ctl" id="s_codec"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">音频质量</span><span class="sel"><select class="ctl" id="s_audio"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">视频输出格式</span><span class="sel"><select class="ctl" id="s_format"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">音频处理方案</span><span class="sel"><select class="ctl" id="s_audiomode" onchange="onAudioModeChange()"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">音频输出格式</span><span class="sel"><select class="ctl" id="s_audiofmt"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">硬件加速</span><span class="sel"><select class="ctl" id="s_hwaccel"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">嵌入元数据</span><span class="sw on" id="sw_meta" onclick="toggleSwitch(this)"><i></i></span></div>
-              <div class="row"><span class="lb">下载封面</span><span class="sw on" id="sw_thumb" onclick="toggleSwitch(this)"><i></i></span></div>
+              <div class="output-settings-grid">
+                <div class="output-settings-group compact-settings-group" role="group" aria-label="视频输出设置">
+                  <h3 class="settings-group-title">视频输出</h3>
+                  <div class="row"><span class="lb">分辨率上限</span><span class="sel"><select class="ctl" id="s_resolution"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                  <div class="row"><span class="lb">编码模式</span><span class="sel"><select class="ctl" id="s_codec"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                  <div class="row"><span class="lb">视频输出格式</span><span class="sel"><select class="ctl" id="s_format"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                  <div class="row"><span class="lb">硬件加速</span><span class="sel"><select class="ctl" id="s_hwaccel"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                </div>
+                <div class="output-settings-group compact-settings-group" role="group" aria-label="音频输出设置">
+                  <h3 class="settings-group-title">音频处理</h3>
+                  <div class="row"><span class="lb">音频质量</span><span class="sel"><select class="ctl" id="s_audio"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                  <div class="row"><span class="lb">音频处理方案</span><span class="sel"><select class="ctl" id="s_audiomode" onchange="onAudioModeChange()"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                  <div class="row"><span class="lb">音频输出格式</span><span class="sel"><select class="ctl" id="s_audiofmt"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+                </div>
+              </div>
+              <div class="output-settings-switches">
+                <h3 class="settings-group-title">附加处理</h3>
+                <div class="row"><span class="lb">嵌入元数据</span><span class="sw on" id="sw_meta" onclick="toggleSwitch(this)"><i></i></span></div>
+                <div class="row"><span class="lb">下载封面</span><span class="sw on" id="sw_thumb" onclick="toggleSwitch(this)"><i></i></span></div>
+              </div>
             </section>
 
             <section class="settings-section" id="set-live">
-              <div class="sh"><b>直播设置</b><span class="rule"></span><span class="note">任务开始前会按平台检查直播状态</span></div>
-              <div class="row"><span class="lb">直播下载方式</span><span class="sel"><select class="ctl" id="s_live_stream_method"><option value="auto">自动（B站优先录播姬）</option><option value="yt-dlp">yt-dlp</option><option value="bililive-recorder">BililiveRecorder（仅B站）</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">全局直播模式</span><span class="sel"><select class="ctl" id="s_live_mode"><option value="auto">自动（推荐）</option><option value="catch_up">追开播（条件）</option><option value="live_edge">从当前时刻</option><option value="wait">蹲开播（开播后自动录制）</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">直播超时</span><input type="number" class="ctl mono" id="s_live_timeout" min="0" max="1440" value="0" style="width:110px"><span class="hint">分钟；0 表示不限时，单条和批量直播均有效；到点先收尾再验证</span></div>
-              <div class="row"><span class="lb">断流重试上限</span><input type="number" class="ctl mono" id="s_live_retries" min="0" max="5" value="5" style="width:110px"><span class="hint">每次保留新分段；恢复等待逐步增加，最长 30 秒。录播姬自行重连，崩溃标为失败</span></div>
-              <div class="row"><span class="lb">无增长告警</span><input type="number" class="ctl mono" id="s_live_watchdog" min="10" max="600" value="60" style="width:110px"><span class="hint">秒；连续两倍时间无媒体增长或下载进度则收尾并按策略重试</span></div>
-              <div class="row"><span class="lb">磁盘安全余量</span><input type="number" class="ctl mono" id="s_live_free_mb" min="64" max="102400" value="256" style="width:110px"><span class="hint">MiB；低于余量自动收尾</span></div>
-              <div class="row"><span class="lb">预检估算码率</span><input type="number" class="ctl mono" id="s_live_bitrate" min="128" max="100000" value="8000" style="width:110px"><span class="hint">Kbps；预计时长 × 码率 × 1.3；不限时先预留 15 分钟并持续检查</span></div>
-              <!-- <div class="hint">YouTube 先验证可追播 DASH；Twitch 先录实时尾部、独立回填本场 VOD。无法验证重叠时保留两路文件并报告缺口。B站录播姬使用原始 FLV、最高可用画质；代理、浏览器 Cookie、自定义参数或音频处理需要 yt-dlp 时会明确降级。</div> -->
-              <div class="row"><span class="lb">默认抓取直播弹幕</span><span class="sw" id="sw_live_danmaku" role="switch" aria-label="默认抓取直播弹幕" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">下方可按平台覆盖；只影响新任务，采集失败不停止媒体录制</span></div>
-              <div id="liveCommentPlatforms" class="live-platform-modes" aria-label="各平台弹幕默认值"></div>
-              <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_formats">弹幕导出格式</label><span class="sel"><select class="ctl" id="s_live_danmaku_formats"><option value="srt,ass">SRT + ASS</option><option value="srt">SRT</option><option value="ass">ASS</option></select></span><span class="hint">结束后逐个媒体分段生成同名字幕；密集弹幕超出轨道容量会丢弃并计数</span></div>
-              <div class="row"><span class="lb">导出匿名化</span><span class="sw" id="sw_live_danmaku_anon" role="switch" aria-label="导出匿名化" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span><span class="hint">事件库与字幕的 UID/昵称作会话内哈希；原生 XML / 聊天 JSON 仍含原始身份信息</span></div>
-              <div class="row live-comment-control"><label class="lb" for="s_live_danmaku_offset">弹幕时间微调</label><input type="number" class="ctl mono" id="s_live_danmaku_offset" min="-600000" max="600000" step="100" value="0" style="width:130px"><span class="hint">毫秒；正数延后，负数提前。可在录制结束后按当前格式与微调重新导出</span></div>
-              <!-- <div class="hint">B站复用录播姬 XML，YouTube 使用原生 live_chat，Withny 使用原生聊天 JSON；Twitch、TwitCasting、NicoChannel、Niconico 独立采集。部分平台需要登录或观看权限。源时间与本机时间精度不同，估算锚点会标明未知误差，不宣称已精确校准；详情见 comments-report.json。</div> -->
-              <div class="sh" style="margin-top:4px"><b>平台默认录制方式</b><span class="rule"></span><span class="note">仅显示同时支持追开播与当前录制的平台</span></div>
-              <div id="livePlatformModes" class="live-platform-modes"></div>
-              <!-- <div class="hint">追开播不可用时会提示原因并降级为从当前时刻；条件平台（Niconico/NicoChannel/TwitCasting/X）在探测能力接入前不显示。</div> -->
-              <div class="row"><span class="lb">直播提醒</span><button class="btn sm gh" onclick="clearLiveNoticeMutes()">清除“不再提醒”</button><span class="hint">提醒弹窗中的“不再提醒”保存在浏览器本地</span></div>
+              <div class="sh"><b>直播设置</b><span class="rule"></span><span class="note">录制与弹幕</span></div>
+
+              <section class="lc-group" aria-labelledby="lc-recording-title">
+                <h3 id="lc-recording-title">录制方式</h3>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_stream_method">直播下载方式</label>
+                  <span class="sel"><select class="ctl" id="s_live_stream_method"><option value="auto">自动（B站优先录播姬）</option><option value="yt-dlp">yt-dlp</option><option value="bililive-recorder">BililiveRecorder（仅B站）</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span>
+                  <span class="lc-hint">通常保持自动。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_mode">全局直播模式</label>
+                  <span class="sel"><select class="ctl" id="s_live_mode"><option value="auto">自动（推荐）</option><option value="catch_up">追开播（条件）</option><option value="live_edge">从当前时刻</option><option value="wait">蹲开播（开播后自动录制）</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span>
+                  <span class="lc-hint">新任务的默认录制模式。</span>
+                </div>
+                <details class="lc-disclosure">
+                  <summary>各平台录制方式<span class="lc-summary-note">按需覆盖全局默认</span></summary>
+                  <div class="lc-details-body"><div id="livePlatformModes" class="live-platform-modes"></div></div>
+                </details>
+              </section>
+
+              <section class="lc-group" aria-labelledby="lc-resources-title">
+                <h3 id="lc-resources-title">稳定性与资源</h3>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_timeout">直播超时</label><input type="number" class="ctl mono" id="s_live_timeout" min="0" max="1440" value="0"><span class="lc-unit">分钟</span><span class="lc-hint">0 表示不限时。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_retries">断流重试上限</label><input type="number" class="ctl mono" id="s_live_retries" min="0" max="5" value="5"><span class="lc-unit">次</span><span class="lc-hint">最多 5 次，保留已录制分段。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_watchdog">无增长告警</label><input type="number" class="ctl mono" id="s_live_watchdog" min="10" max="600" value="60"><span class="lc-unit">秒</span><span class="lc-hint">检测媒体或下载进度停滞。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_free_mb">磁盘安全余量</label><input type="number" class="ctl mono" id="s_live_free_mb" min="64" max="102400" value="256"><span class="lc-unit">MiB</span><span class="lc-hint">低于余量时自动收尾。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_bitrate">预检估算码率</label><input type="number" class="ctl mono" id="s_live_bitrate" min="128" max="100000" value="8000"><span class="lc-unit">Kbps</span><span class="lc-hint">用于预估所需磁盘空间。</span>
+                </div>
+                <div class="lc-meta-row">
+                  <details class="lc-disclosure">
+                    <summary>录制与重试说明</summary>
+                    <div class="lc-details-body lc-explanation">
+                      <p>直播超时对单条和批量任务都有效；到点先收尾，再验证录制结果。</p>
+                      <p>重试每次保留新分段，恢复等待逐步增加、最长 30 秒。录播姬自行重连，崩溃标为失败。</p>
+                      <p>连续两倍告警时间没有媒体增长或下载进度时，收尾并按策略重试。</p>
+                      <p>预检按“预计时长 × 码率 × 1.3”估算；不限时先预留 15 分钟，并持续检查。</p>
+                    </div>
+                  </details>
+                  <button class="btn sm gh" type="button" onclick="clearLiveNoticeMutes()">清除“不再提醒”</button>
+                </div>
+              </section>
+
+              <section class="lc-group" aria-labelledby="lc-comments-title">
+                <h3 id="lc-comments-title">弹幕设置</h3>
+                <div class="lc-row">
+                  <span class="lc-label">默认抓取弹幕</span>
+                  <span class="sw" id="sw_live_danmaku" role="switch" aria-label="默认抓取直播弹幕" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span>
+                  <span class="lc-hint">只影响新任务，采集失败不停止录制。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_danmaku_formats">弹幕导出格式</label>
+                  <span class="sel"><select class="ctl" id="s_live_danmaku_formats"><option value="srt,ass">SRT + ASS</option><option value="srt">SRT</option><option value="ass">ASS</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span>
+                  <span class="lc-hint">与媒体分段同名。</span>
+                </div>
+                <div class="lc-row">
+                  <label class="lc-label" for="s_live_danmaku_offset">弹幕时间微调</label><input type="number" class="ctl mono" id="s_live_danmaku_offset" min="-600000" max="600000" step="100" value="0"><span class="lc-unit">毫秒</span><span class="lc-hint">正数延后，负数提前。</span>
+                </div>
+                <div class="lc-row">
+                  <span class="lc-label">导出匿名化</span>
+                  <span class="sw" id="sw_live_danmaku_anon" role="switch" aria-label="导出匿名化" aria-checked="false" tabindex="0" onclick="toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSwitch(this)}"><i></i></span>
+                  <span class="lc-hint">会话内哈希处理字幕与事件库中的昵称、UID。</span>
+                </div>
+                <details class="lc-disclosure">
+                  <summary>各平台弹幕默认值<span class="lc-summary-note">7 个平台，按需覆盖</span></summary>
+                  <div class="lc-details-body"><div id="liveCommentPlatforms" class="live-platform-modes" aria-label="各平台弹幕默认值"></div></div>
+                </details>
+                <details class="lc-disclosure lc-secondary-disclosure">
+                  <summary>导出说明</summary>
+                  <div class="lc-details-body lc-explanation"><p>密集弹幕超出轨道容量时会丢弃并计数；结束后可以按当前格式和微调重新导出。</p><p>匿名化仅在本次会话内处理字幕与事件库；原始 XML、聊天 JSON 仍保留原始身份信息。</p></div>
+                </details>
+              </section>
             </section>
 
             <section class="settings-section" id="set-network">
@@ -321,7 +400,11 @@
               <div class="row"><span class="lb">代理地址</span><input type="text" class="ctl mono" id="s_proxyaddr" value="127.0.0.1" style="flex:1"><span class="dim">:</span><input type="text" class="ctl mono" id="s_proxyport" value="7890" style="width:88px;flex:none"></div>
               <div class="network-check">
                 <div class="row"><span class="lb">自动调整并发</span><button class="btn" id="btnNetworkTest" onclick="startNetworkTest()">快速检测网络</button><button class="btn gh" id="btnNetworkCancel" onclick="cancelNetworkTest()" disabled>取消检测</button></div>
-                <div class="hint">使用当前代理设置访问 Cloudflare 测试节点，约 20 秒、最多 32 MiB 测试数据（不含协议开销）；检测期间暂停新任务启动，请先完成或取消已有任务。</div>
+                <p class="compact-action-note">约 20 秒，最多使用 32 MiB 测试数据；请在任务空闲时检测。</p>
+                <details class="settings-help"><summary>网络检测说明</summary>
+                  <div class="hint">使用当前代理设置访问 Cloudflare 测试节点，最多 32 MiB 测试数据不含协议开销。检测期间暂停新任务启动，请先完成或取消已有任务。</div>
+                  <div class="hint">检测结果 15 分钟内可用，切换网络或代理后请重新检测。快速检测给出本轮线路的观测区间，不代表所有平台的带宽上下限，也不能保证不漏录。高可靠方案仅对普通 yt-dlp 视频限速，保留直播带宽。</div>
+                </details>
                 <p id="networkTestStatus" role="status" aria-live="polite">检测后可选择高性能或高可靠配置。</p>
                 <div id="networkTestMetrics" class="network-metrics"></div>
                 <div id="networkTestNotes" class="hint"></div>
@@ -329,7 +412,6 @@
                   <div class="network-profile"><b>高性能</b><p id="networkPerformanceSummary"></p><p class="mono" id="networkPerformanceSettings"></p><button class="btn" id="btnNetworkPerformance" onclick="applyNetworkProfile('performance')">应用高性能</button></div>
                   <div class="network-profile"><b>高可靠</b><p id="networkReliableSummary"></p><p class="mono" id="networkReliableSettings"></p><button class="btn" id="btnNetworkReliable" onclick="applyNetworkProfile('reliable')">应用高可靠</button></div>
                 </div>
-                <div class="hint">检测结果 15 分钟内可用，切换网络或代理后请重新检测。快速检测给出本轮线路的观测区间，不代表所有平台的带宽上下限，也不能保证不漏录。高可靠方案仅对普通 yt-dlp 视频限速，保留直播带宽。</div>
               </div>
             </section>
 
@@ -359,12 +441,16 @@
 
             <section class="settings-section" id="set-platform">
               <div class="sh"><b>平台专项</b><span class="rule"></span></div>
-              <div class="row"><span class="lb">B站多 P 策略</span><span class="sel"><select class="ctl" id="s_bili_policy"><option value="all">全部下载</option><option value="select">弹出选择</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">YouTube PO Token</span><span class="sw" id="sw_youtube_po_token" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载前自动启动本地 BgUtils Provider，缓解部分 403</span></div>
-              <div class="row"><span class="lb">Niconico 点播弹幕</span><span class="sw" id="sw_nicocmt" onclick="toggleSwitch(this)"><i></i></span><span class="hint">直播弹幕使用上方的逐平台设置</span></div>
-              <div class="row"><span class="lb">Niconico 重编码</span><span class="sw" id="sw_nicorec" onclick="toggleSwitch(this)"><i></i></span><span class="hint">兼容性优先，速度较慢</span></div>
-              <div class="row"><span class="lb">记住 TwitCasting 直播间密码</span><span class="sw" id="sw_tc_remember" role="switch" aria-label="记住 TwitCasting 密码" aria-checked="false" tabindex="0" onclick="toggleSwitch(this);onTcPasswordChange()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；开启后在本次运行内按链接复用成功使用的密码</span></div>
-              <div class="row"><span class="lb">保存 TwitCasting 直播间密码到 XLSX</span><span class="sw" id="sw_tc_xlsx" role="switch" aria-label="保存 TwitCasting 密码到 XLSX" aria-checked="false" tabindex="0" onclick="if(this.getAttribute('aria-disabled')!=='true') toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；需开启记住密码，保存到根目录 twitcasting_passwords.xlsx，明文保存并在下次启动时读取</span></div>
+              <h3 class="settings-group-title">Bilibili</h3>
+              <div class="row"><span class="lb">多 P 策略</span><span class="sel"><select class="ctl" id="s_bili_policy"><option value="all">全部下载</option><option value="select">弹出选择</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <h3 class="settings-group-title settings-group-divider">YouTube</h3>
+              <div class="row"><span class="lb">PO Token</span><span class="sw" id="sw_youtube_po_token" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载前自动启动本地 BgUtils Provider，缓解部分 403</span></div>
+              <h3 class="settings-group-title settings-group-divider">Niconico</h3>
+              <div class="row"><span class="lb">点播弹幕</span><span class="sw" id="sw_nicocmt" onclick="toggleSwitch(this)"><i></i></span><span class="hint">直播弹幕使用上方的逐平台设置</span></div>
+              <div class="row"><span class="lb">重编码</span><span class="sw" id="sw_nicorec" onclick="toggleSwitch(this)"><i></i></span><span class="hint">兼容性优先，速度较慢</span></div>
+              <h3 class="settings-group-title settings-group-divider">TwitCasting</h3>
+              <div class="row"><span class="lb">记住直播间密码</span><span class="sw" id="sw_tc_remember" role="switch" aria-label="记住 TwitCasting 密码" aria-checked="false" tabindex="0" onclick="toggleSwitch(this);onTcPasswordChange()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；仅在本次运行内复用已验证密码</span></div>
+              <div class="row"><span class="lb">保存密码到 XLSX</span><span class="sw" id="sw_tc_xlsx" role="switch" aria-label="保存 TwitCasting 密码到 XLSX" aria-checked="false" tabindex="0" onclick="if(this.getAttribute('aria-disabled')!=='true') toggleSwitch(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><i></i></span><span class="hint">默认关闭；需记住密码，明文保存到根目录 twitcasting_passwords.xlsx，下次启动时读取</span></div>
             <section class="fb-platform-options" id="set-fanbox">
               <h3 class="fb-platform-title">FANBOX</h3>
               <label class="fb-field"><span>启用 FANBOX</span><input type="checkbox" class="fb-switch" id="fanboxEnabled" checked></label>
@@ -383,7 +469,7 @@
               <div class="row"><span class="lb">启用任务模式</span><span class="sw on" id="sw_task_mode" onclick="toggleSwitch(this)"><i></i></span><span class="hint">下载/录制进入任务列表；关闭则使用旧单任务模式</span></div>
               <div class="row"><span class="lb">最大并行任务数</span><input type="number" class="ctl mono" id="s_task_parallel" min="1" max="5" value="2" style="width:100px"><span class="hint">默认 2，最多 5；1 表示任务间串行</span></div>
               <div class="row"><span class="lb">任务排序</span><span class="sel"><select class="ctl" id="s_task_order"></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">任务内直播与下载并行</span><span class="sw on" id="sw_task_mixed" onclick="toggleSwitch(this);onTaskMixedChange()"><i></i></span><span class="hint">默认开启，直播与视频使用独立额度；关闭后全部链接按输入顺序串行</span></div>
+              <div class="row"><span class="lb">任务内混合并行</span><span class="sw on" id="sw_task_mixed" onclick="toggleSwitch(this);onTaskMixedChange()"><i></i></span><span class="hint">默认开启，直播与视频使用独立额度；关闭后全部链接按输入顺序串行</span></div>
               <div class="row"><span class="lb">任务内直播并行数</span><input type="number" class="ctl mono" id="s_task_live_parallel" min="2" max="5" value="2" style="width:100px"><span class="hint">默认 2，可设置 2–5 路，不占用视频下载额度</span></div>
               <div class="row"><span class="lb">任务内视频并行数</span><input type="number" class="ctl mono" id="s_task_download_parallel" min="1" max="5" value="1" style="width:100px"><span class="hint">默认 1，视频下载串行；最多 5 路，不占用直播额度</span></div>
               <div class="row"><span class="lb">普通下载限速</span><input type="number" class="ctl mono" id="s_task_download_speed" min="0" max="100000" step="0.1" value="0" style="width:110px"><span class="hint">MiB/s / 每条普通 yt-dlp 视频；0 不限，不限制直播，Withny 专用流程不适用</span></div>
@@ -551,18 +637,40 @@
 
       <!-- ====== 使用帮助 ====== -->
       <div class="page" id="page-help">
-        <div class="doc two">
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-rocket"></use></svg>快速开始</h3>
+        <div class="help-guide" id="helpGuide">
+          <div class="help-intro">
+            <div><h2>按主题查看使用说明</h2><p>快速开始默认展开，其余内容可点击整行标题查看。</p></div>
+            <button class="btn sm" type="button" id="helpToggleAll" aria-controls="helpGuide">全部展开</button>
+          </div>
+          <nav class="help-nav" aria-label="帮助分类">
+            <a href="#help-basics">入门与设置</a>
+            <a href="#help-platforms">平台与录制</a>
+            <a href="#help-troubleshooting">文件与排查</a>
+          </nav>
+          <section class="help-group" id="help-basics" aria-labelledby="help-basics-title" tabindex="-1">
+            <div class="help-group-heading"><h3 id="help-basics-title">入门与设置</h3><span class="rule"></span><span class="help-count">6 个主题</span></div>
+            <div class="help-topics">
+              <details class="dsec help-topic" id="help-start" open>
+                <summary><svg class="ico s14"><use href="#i-rocket"></use></svg><span class="help-topic-heading"><span class="help-topic-title">快速开始</span><span class="help-topic-hint">单条下载、批量链接与任务入口</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <p><b>单个视频：</b>在下载页粘贴链接，回车即可，平台会自动识别。</p>
             <p><b>播放列表 / 频道：</b>支持情况由平台和链接类型决定，不能保证所有平台的列表或频道都能下载。Rplay 请使用单个点播或直播间入口；FANBOX 按创作者、帖子等归档入口处理。</p>
             <p><b>批量：</b>在输入框里每行粘一个链接；或把链接写进工具目录的 <span class="code">urls.txt</span>，用工具页的「TXT 混合批量下载」。</p>
             <p><b>FANBOX 单独建任务：</b>不要把 FANBOX 与其他平台链接混在同一个任务内；不同任务仍可并行。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-cookie"></use></svg>Cookie 配置</h3>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-args">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-file-text"></use></svg><span class="help-topic-heading"><span class="help-topic-title">本次参数与默认参数</span><span class="help-topic-hint">填写位置、作用范围与提交后的保留规则</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+                  <p><b>本次参数：</b>在「下载任务」展开「本次 yt-dlp 参数」，填写后再提交普通单条、多链接或 TXT 批量任务。它不保存为全局默认值；收起按钮只隐藏输入框，不会清空内容。</p>
+                  <p><b>默认参数：</b>在「下载设置 → 高级与诊断 → 默认 yt-dlp 参数」中保存，普通 yt-dlp 下载会先添加默认参数，再追加本次参数。FANBOX、Withny 等专用入口按各自选项运行。</p>
+                  <p><b>提交之后：</b>任务成功提交或加入队列后，会清空与已提交内容相同的本次参数；提交失败时保留，方便修改重试。进入等待开播时暂时保留，提交期间新输入的不同内容不会被清除。已提交任务后续执行失败，不会自动回填参数。</p>
+                  <p><b>填写示例：</b><span class="code">--sleep-requests 1</span> 设置请求间隔，<span class="code">--retries 10</span> 设置重试次数。参数间用空格分隔，含空格的值使用英文引号；遇到参数错误时，先记录原内容，再用单条任务验证。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-cookies">
+                <summary><svg class="ico s14"><use href="#i-cookie"></use></svg><span class="help-topic-heading"><span class="help-topic-title">Cookie 配置</span><span class="help-topic-hint">登录方式、凭据文件与访问权限</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <p>登录只提供账号已有权限，不能绕过付费、会员、地区或 DRM 限制。普通视频平台按需选择以下 Cookie 方式：</p>
             <ol>
               <li><b>cookies.txt 文件</b> — 用浏览器扩展导出，改名放到工具目录。</li>
@@ -570,64 +678,117 @@
             </ol>
             <p><b>平台差异：</b>Fantia 必须登录，专项下载仅支持 <span class="code">cookies.txt</span> 文件模式；Rplay 使用独立 Firefox 授权，普通 Cookie 文件不能替代；FANBOX 使用凭据文件或匿名访问，匿名只读取平台允许公开访问的内容。</p>
             <p>YouTube / Twitch 等平台的年龄限制、会员内容需要相应观看权限；NicoChannel 的 Firefox JWT 方式见下方说明。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-list"></use></svg>任务与并发</h3>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-tasks">
+                <summary><svg class="ico s14"><use href="#i-list"></use></svg><span class="help-topic-heading"><span class="help-topic-title">任务与并发</span><span class="help-topic-hint">任务队列、并行数量与 FANBOX 独立任务</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <p>「设置 → 任务与并发」默认开启任务模式，任务间默认并行 2 个，可设 1–5 个；设为 1 时任务间串行。任务内直播与视频可使用独立额度，点击任务查看具体链接、进度和日志。</p>
             <p>FANBOX 使用独立归档任务与专项文件并发设置，请与普通视频分开提交；不同任务仍可并行。普通任务队列仅保留在本次运行中，重启后不恢复。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-tv"></use></svg>Bilibili 1080P</h3>
-            <p>1080P 及以上需要登录 Cookie；标准 1080P 只要登录账号，<b>不需要大会员</b>。</p>
-            <p><b>关键一步：</b>导出 Cookie 前，先在浏览器里把播放器画质手动切到 1080P 高清，Cookie 里的 <span class="code">CURRENT_QUALITY</span> 才会正确。</p>
-            <p>分P 与合集会自动全部下载，也可在设置里改成「弹出选择」。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-radio"></use></svg>直播录制</h3>
-            <p><b>直播模式：</b>在「设置 → 直播设置」选择全局模式，并可分别设置支持追开播的平台默认方式。开始直播任务前会检查状态：未开播可加入蹲开播；已开播会显示开播时间和已开播时长，并让你确认录制方式；追开播不可用时会提示原因并降级为从当前时刻。</p>
-            <p><b>Bilibili：</b>粘贴 <span class="code">live.bilibili.com/房间号</span>，默认从当前时刻录制；普通观看侧无 DVR，不支持追开播。</p>
-            <p><b>Twitch：</b>粘贴频道 URL 录制当前直播；仅当本场有可访问的增长中 VOD 时才可能追开播。<span class="code">/videos/</span> 链接是回放。</p>
-            <p><b>TwitCasting：</b>主播页默认从当前时刻录制；<span class="code">/movie/ID</span> 下载单条，<span class="code">/show</span> 拉取历史列表。密码保护内容会弹窗要求输入密码；在平台专项设置中可选择记住密码或保存到 XLSX，两项默认关闭。XLSX 以明文保存密码，除非获得明确授权，请勿发送给其他人。</p>
-            <p><b>Rplay：</b>支持已接入直播源的状态检查、等待开播与录制；Twitch 转播要求源频道仍在直播且具有观看权限，Rplay 凭据不会转交给 Twitch。</p>
-            <p>录制期间需保持工具运行；停止后先收尾，再验证音视频和文件完整性。恢复失败时会保留已录制内容与报告。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-bookmark"></use></svg>Rplay / FANBOX</h3>
-            <p><b>Rplay 点播：</b>支持单个 HLS 点播；受限内容需在 Firefox 登录后，在「Cookie 登录」配置独立的 Rplay 登录来源与配置。暂不支持分离音画；未完成文件再次下载会重下，不能承诺断点接续。</p>
-            <p><b>FANBOX 归档：</b>支持创作者主页、单帖、标签及账号可访问的赞助/关注集合。下载前可预览和选择帖子、附件，本次设置不覆盖全局默认值。</p>
-            <p>可归档正文、图片、附件、封面、原始 JSON、可选评论和外链清单；外链仅记录，不下载外站内容。粉丝卡、评论、正文和附件是否可用取决于当前账号权限与平台返回，请核对清单和具体文件结果。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-file-text"></use></svg>Withny 存档与录制</h3>
-            <p><b>历史存档：</b>选 Withny 平台，点「选择 HAR 并下载」，选浏览器导出的「包含内容」HAR。</p>
-            <p><b>直播录制：</b>完整保留依赖包中的 <span class="code">dependency/Withny/</span> 受管组件及配套 manifest，点「选择配置并录制」并选择 YAML 配置。受管组件不可用时可能回退旧工具，应核对任务记录和评论报告。</p>
-            <p><b>输出与配置：</b>程序生成当前会话的私有配置，不改写原配置；输出和部分收尾选项由本工具接管，请按任务记录与会话报告查找文件。</p>
-            <p><b>限制与隐私：</b>仅处理未加密的普通 HLS 存档；检测到 DRM、加密或缺失签名会拒绝。HAR 含登录凭据，用完请删除，不要分享。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-globe"></use></svg>Twitter / NicoChannel</h3>
-            <p><b>Twitter / X：</b>推文链接直接提取视频，Space 链接下载音频。未登录访问限流较严，建议开浏览器 Cookie 模式。</p>
-            <p><b>NicoChannel：</b>从 Firefox 读取未过期的 JWT 登录令牌，请先在 Firefox 里登录。浏览器令牌过期时需重新刷新登录页面。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-bookmark"></use></svg>配置预设</h3>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-presets">
+                <summary><svg class="ico s14"><use href="#i-bookmark"></use></svg><span class="help-topic-heading"><span class="help-topic-title">配置预设</span><span class="help-topic-hint">保存和切换常用下载配置</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <p>设置页顶部可把当前整套参数存成命名预设，一键切换。常用几组：</p>
             <ul>
               <li><b>4K 收藏</b> — 最高画质，留原始编码</li>
               <li><b>手机兼容</b> — 1080P + H.264 + MP4</li>
               <li><b>仅音频</b> — 只输出 MP3 320k</li>
             </ul>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-folder"></use></svg>目录结构</h3>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-tools">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-wrench"></use></svg><span class="help-topic-heading"><span class="help-topic-title">实用工具简明指南</span><span class="help-topic-hint">字幕、封面、音频处理与临时文件清理</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+                  <p>进入「实用工具」点击对应卡片，填写链接或选择本地目录，核对选项后开始。过程与结果看下方「工具运行日志」，不要只根据进度条判断是否完成。</p>
+                  <ul>
+                    <li><b>单独下载字幕：</b>输入链接，选择人工或自动字幕及语言，仅保存字幕；输出到对应平台的 <span class="code">subtitles</span> 目录。实际可得语言取决于原内容。</li>
+                    <li><b>下载视频封面：</b>输入一条或多条受支持的链接，仅保存 JPG；沿用当前视频输出目录与命名规则，不写入普通视频下载归档。</li>
+                    <li><b>音频格式转换：</b>选择输入目录、目标格式等选项后转换。确认输出可用前保留源文件，涉及删除源文件的选项请谨慎选择。</li>
+                    <li><b>音频响度统一：</b>按目标响度处理不同音频，适合统一听感；单次模式较快，双次模式先分析再处理。</li>
+                    <li><b>音频音量调整：</b>按指定增益提高或降低音量。放大过多可能失真，先处理少量文件检查效果。</li>
+                    <li><b>清理临时文件：</b>可能删除下载恢复数据；未确认不再需要续传前，不要随意清理 <span class="code">.part</span>、<span class="code">.ytdl</span> 等文件。</li>
+                  </ul>
+                  <p><b>输出与源文件：</b>格式转换默认在源文件旁输出，已有输出会跳过，删除源文件选项默认关闭。响度、音量工具分别默认使用源目录下的 <span class="code">loudnorm_output/</span>、<span class="code">volume_output/</span>，也可另设目录；它们不会覆盖已有输出。</p>
+                  <p>字幕、封面工具若提示任务占用，先完成或取消活动队列。音频处理需要停止时使用「停止音频工具」，之后按完成日志检查已生成文件。</p>
+                </div>
+              </details>
+            </div>
+          </section>
+          <section class="help-group" id="help-platforms" aria-labelledby="help-platforms-title" tabindex="-1">
+            <div class="help-group-heading"><h3 id="help-platforms-title">平台与录制</h3><span class="rule"></span><span class="help-count">6 个主题</span></div>
+            <div class="help-topics">
+              <details class="dsec help-topic" id="help-live">
+                <summary><svg class="ico s14"><use href="#i-radio"></use></svg><span class="help-topic-heading"><span class="help-topic-title">直播录制</span><span class="help-topic-hint">录制模式、平台差异与停止收尾</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p><b>直播模式：</b>在「设置 → 直播设置」选择全局模式，并可分别设置支持追开播的平台默认方式。开始直播任务前会检查状态：未开播可加入蹲开播；已开播会显示开播时间和已开播时长，并让你确认录制方式；追开播不可用时会提示原因并降级为从当前时刻。</p>
+            <p><b>Bilibili：</b>粘贴 <span class="code">live.bilibili.com/房间号</span>，默认从当前时刻录制；普通观看侧无 DVR，不支持追开播。</p>
+            <p><b>Twitch：</b>粘贴频道 URL 录制当前直播；仅当本场有可访问的增长中 VOD 时才可能追开播。<span class="code">/videos/</span> 链接是回放。</p>
+            <p><b>TwitCasting：</b>主播页默认从当前时刻录制；<span class="code">/movie/ID</span> 下载单条，<span class="code">/show</span> 拉取历史列表。密码保护内容会弹窗要求输入密码；在平台专项设置中可选择记住密码或保存到 XLSX，两项默认关闭。XLSX 以明文保存密码，除非获得明确授权，请勿发送给其他人。</p>
+            <p><b>Rplay：</b>支持已接入直播源的状态检查、等待开播与录制；Twitch 转播要求源频道仍在直播且具有观看权限，Rplay 凭据不会转交给 Twitch。</p>
+            <p>录制期间需保持工具运行；停止后先收尾，再验证音视频和文件完整性。恢复失败时会保留已录制内容与报告。</p>
+                  <h4 class="help-subtitle">直播弹幕与字幕导出</h4>
+                  <p>在「下载设置 → 直播设置 → 弹幕设置」开启采集，选择 SRT、ASS 或同时导出，并按需展开「各平台弹幕默认值」覆盖全局选择。能否采集取决于平台、当前账号权限与直播源。</p>
+                  <p><b>格式与时间：</b>SRT 用于常规字幕显示，ASS 可保留弹幕排布。时间微调以毫秒为单位，正数延后、负数提前；录制结束后可按当前格式和微调重新导出。</p>
+                  <p><b>缺失或不同步：</b>查看会话中的 <span class="code">comments-report.json</span>，核对来源、录制起点和时间精度；不能仅凭视频录制成功认定弹幕完整。</p>
+                  <p><b>匿名化：</b>仅作用于本次会话的派生字幕和事件库。原始 XML、聊天 JSON 等仍可能保留昵称与账号信息，分享前需另行检查。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-bilibili">
+                <summary><svg class="ico s14"><use href="#i-tv"></use></svg><span class="help-topic-heading"><span class="help-topic-title">Bilibili 1080P</span><span class="help-topic-hint">登录、画质与分 P 选择</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p>1080P 及以上需要登录 Cookie；标准 1080P 只要登录账号，<b>不需要大会员</b>。</p>
+            <p><b>关键一步：</b>导出 Cookie 前，先在浏览器里把播放器画质手动切到 1080P 高清，Cookie 里的 <span class="code">CURRENT_QUALITY</span> 才会正确。</p>
+            <p>分P 与合集会自动全部下载，也可在设置里改成「弹出选择」。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-rplay">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-radio"></use></svg><span class="help-topic-heading"><span class="help-topic-title">Rplay 登录与点播</span><span class="help-topic-hint">Firefox 登录来源、支持范围与续传差异</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p><b>Rplay 点播：</b>支持单个 HLS 点播；受限内容需在 Firefox 登录后，在「Cookie 登录」配置独立的 Rplay 登录来源与配置。暂不支持分离音画；未完成文件再次下载会重下，不能承诺断点接续。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-fanbox">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-bookmark"></use></svg><span class="help-topic-heading"><span class="help-topic-title">FANBOX 预览与归档</span><span class="help-topic-hint">访问方式、预览筛选、下载所选与资源校验</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+                  <ol>
+                    <li>在「下载设置 → 平台专项 → FANBOX」启用平台，选择匿名访问或凭据文件。匿名仅能访问公开内容；登录账号仍须具有对应权限。</li>
+                    <li>在下载页粘贴创作者主页或单帖链接，FANBOX 与其他平台分别创建任务；不同任务仍可并行。</li>
+                    <li>点击「预览」按当前全局选项抓取帖子列表；若需单独调整本次选项，可从「抓取并下载」入口打开任务选项弹窗。预览用于检查范围，不等于附件已经下载。</li>
+                    <li>按标题、日期、资源类型等条件筛选，勾选帖子或资源。受限帖子的公开封面可以单独获取，但不代表正文和附件已解锁。</li>
+                    <li>点击「下载所选」，查看该归档任务的具体进度与错误。本次任务选项不覆盖全局默认值。</li>
+                    <li>完成后在「内容归档」详情中打开归档、导出清单或「校验资源文件」。结合具体资源与校验结果确认是否齐全。</li>
+                  </ol>
+            <p><b>FANBOX 归档：</b>支持创作者主页、单帖、标签及账号可访问的赞助/关注集合。下载前可预览和选择帖子、附件，本次设置不覆盖全局默认值。</p>
+            <p>可归档正文、图片、附件、封面、原始 JSON、可选评论和外链清单；外链仅记录，不下载外站内容。粉丝卡、评论、正文和附件是否可用取决于当前账号权限与平台返回，请核对清单和具体文件结果。</p>
+                  <p><b>恢复与重试：</b>暂停、部分完成或失败的归档，可按当前状态使用「继续」或「重试失败文件」；校验和恢复操作是否可用，以该任务实际显示的按钮为准。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-withny">
+                <summary><svg class="ico s14"><use href="#i-file-text"></use></svg><span class="help-topic-heading"><span class="help-topic-title">Withny 存档与录制</span><span class="help-topic-hint">HAR 存档、YAML 配置与文件位置</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p><b>历史存档：</b>选 Withny 平台，点「选择 HAR 并下载」，选浏览器导出的「包含内容」HAR。</p>
+            <p><b>直播录制：</b>完整保留依赖包中的 <span class="code">dependency/Withny/</span> 受管组件及配套 manifest，点「选择配置并录制」并选择 YAML 配置。受管组件不可用时可能回退旧工具，应核对任务记录和评论报告。</p>
+            <p><b>输出与配置：</b>程序生成当前会话的私有配置，不改写原配置；输出和部分收尾选项由本工具接管，请按任务记录与会话报告查找文件。</p>
+            <p><b>限制与隐私：</b>仅处理未加密的普通 HLS 存档；检测到 DRM、加密或缺失签名会拒绝。HAR 含登录凭据，用完请删除，不要分享。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-other-platforms">
+                <summary><svg class="ico s14"><use href="#i-globe"></use></svg><span class="help-topic-heading"><span class="help-topic-title">Twitter / NicoChannel</span><span class="help-topic-hint">链接类型与 Firefox 登录令牌</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p><b>Twitter / X：</b>推文链接直接提取视频，Space 链接下载音频。未登录访问限流较严，建议开浏览器 Cookie 模式。</p>
+            <p><b>NicoChannel：</b>从 Firefox 读取未过期的 JWT 登录令牌，请先在 Firefox 里登录。浏览器令牌过期时需重新刷新登录页面。</p>
+                </div>
+              </details>
+            </div>
+          </section>
+          <section class="help-group" id="help-troubleshooting" aria-labelledby="help-troubleshooting-title" tabindex="-1">
+            <div class="help-group-heading"><h3 id="help-troubleshooting-title">文件与排查</h3><span class="rule"></span><span class="help-count">5 个主题</span></div>
+            <div class="help-topics">
+              <details class="dsec help-topic" id="help-files">
+                <summary><svg class="ico s14"><use href="#i-folder"></use></svg><span class="help-topic-heading"><span class="help-topic-title">目录结构</span><span class="help-topic-hint">下载文件、日志、依赖与配置的位置</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <div class="tree">工具目录/
 ├── dependency/       yt-dlp、FFmpeg、Deno及插件
 ├── download/
@@ -639,30 +800,268 @@
 ├── urls.txt          批量链接
 ├── cookies.txt       Cookie
 └── settings.ini      配置</div>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-wrench"></use></svg>常见问题</h3>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-redownload">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-refresh"></use></svg><span class="help-topic-heading"><span class="help-topic-title">下载记录、跳过与重新下载</span><span class="help-topic-hint">归档命中、同名覆盖与临时文件保留</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+                  <p><b>记录不等于文件完整：</b>历史和归档记录说明曾经处理过链接，不能证明本地文件仍存在或没有损坏；请同时检查任务统计、实际文件和适用的校验报告。</p>
+                  <p><b>普通视频命中归档：</b>按提示选择「重新下载」或「跳过」，默认等待 20 秒未选择会跳过并继续队列。跳过单独计数，不算新下载成功。</p>
+                  <p><b>重新下载：</b>只清理本次命中的普通视频归档记录，其他记录保留；按当前输出目录和命名规则覆盖相同路径的视频及配套音频，不生成编号副本。改过目录、模板或格式时，输出位置也可能改变，重要旧文件先备份。</p>
+                  <p><b>FANBOX：</b>通过内容归档查看资源与记录，按任务提示处理复用、冲突或单独重试。父任务完成不能代替逐项校验，也不要为了单个文件直接清空整库记录。</p>
+                  <p><b>临时文件：</b><span class="code">.part</span>、<span class="code">.ytdl</span> 和分片是恢复数据，不是最终视频。清理前确认没有需要继续的下载；删除后可能无法复用原有进度。</p>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-errors">
+                <summary><svg class="ico s14" aria-hidden="true"><use href="#i-help"></use></svg><span class="help-topic-heading"><span class="help-topic-title">错误码与报错速查</span><span class="help-topic-hint">HTTP、下载器和 FANBOX 常见报错的含义与处理步骤</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+                  <p>先看报错来自哪个工具，再匹配错误文本。点击条目查看含义、常见原因、处理步骤和重试建议；同一个数字在不同工具中不一定含义相同。</p>
+                  <section class="help-error-group">
+                    <h4>网络与 HTTP</h4>
+                    <details class="help-error-entry" id="help-error-http-401">
+                      <summary><span class="help-error-label"><span class="help-error-code">HTTP 401</span><span class="help-error-name">未通过身份验证</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>当前请求未通过服务器身份验证。</dd></div>
+                        <div><dt>常见原因</dt><dd>登录方式不匹配，或 Cookie、令牌失效。</dd></div>
+                        <div><dt>处理步骤</dt><dd>确认同一账号能在浏览器访问原内容，再更新对应平台的登录配置。</dd></div>
+                        <div><dt>重试建议</dt><dd>修正登录状态后再试；原样连续提交通常无益。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-http-403">
+                      <summary><span class="help-error-label"><span class="help-error-code">HTTP 403</span><span class="help-error-name">服务器拒绝访问</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>服务器拒绝了当前请求，不能仅凭 403 判断 Cookie 过期。</dd></div>
+                        <div><dt>常见原因</dt><dd>可能涉及账号权限、签名过期、验证要求、地区或请求限制。</dd></div>
+                        <div><dt>处理步骤</dt><dd>核对原始链接、账号权限和前文日志；需要验证时先在平台完成验证。</dd></div>
+                        <div><dt>重试建议</dt><dd>明确并处理具体原因后再试，避免连续重复请求。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-http-404">
+                      <summary><span class="help-error-label"><span class="help-error-code">HTTP 404</span><span class="help-error-name">资源不存在或当前账号不可见</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>目标资源未找到，也可能对当前账号不可见。</dd></div>
+                        <div><dt>常见原因</dt><dd>链接错误、内容已删除，或账号无法访问。</dd></div>
+                        <div><dt>处理步骤</dt><dd>重新打开原始页面，核对链接和浏览器中的访问结果。</dd></div>
+                        <div><dt>重试建议</dt><dd>仅在链接或访问条件已修正时再试。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-http-429">
+                      <summary><span class="help-error-label"><span class="help-error-code">HTTP 429</span><span class="help-error-name">请求过于频繁</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>平台正在限制请求频率。</dd></div>
+                        <div><dt>常见原因</dt><dd>短时间请求或并发过多，也可能处于平台冷却期。</dd></div>
+                        <div><dt>处理步骤</dt><dd>暂停任务，按平台或 Retry-After 提示等待，并降低并发。</dd></div>
+                        <div><dt>重试建议</dt><dd>等待冷却结束后再试，不要连续重复提交。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-connection-refused">
+                      <summary><span class="help-error-label"><span class="help-error-code">Connection refused</span><span class="help-error-name">连接被拒绝</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>目标连接被拒绝建立。</dd></div>
+                        <div><dt>常见原因</dt><dd>常见于代理未运行，或程序中的代理地址、端口不正确。</dd></div>
+                        <div><dt>处理步骤</dt><dd>检查报错指向的地址，以及代理服务、地址和端口配置。</dd></div>
+                        <div><dt>重试建议</dt><dd>连接配置或服务恢复后再试。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-timeout-dns">
+                      <summary><span class="help-error-label"><span class="help-error-code">Timed out / DNS 解析失败</span><span class="help-error-name">超时或域名解析失败</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>请求未及时完成，或目标域名无法解析。</dd></div>
+                        <div><dt>常见原因</dt><dd>可能涉及网络、DNS 或代理；浏览器和下载器不一定使用同一路径。</dd></div>
+                        <div><dt>处理步骤</dt><dd>按具体文本分别检查网络连接、域名解析和代理出口。</dd></div>
+                        <div><dt>重试建议</dt><dd>网络恢复后可重试；持续失败时先排查线路。</dd></div>
+                      </dl>
+                    </details>
+                  </section>
+                  <section class="help-error-group">
+                    <h4>下载器与本地文件</h4>
+                    <details class="help-error-entry" id="help-error-ytdlp-exit-1">
+                      <summary><span class="help-error-label"><span class="help-error-code">yt-dlp 退出码 1</span><span class="help-error-name">下载器通用失败</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>yt-dlp 未正常完成，数字 1 本身不能定位原因。</dd></div>
+                        <div><dt>常见原因</dt><dd>提取、登录、网络、下载或后处理失败均可能返回 1。</dd></div>
+                        <div><dt>处理步骤</dt><dd>向前查找第一条具体错误，按其文本处理。</dd></div>
+                        <div><dt>重试建议</dt><dd>先处理具体原因，不要只看到 1 就重复整批任务。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-ytdlp-exit-2">
+                      <summary><span class="help-error-label"><span class="help-error-code">yt-dlp 退出码 2</span><span class="help-error-name">参数解析或调用错误</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>yt-dlp 的命令行参数或调用不符合要求。</dd></div>
+                        <div><dt>常见原因</dt><dd>自定义参数拼写、引号或参数值有误。</dd></div>
+                        <div><dt>处理步骤</dt><dd>检查默认参数与本次参数，修正后先用一条链接验证。</dd></div>
+                        <div><dt>重试建议</dt><dd>修正参数后再试；原样重试通常不会解决。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-format-unavailable">
+                      <summary><span class="help-error-label"><span class="help-error-code">Requested format is not available</span><span class="help-error-name">没有符合条件的格式</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>当前内容没有满足所选条件的可用格式。</dd></div>
+                        <div><dt>常见原因</dt><dd>画质、编码或格式筛选过严，也可能与可访问格式有关。</dd></div>
+                        <div><dt>处理步骤</dt><dd>先使用自动画质和兼容输出组合复查，放宽格式筛选。</dd></div>
+                        <div><dt>重试建议</dt><dd>调整筛选后可试；不要把这条文本固定当作退出码 2。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-ffmpeg-exit">
+                      <summary><span class="help-error-label"><span class="help-error-code">ffmpeg exited with code 4294967294</span><span class="help-error-name">FFmpeg 异常退出</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>Windows 可能显示的无符号退出值，对应有符号 -2；该数字不能唯一定位故障。</dd></div>
+                        <div><dt>常见原因</dt><dd>需由前文 stderr 判断，可能涉及输入、权限、HTTP、媒体或封装错误。</dd></div>
+                        <div><dt>处理步骤</dt><dd>保留错误前后的日志，找到 FFmpeg 的具体错误文本再处理。</dd></div>
+                        <div><dt>重试建议</dt><dd>先核对具体原因，不要仅依据这个数字清缓存或修改网络。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-missing-media-tools">
+                      <summary><span class="help-error-label"><span class="help-error-code">ffmpeg / ffprobe 未找到</span><span class="help-error-name">缺少媒体处理依赖</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>程序找不到所需媒体处理工具。</dd></div>
+                        <div><dt>常见原因</dt><dd>依赖包未完整解压、位置不对，或组件缺失。</dd></div>
+                        <div><dt>处理步骤</dt><dd>确认程序旁的 dependency/ 完整，使用与程序匹配的依赖包。</dd></div>
+                        <div><dt>重试建议</dt><dd>补齐依赖后再试；重复下载任务不能补齐文件。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-file-write">
+                      <summary><span class="help-error-label"><span class="help-error-code">Permission denied / No space left on device</span><span class="help-error-name">文件无法写入</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>前者表示写入被拒绝，后者表示可用空间不足。</dd></div>
+                        <div><dt>常见原因</dt><dd>可能是目录权限、文件占用、磁盘只读，或下载/临时目录空间不足。</dd></div>
+                        <div><dt>处理步骤</dt><dd>根据实际文本检查写入权限、占用程序及相关目录剩余空间。</dd></div>
+                        <div><dt>重试建议</dt><dd>恢复可写状态或空间后再试，保留尚未完成的恢复数据。</dd></div>
+                      </dl>
+                    </details>
+                  </section>
+                  <section class="help-error-group">
+                    <h4>FANBOX</h4>
+                    <details class="help-error-entry" id="help-error-invalid-payload">
+                      <summary><span class="help-error-label"><span class="help-error-code">invalid_payload</span><span class="help-error-name">返回内容不符合资源要求</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>收到网页、错误文档，或图片文件头/解码与预期不符。</dd></div>
+                        <div><dt>常见原因</dt><dd>可能是权限或实际响应异常；旧资源记录也可能存在扩展名不匹配。</dd></div>
+                        <div><dt>处理步骤</dt><dd>查看对应资源明细与登录状态；当前修复版支持续跑时修正旧失败资源的错误路径。</dd></div>
+                        <div><dt>重试建议</dt><dd>确认响应或配置后再试，不要仅修改扩展名冒充有效文件。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-access-denied">
+                      <summary><span class="help-error-label"><span class="help-error-code">access_denied</span><span class="help-error-name">当前请求未获授权</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>当前账号或访问方式未获得请求资源的权限。</dd></div>
+                        <div><dt>常见原因</dt><dd>账号无访问权限、登录态失效，或需要浏览器验证。</dd></div>
+                        <div><dt>处理步骤</dt><dd>核对同一账号的实际权限及登录状态；匿名方式仅用于公开内容。</dd></div>
+                        <div><dt>重试建议</dt><dd>修正访问条件后再试；重试不能增加账号权限。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-job-busy">
+                      <summary><span class="help-error-label"><span class="help-error-code">job_busy</span><span class="help-error-name">任务或资源仍被占用</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>任务处于排队、运行、收尾，或与校验/维护操作互斥。</dd></div>
+                        <div><dt>常见原因</dt><dd>同一归档仍有活动操作，或正在等待有效租约释放。</dd></div>
+                        <div><dt>处理步骤</dt><dd>先查看任务和日志，等待当前操作结束；需要停止时使用界面提供的入口。</dd></div>
+                        <div><dt>重试建议</dt><dd>确认不再占用后再操作，不要重复启动同一任务。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-lease-expired">
+                      <summary><span class="help-error-label"><span class="help-error-code">lease_expired</span><span class="help-error-name">工作或下载租约失效</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>当前工作已失去有效租约，界面显示 running 不代表仍在正常执行。</dd></div>
+                        <div><dt>常见原因</dt><dd>实际租约校验未通过，需结合中断、恢复及任务所有权状态判断。</dd></div>
+                        <div><dt>处理步骤</dt><dd>刷新任务详情，核对最终状态与日志，再从允许的继续入口恢复；不要手改数据库。</dd></div>
+                        <div><dt>重试建议</dt><dd>状态核对后再继续；若反复出现，请保留脱敏日志反馈。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-rate-limited">
+                      <summary><span class="help-error-label"><span class="help-error-code">rate_limited</span><span class="help-error-name">平台限频或账号冷却</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>平台拒绝过密请求，或本地记录的账号冷却尚未结束。</dd></div>
+                        <div><dt>常见原因</dt><dd>接口返回限频，或同一账号仍处于冷却期。</dd></div>
+                        <div><dt>处理步骤</dt><dd>按任务 retry_after 或等待提示处理，并降低并发或增加请求间隔。</dd></div>
+                        <div><dt>重试建议</dt><dd>等待冷却结束后再试，不要用连续启动绕过等待。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-challenge-required">
+                      <summary><span class="help-error-label"><span class="help-error-code">challenge_required</span><span class="help-error-name">需要平台验证</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>接口返回了浏览器验证或非预期验证页面。</dd></div>
+                        <div><dt>常见原因</dt><dd>平台要求当前访问先完成验证。</dd></div>
+                        <div><dt>处理步骤</dt><dd>在平台处理验证并核对登录状态，再返回程序继续。</dd></div>
+                        <div><dt>重试建议</dt><dd>完成验证后再试；程序不会自动绕过平台验证。</dd></div>
+                      </dl>
+                    </details>
+                  </section>
+                  <div class="help-note"><b>任务状态不是错误码。</b><span class="code">queued</span> 表示等待调度，<span class="code">running</span> 表示执行状态，<span class="code">paused</span> 表示 FANBOX 归档暂停，<span class="code">preview_ready</span> 仅表示预览就绪；<span class="code">partial</span> 表示部分结果，<span class="code">reused</span> / <span class="code">skipped</span> 表示复用或跳过。结合资源明细、实际文件和校验报告判断；进程退出码 <span class="code">0</span> 也不保证本次下载了新文件。</div>
+                  <p>更多报错见程序目录内的 <span class="code">docs/错误码.txt</span>。排查或反馈时保留首次具体错误及前后日志，并先遮盖凭据等敏感内容。</p>
+                  <section class="help-missing-error" aria-labelledby="helpMissingTitle">
+                    <h4 class="help-subtitle" id="helpMissingTitle">没有找到你的报错？</h4>
+                    <p>该报错暂未收录，原因尚未确认。请保留相关文件和前后日志，先查完整手册；仍无法解决时，整理信息后反馈。</p>
+                    <div class="help-support-actions">
+                      <button class="btn sm" type="button" id="helpOpenManual" aria-controls="helpManualPanel" aria-expanded="false">查看完整错误手册</button>
+                      <button class="btn sm" type="button" id="helpOpenOrganizer" aria-controls="helpSupportPanel">整理报错信息</button>
+                      <button class="btn sm" type="button" id="helpOpenFeedback" aria-controls="helpSupportPanel">生成反馈模板</button>
+                    </div>
+                    <section class="help-support-panel" id="helpManualPanel" aria-labelledby="helpManualTitle" hidden>
+                      <div class="help-support-heading"><h4 id="helpManualTitle">完整错误与排查手册</h4><button class="btn sm gh" type="button" id="helpCloseManual">收起手册</button></div>
+                      <p>按报错来源阅读，也可使用浏览器的 Ctrl+F 查找错误文本。手册覆盖面更广，但不能保证穷尽所有报错。</p>
+                      <p id="helpManualStatus" class="help-support-status" role="status"></p>
+                      <pre class="help-manual-text" id="helpManualText" tabindex="0" aria-label="完整错误手册正文"></pre>
+                    </section>
+                    <section class="help-support-panel" id="helpSupportPanel" aria-labelledby="helpSupportTitle" hidden>
+                      <div class="help-support-heading"><h4 id="helpSupportTitle">整理报错信息</h4><button class="btn sm gh" type="button" id="helpCloseSupport">收起</button></div>
+                      <p id="helpSupportHint">填写或粘贴具体错误及前后日志，生成可检查的报错摘要。</p>
+                      <div class="help-report-grid">
+                        <label class="help-report-field help-field-version"><span>程序版本</span><input class="ctl" id="helpReportVersion" maxlength="100" placeholder="未取得时请手动填写"></label>
+                        <label class="help-report-field"><span>平台</span><input class="ctl" id="helpReportPlatform" maxlength="200" placeholder="例如 FANBOX、Bilibili"></label>
+                        <label class="help-report-field"><span>报错来源</span><input class="ctl" id="helpReportSource" maxlength="200" placeholder="例如 HTTP、yt-dlp、FFmpeg；不确定可留空"></label>
+                        <label class="help-report-field"><span>错误码或标识</span><input class="ctl mono" id="helpReportCode" maxlength="300" placeholder="例如 HTTP 403、invalid_payload；未返回时留空"></label>
+                        <label class="help-report-field help-report-wide"><span>错误原文</span><textarea class="ctl mono" id="helpReportError" rows="3" maxlength="10000" placeholder="粘贴具体错误，尽量保留原始文字"></textarea></label>
+                        <label class="help-report-field help-report-wide"><span>报错前后相关日志</span><textarea class="ctl mono" id="helpReportLogs" rows="4" maxlength="20000" placeholder="只粘贴相关片段；本功能不会自动读取日志文件"></textarea></label>
+                      </div>
+                      <div class="help-report-grid" id="helpFeedbackFields" hidden>
+                        <label class="help-report-field help-report-wide"><span>操作步骤</span><textarea class="ctl" id="helpReportSteps" rows="3" maxlength="5000" placeholder="从哪个页面进入，依次做了什么"></textarea></label>
+                        <label class="help-report-field"><span>预期结果</span><textarea class="ctl" id="helpReportExpected" rows="3" maxlength="3000" placeholder="你希望发生什么"></textarea></label>
+                        <label class="help-report-field"><span>实际结果</span><textarea class="ctl" id="helpReportActual" rows="3" maxlength="3000" placeholder="实际发生了什么，任务最终处于什么状态"></textarea></label>
+                      </div>
+                      <div class="help-note">内容只在本页整理，不会自动上传日志或创建问题反馈。生成时会尝试遮盖常见凭据、令牌和签名链接；规则不能保证完全脱敏，复制前请人工检查预览。</div>
+                      <div class="help-support-actions"><button class="btn sm" type="button" id="helpGenerateReport">生成报错摘要</button><button class="btn sm" type="button" id="helpCopyReport" disabled>复制整理结果</button></div>
+                      <label class="help-report-field" id="helpReportOutputPanel" hidden><span>整理结果（复制前可检查、修改）</span><textarea class="ctl mono help-report-output" id="helpReportOutput" rows="12" maxlength="50000"></textarea></label>
+                      <p id="helpReportStatus" class="help-support-status" role="status"></p>
+                    </section>
+                  </section>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-faq">
+                <summary><svg class="ico s14"><use href="#i-wrench"></use></svg><span class="help-topic-heading"><span class="help-topic-title">常见问题</span><span class="help-topic-hint">速度、登录、中断恢复与后台运行</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
             <p><b>速度慢：</b>先检查线路、代理、平台限流和同时运行的任务，再调整并发。下载限速推荐 5–10 MB/s；高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担。</p>
             <p><b>提示需要登录：</b>先确认账号在浏览器里能观看，再按对应平台的 Cookie、Firefox 或凭据文件方式配置。</p>
             <p><b>中断了：</b>续传取决于平台、资源和下载方式。普通 yt-dlp 下载通常可复用未完成文件；TwitCasting 会校验并复用完整分片；FANBOX 按检查点及资源验证决定复用或重下；Rplay 未完成文件重试会重下。</p>
             <p><b>关闭网页：</b>有任务时确认关闭后，任务继续在后台运行；无任务时关闭网页，程序会在 30 秒后退出。不要关闭后端控制台，彻底退出请用「✕ 退出」。</p>
             <p><b>网站改版下不动：</b>普通 yt-dlp 提取失败可在工具页更新核心；Rplay 插件或 FANBOX 接口兼容问题还应检查程序与配套依赖版本，并保留相关日志。</p>
-          </div>
-
-          <div class="dsec">
-            <h3><svg class="ico s14"><use href="#i-wrench"></use></svg>当前已知问题</h3>
-            <p>已修复单任务模式下，跨 FANBOX 后新任务成功启动但停止仍指向旧执行器的问题。以下六项仍待修复：</p>
+                  <h4 class="help-subtitle">排查与反馈清单</h4>
+                  <ol>
+                    <li>记录程序版本、当前修复版或旧发布附件、平台、链接类型，以及使用的操作入口。</li>
+                    <li>写清操作步骤、预期结果和实际结果，保留首次具体报错及前后日志，不只截最后一行退出码。</li>
+                    <li>先确认同一账号在浏览器中有访问权限，再核对对应登录方式、代理、配套依赖、磁盘空间和输出目录权限。</li>
+                    <li>在工具页「打开日志目录」，并优先查看具体任务日志；直播还应核对 <span class="code">download/.live-jobs/</span> 中的会话报告与 <span class="code">comments-report.json</span>。</li>
+                    <li>反馈前遮盖 Cookie、令牌、HAR、密码及原始评论身份信息。不要直接公开凭据文件或完整含密命令。</li>
+                  </ol>
+                </div>
+              </details>
+              <details class="dsec help-topic" id="help-fixes">
+                <summary><svg class="ico s14"><use href="#i-wrench"></use></svg><span class="help-topic-heading"><span class="help-topic-title">当前修复版说明</span><span class="help-topic-hint">当前修复版与旧发布附件的区别</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <div class="help-topic-body">
+            <p>单任务模式下，跨 FANBOX 后新任务成功启动但停止仍指向旧执行器的问题已修复。</p>
+            <p>当前修复版源码已处理以下 FANBOX 问题。旧 v2.7.0 发布附件未重新打包，查看效果请使用当前修复版入口。</p>
             <ol>
-              <li>FANBOX 排队任务暂停或启动失败后，归档记录可能卡在 <span class="code">queued</span>；核对日志，必要时重启。</li>
-              <li>FANBOX 与其他平台混合批量时，重新下载确认可能失败；请独立建任务，不同任务仍可并行。</li>
-              <li>原图 PNG/GIF、缩略图 JPEG 时，FANBOX 缩略图可能按错误格式校验；暂用原图质量。</li>
-              <li>FANBOX 先预览再下载可能漏存受限帖公开封面；请人工核对结果。</li>
-              <li>FANBOX API 请求间隔达到或超过 120 秒可能使租约过期，中断后仍显示 <span class="code">running</span>；避免此设置，异常时核对日志并重启。</li>
-              <li>独立 <span class="code">--fanbox-scan</span> 忽略保存的 <span class="code">FANBOX_ANONYMOUS</span>，匿名扫描必须显式传 <span class="code">--anonymous</span>；WebUI 和归档下载 CLI 不受此项影响。</li>
+              <li>排队任务暂停、取消或启动失败后可继续处理，失效活动记录会按实际任务状态清理。</li>
+              <li>同一任务拒绝 FANBOX 与其他平台混合链接；分别创建的任务仍可并行，确认消息按当前执行器归属处理。</li>
+              <li>缩略图扩展名按实际资源 URL 处理，旧失败记录续跑时可修正错误扩展名与路径。</li>
+              <li>先预览再下载时，允许选择受限帖子的公开封面；正文和附件仍受访问权限限制。</li>
+              <li>较长请求间隔的等待期间会续租；异常收尾检查所有权并保存任务状态。</li>
+              <li>独立扫描及归档命令读取已保存的匿名和 Cookie 设置，本次显式参数优先。</li>
             </ol>
-          </div>
-
+                </div>
+              </details>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -678,6 +1077,36 @@
                 <div class="mono dim" style="font-size:12px;margin-top:3px"><span id="aboutVer"></span> · 基于 yt-dlp + ffmpeg</div>
               </div>
             </div>
+
+            <section class="sect" id="aboutReleaseNotes" aria-labelledby="aboutReleaseTitle">
+              <div class="sh"><b id="aboutReleaseTitle">v2.7.1 本版更新</b><span class="rule"></span></div>
+              <ul class="about-release-summary">
+                <li>修复 FANBOX 任务恢复、确认归属、封面格式、公开封面、续租与 CLI 访问设置。</li>
+                <li>设置页紧凑单列、整行展开收起，修复目录高亮跳动和工具卡片入场顺序。</li>
+                <li>“本次 yt-dlp 参数”默认收起，保留原有提交和清空规则。</li>
+                <li>帮助页分组折叠，提供错误速查、完整手册及本地报错整理和反馈模板。</li>
+              </ul>
+              <details class="about-release-details" id="aboutReleaseDetails">
+                <summary>查看 v2.7.1 详细更新</summary>
+                <div class="dsec about-release-body">
+                  <h4>FANBOX 六项修复</h4>
+                  <ol>
+                    <li>排队任务暂停、取消或启动失败后清理失效状态，允许继续；有效租约仍防止重复运行。</li>
+                    <li>FANBOX 与其他平台分别创建任务，混合输入在入口校验，重下载确认发送给所属执行器。</li>
+                    <li>封面、缩略图扩展名按实际资源 URL 处理，恢复旧失败资源时可修正错误路径。</li>
+                    <li>预览后可选受限帖公开封面，正文与附件仍按访问权限处理。</li>
+                    <li>较长请求间隔期间持续续租，异常收尾核对所有权并保存终态。</li>
+                    <li>扫描、归档 CLI 沿用保存的匿名和 Cookie 设置，显式参数优先且互斥。</li>
+                  </ol>
+                  <h4>界面与帮助</h4>
+                  <p>下拉框按文字长度测宽、同组等宽，保留长参数空间；目录与章节标题整行切换，内部折叠不抢占高亮；工具卡片按顺序入场。</p>
+                  <p>帮助分为三类、17 个主题，默认只展开快速开始；18 条常见报错按含义、原因、步骤和重试建议说明。未找到报错时可查看完整手册，或本地整理并检查反馈预览。</p>
+                  <p>本地整理尝试遮盖常见敏感信息，不自动读取日志、上传或提交反馈，复制前仍需人工检查。</p>
+                  <h4>升级提示</h4>
+                  <p>源码升级需同步主入口、程序模块、前端资源及同版依赖，并重启后端。保留配置、凭据、密码表和下载目录；普通任务队列不跨进程恢复。</p>
+                </div>
+              </details>
+            </section>
 
             <div class="sect">
               <div class="sh"><b>支持平台</b><span class="rule"></span></div>
@@ -843,7 +1272,9 @@
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/audio-convert.js"></script>
 <script src="/static/js/audio-volume.js"></script>
-<script src="/static/js/app.js?v=task-network-1"></script>
+<script src="/static/js/settings-controls.js?v=all-settings-1"></script>
+<script src="/static/js/help-support.js?v=help-support-1"></script>
+<script src="/static/js/app.js?v=all-settings-1"></script>
 <script src="/static/js/fanbox.js"></script>
 </body>
 </html>

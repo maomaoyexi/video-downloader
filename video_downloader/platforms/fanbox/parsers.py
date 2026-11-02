@@ -81,7 +81,7 @@ def parse_post(value: dict, options: dict | None = None) -> Post:
         resource_index = 0 if kind == "cover" else 1 + sum(a.kind != "cover" for a in post.assets)
         asset = Asset(asset_id, kind or category(extension), str(data.get("name") or name.rsplit(".", 1)[0]),
                       extension, url, variant, resource_index, size if type(size) is int and size >= 0 else None,
-                      data.get("width"), data.get("height"), data.get("thumbnailUrl"))
+                      data.get("width"), data.get("height"), data.get("thumbnailUrl")).for_download()
         asset.skip_reason = asset_reason(asset, options)
         asset.selected = asset.skip_reason is None
         post.assets.append(asset)

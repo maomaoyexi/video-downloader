@@ -7,7 +7,7 @@ from video_downloader.state.app_state import AppState
 from tests.platforms.fanbox.test_executor import callbacks
 
 
-def test_exclusive_mixed_batch_routes_sequentially_without_deadlock():
+def test_exclusive_fanbox_batch_routes_sequentially_without_deadlock():
     manager=DownloadManager();state=AppState();seen=[]
     def factory(dm,cb,finished,config):
         def start(url,**kwargs):
@@ -18,10 +18,10 @@ def test_exclusive_mixed_batch_routes_sequentially_without_deadlock():
     video=SimpleNamespace(batch_download=lambda *a,**kw:{'old':True},stop_download=lambda:None)
     router=RoutedDownloadExecutor(video,SimpleNamespace(state=state),manager=manager,
                                   callbacks=callbacks(),batch_factory=factory)
-    urls=['https://www.youtube.com/watch?v=test','https://sample.fanbox.cc']
+    urls=['https://sample.fanbox.cc','https://other.fanbox.cc']
     assert router.batch_download(urls)['ok'];router.batch_thread.join(3)
     assert seen==urls and not manager.snapshot()['running']
-    assert router.batch_download([urls[0]])=={'old':True}
+    assert router.batch_download(['https://www.youtube.com/watch?v=test'])=={'old':True}
 
 
 def test_exclusive_batch_stop_does_not_start_later_item():

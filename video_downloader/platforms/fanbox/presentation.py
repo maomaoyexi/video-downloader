@@ -11,9 +11,12 @@ def asset_rows(state,post,options):
     rows=[]
     for asset in post.assets:
         record=state.get('files',{}).get(post.id,{}).get(asset.id+':'+asset.variant,{})
+        restricted_body=post.access=='restricted' and asset.kind!='cover'
+        selected=asset.selected and not restricted_body
         rows.append({'id':post.id+':'+asset.id+':'+asset.variant,'name':asset.name,'kind':asset.kind,
-            'variant':asset.variant,'size':asset.size,'selected':asset.selected,'reason':asset.skip_reason,
-            'status':record.get('status','excluded' if not asset.selected else 'pending'),'error':record.get('error'),
+            'variant':asset.variant,'size':asset.size,'selected':selected,
+            'reason':'restricted_body' if restricted_body else asset.skip_reason,
+            'status':record.get('status','excluded' if not selected else 'pending'),'error':record.get('error'),
             'path':record.get('path') or asset_path(post,asset,options,state['task_date'])})
     return rows
 

@@ -13,7 +13,7 @@ const script=fs.readFileSync('resource/static/js/fanbox.js','utf8');
 const app=fs.readFileSync('resource/static/js/app.js','utf8').replace(/^init\(\);$/m,'');
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
 
-async function page(){
+async function page({posts,assets}={}){
   const w=new Window({url:'http://localhost:19876',settings:{disableCSSFileLoading:true,disableJavaScriptFileLoading:true}});
   w.document.write(template);w.structuredClone=structuredClone;
   const calls=[],saved=[];
@@ -27,7 +27,11 @@ async function page(){
     if(path==='/api/fanbox/naming-preview')return {directory:'sample/post',files:['images/001.png']};
     if(path.startsWith('/api/fanbox/history'))return {runs:[job]};
     if(path.startsWith('/api/fanbox/logs'))return {logs:[]};
-    if(path.startsWith('/api/fanbox/job'))return {job,posts:[{id:'1',title:'Match <script>',published_at:'2026-10-01',access:'accessible',resources:0}],total:1,options:defaults};
+    if(path.startsWith('/api/fanbox/job')){
+      if(path.includes('post_id='))return {job,post:{blocks:[],comments:[],links:[]},assets:assets||[]};
+      const items=posts||[{id:'1',title:'Match <script>',published_at:'2026-10-01',access:'accessible',resources:0}];
+      return {job,posts:items,total:items.length,options:defaults};
+    }
     if(path==='/api/check-update')return {};
     throw new Error('Unexpected endpoint: '+path);
   };
@@ -117,5 +121,32 @@ test('FANBOX console isolates logs, history groups URLs and opens detailed runs'
     d.getElementById('urlInput').value='https://youtube.com/watch?v=x';w.FanboxUI.sync();
     assert.ok(d.getElementById('logBox').textContent.includes('video log'));
     assert.ok(!d.getElementById('logBox').textContent.includes('[FANBOX]'));
+  }finally{await close();}
+});
+
+test('restricted post public covers stay selectable while private body assets do not',async()=>{
+  const {w,close}=await page({posts:[
+    {id:'1',title:'Restricted with cover',published_at:'2026-10-01',access:'restricted',resources:1},
+    {id:'2',title:'Restricted without cover',published_at:'2026-10-01',access:'restricted',resources:0}
+  ],assets:[
+    {id:'1:cover:original',name:'cover',kind:'cover',variant:'original',selected:true,status:'pending',path:'cover.jpg'},
+    {id:'1:private:original',name:'private',kind:'image',variant:'original',selected:false,status:'excluded',path:'private.png'}
+  ]});
+  try{
+    const d=w.document;
+    d.getElementById('urlInput').value='https://sample.fanbox.cc';w.FanboxUI.sync();
+    await w.FanboxUI.start('https://sample.fanbox.cc',true);await tick();
+    const posts=[...d.querySelectorAll('#fanboxPosts .fb-post')];
+    assert.equal(posts.length,2);
+    assert.equal(posts[0].querySelector('.fb-post-head input').disabled,false);
+    assert.equal(posts[0].querySelector('.fb-post-head input').checked,true);
+    assert.equal(posts[1].querySelector('.fb-post-head input').disabled,true);
+    const details=posts[0].querySelector('details');details.open=true;
+    details.dispatchEvent(new w.Event('toggle'));await tick();
+    const resources=[...details.querySelectorAll('.fb-asset input')];
+    assert.equal(resources.length,2);
+    assert.equal(resources[0].disabled,false);
+    assert.equal(resources[0].checked,true);
+    assert.equal(resources[1].disabled,true);
   }finally{await close();}
 });

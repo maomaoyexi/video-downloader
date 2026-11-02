@@ -1,7 +1,8 @@
 """Normalized content model. A missing summary body is never a restricted post."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
+from urllib.parse import unquote, urlsplit
 
 
 @dataclass
@@ -19,6 +20,14 @@ class Asset:
     thumbnail_url: str | None = field(default=None, repr=False)
     selected: bool = True
     skip_reason: str | None = None
+
+    def for_download(self):
+        if self.kind == 'image' and self.variant == 'thumbnail':
+            name = unquote(urlsplit(self.url).path.rsplit('/', 1)[-1])
+            extension = name.rsplit('.', 1)[-1].lower() if '.' in name else ''
+            if extension in {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'} and extension != self.extension:
+                return replace(self, extension=extension)
+        return self
 
 
 @dataclass
@@ -56,6 +65,6 @@ class Post:
     @classmethod
     def from_dict(cls, value):
         fields = dict(value)
-        fields["assets"] = [Asset(**a) for a in fields["assets"]]
+        fields["assets"] = [Asset(**a).for_download() for a in fields["assets"]]
         fields["links"] = [Link(**link) for link in fields["links"]]
         return cls(**fields)

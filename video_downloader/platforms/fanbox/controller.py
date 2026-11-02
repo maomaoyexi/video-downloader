@@ -25,9 +25,10 @@ from .verification import VerificationService,report_header
 
 
 class FanboxController:
-    def __init__(self,application,*,tool_dir,config_getter,start,cancel,publish=None):
+    def __init__(self,application,*,tool_dir,config_getter,start,cancel,publish=None,is_active=None):
         self.application,self.root=application,Path(tool_dir)
         self.config=config_getter;self.start=start;self.cancel=cancel
+        self.is_active=is_active or (lambda job_id,target:True)
         self.publish=publish or (lambda event:None)
         self.lock=threading.RLock();self.active={}
         self.verifier=VerificationService(application,self._verification_event)
@@ -87,11 +88,11 @@ class FanboxController:
                     self.application.repository.save_verification(state['id'],report);state['verification']=report_header(report)
                 if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+state['id']):
                     self.active.pop(state['id'],None)
-                if state['status'] in {'running','queued'} and state['id'] not in self.active and not self.application.repository.has_lease('job:'+state['id']):
+                target=self.active.get(state['id'])
+                if (state['status'] in {'running','queued'} and not self.application.repository.has_lease('job:'+state['id'])
+                        and (target is None or not self.is_active(state['id'],target))):
                     state=self.application.repository.job(state['id'])
-                    state['status']='paused';state['phase']='paused'
-                    state['error']={'code':'interrupted','message':'任务已中断，可继续','retry_after':None}
-                    self.application.repository.save_job(state)
+                    state=self._recover(state)
                     result.append(self._summary(state))
                 else:result.append(state)
             return result
@@ -112,9 +113,29 @@ class FanboxController:
             loaded=load_credentials(path).has_session
         return {'status':'loaded' if loaded else 'anonymous','runtime':health(),'checked_at':time.time()}
 
+    def _recover(self,state,*,persist=True,force=False):
+        repository=self.application.repository
+        if state['status'] not in {'running','queued'} or repository.has_lease('job:'+state['id']):
+            return state
+        target=self.active.get(state['id'])
+        if not force and target is not None and self.is_active(state['id'],target):
+            return state
+        self.active.pop(state['id'],None)
+        state['status']='paused';state['phase']='paused'
+        state['error']={'code':'interrupted','message':'任务已中断，可继续','retry_after':None}
+        if persist:
+            try:repository.transition(state,state['version'])
+            except FanboxError as error:
+                if error.code not in {'job_busy','stale_version'}:raise
+                return repository.job(state['id'])
+        return state
+
     def _launch(self,state,preview):
-        result=self.start(state['id'],state['source'],preview,state.get('selection',{}))
+        try:result=self.start(state['id'],state['source'],preview,state.get('selection',{}))
+        except (FanboxError,OSError,RuntimeError) as error:
+            result={'error':str(error) if isinstance(error,FanboxError) else '归档任务启动失败'}
         if result.get('error'):
+            self.active.pop(state['id'],None)
             state['status']='paused';state['phase']='paused'
             state['error']={'code':'queue_rejected','message':result['error'],'retry_after':None}
             self.application.repository.save_job(state)
@@ -125,6 +146,8 @@ class FanboxController:
     def finished(self,job_id):
         with self.lock:
             self.active.pop(job_id,None)
+            state=self.application.repository.job(job_id)
+            if state:self._recover(state,force=True)
 
     def create(self,data):
         if not isinstance(data.get('url'),str) or type(data.get('preview',False)) is not bool:
@@ -205,7 +228,7 @@ class FanboxController:
             raise FanboxError('invalid_request','分页参数无效')
         items=[]
         for p in posts[offset:offset+limit]:
-            selected=[a for a in p['assets'] if a['selected']]
+            selected=[a for a in p['assets'] if a['selected'] and (p['access']!='restricted' or a['kind']=='cover')]
             items.append({k:p[k] for k in ('id','title','type','published_at','fee','access')})
             items[-1].update(resources=len(selected),links=len(p['links']),known_bytes=sum(a['size'] or 0 for a in selected),
                              unknown_sizes=sum(a['size'] is None for a in selected))
@@ -229,7 +252,10 @@ class FanboxController:
                 return {'ok':True,'job':self._summary(self.application.repository.job(job_id))}
             if action=='pause':
                 target=self.active.get(job_id)
-                if target:self.cancel(job_id,target)
+                if target:
+                    result=self.cancel(job_id,target)
+                    if result and result.get('error'):raise FanboxError('cancel_rejected',result['error'])
+                state=self._recover(self.application.repository.job(job_id),force=True)
                 return {'ok':True,'job':summary(state)}
             if action=='open':
                 if not state.get('output'):raise FanboxError('output_missing','归档尚未生成')
@@ -243,6 +269,7 @@ class FanboxController:
                 return {'ok':True,'job':summary(updated),'cache':report}
             if action not in {'download','continue','retry_failed'} or type(data.get('version')) is not int:
                 raise FanboxError('invalid_request','任务操作或版本无效')
+            state=self._recover(state,persist=False)
             if state['status'] not in {'running','queued'} and not self.application.repository.has_lease('job:'+job_id):
                 self.active.pop(job_id,None)
             if state['status'] in {'running','queued'} or job_id in self.active:
@@ -254,7 +281,6 @@ class FanboxController:
                 if not failed:raise FanboxError('nothing_to_retry','没有可单独重试的失败文件')
                 selection={'asset_ids':failed,'post_ids':list(dict.fromkeys(key.split(':')[0] for key in failed))}
             self._selection(selection,state)
-            if action=='download':selection=dict(selection,accessible_only=True) if isinstance(selection,dict) else selection
             state['selection']=selection
             state['retry_only']=action=='retry_failed'
             # Runtime policies may be revised while content and names remain
@@ -275,7 +301,8 @@ class FanboxController:
         if not isinstance(selection,dict) or set(selection)-{'post_ids','asset_ids','exclude_post_ids','exclude_asset_ids','accessible_only','title_query'}:
             raise FanboxError('invalid_request','选择参数无效')
         posts=(state.get('scan') or {}).get('posts',[])
-        allowed={p['id'] for p in posts if p['access']!='restricted'}
+        allowed={p['id'] for p in posts if p['access']!='restricted' or
+                 any(a['selected'] and a['kind']=='cover' for a in p['assets'])}
         all_assets={p['id']+':'+a['id']+':'+a['variant'] for p in posts for a in p['assets'] if a['selected']}
         for name,valid in [('post_ids',allowed),('asset_ids',all_assets),('exclude_post_ids',allowed),('exclude_asset_ids',all_assets)]:
             if name in selection and (not isinstance(selection[name],list) or len(selection[name])>100000

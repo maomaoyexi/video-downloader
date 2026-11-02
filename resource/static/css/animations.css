@@ -125,6 +125,8 @@
 .tiles>.tile:nth-child(8){animation-delay:245ms}
 .tiles>.tile:nth-child(9){animation-delay:280ms}
 .tiles>.tile:nth-child(10){animation-delay:315ms}
+.tiles>.tile:nth-child(11){animation-delay:350ms}
+.tiles>.tile:nth-child(12){animation-delay:385ms}
 
 .hitem{animation:list-enter .32s var(--ease-out) backwards}
 .hcard{animation:content-rise .36s var(--ease-out) backwards}

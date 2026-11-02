@@ -6,7 +6,7 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 project_root = Path(SPECPATH)
 sys.path.insert(0, str(project_root / "dependency" / "live-python"))
 sys.path.insert(0, str(project_root / "dependency" / "fanbox-python"))
-entry_script = project_root / "视频下载工具v2.7.0-GUI.py"
+entry_script = project_root / "视频下载工具v2.7.1-GUI.py"
 resource_root = project_root / "resource"
 plugin_root = resource_root / "yt-dlp-plugins"
 packaging_deps = project_root / "build" / "packaging-deps"
@@ -19,6 +19,8 @@ datas = [
     (str(resource_root / "dependencies" / "live-python.lock.json"), "licenses"),
     (str(resource_root / "templates"), "templates"),
     (str(resource_root / "static"), "static"),
+    (str(project_root / "docs" / "错误码.txt"), "docs"),
+    (str(project_root / "CHANGELOG.md"), "docs"),
     (str(plugin_root), "yt-dlp-plugins"),
 ]
 live_vendor = project_root / "dependency" / "live-python"
@@ -36,7 +38,7 @@ live_modules = ["pysubs2", "websocket", "python_socks", "httpx", "httpcore", "h2
 
 a = Analysis(
     [str(entry_script)],
-    pathex=[str(project_root), str(packaging_deps), str(project_root / "dependency" / "live-python")],
+    pathex=[str(project_root), str(packaging_deps), str(project_root / "dependency" / "live-python"), str(project_root / "dependency" / "fanbox-python")],
     binaries=fanbox_binaries+pillow_binaries,
     datas=datas,
     hiddenimports=["tkinter", "tkinter.filedialog", "yt_dlp", "yt_dlp.cookies", "yt_dlp.utils", "cramjam",
@@ -58,7 +60,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="视频下载工具v2.7.0-GUI",
+    name="视频下载工具v2.7.1-GUI",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

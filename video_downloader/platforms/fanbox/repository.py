@@ -103,14 +103,33 @@ class Repository:
                 db.rollback()
                 raise
 
-    def save_job(self, state):
+    def save_job(self, state, *, lease_token=None):
         with self.transaction() as db:
+            if lease_token is not None:
+                now=self.clock()
+                if not db.execute('UPDATE leases SET expires=? WHERE token=? AND kind=? AND expires>?',
+                                  (now+120,lease_token,'job:'+state['id'],now)).rowcount:
+                    raise FanboxError('lease_expired','工作租约已失效，请继续任务')
             previous = db.execute('SELECT version FROM jobs WHERE id=?', (state['id'],)).fetchone()
             state['version'] = (previous['version'] if previous else 0) + 1
             state['updated_at'] = self.clock()
             db.execute('INSERT OR REPLACE INTO jobs VALUES(?,?,?,?,?)',
                        (state['id'], state['version'], state['status'], state['updated_at'],
                         json.dumps(state, ensure_ascii=False)))
+
+    def save_terminal_job(self,state,token):
+        """Persist a stopped worker without renewing or overwriting a new owner."""
+        with self.transaction() as db:
+            previous=db.execute('SELECT version FROM jobs WHERE id=?',(state['id'],)).fetchone()
+            if previous is None or previous['version']!=state['version']:
+                return False
+            if db.execute('SELECT 1 FROM leases WHERE kind=? AND token<>? AND expires>?',
+                          ('job:'+state['id'],token,self.clock())).fetchone():
+                return False
+            state['version']+=1;state['updated_at']=self.clock()
+            db.execute('UPDATE jobs SET version=?,status=?,updated=?,state=? WHERE id=?',
+                       (state['version'],state['status'],state['updated_at'],json.dumps(state,ensure_ascii=False),state['id']))
+            return True
 
     def job(self, job_id):
         with self.connect() as db:
@@ -177,12 +196,14 @@ class Repository:
             report['version']=(previous[0] if previous else 0)+1
             db.execute('INSERT OR REPLACE INTO verifications VALUES(?,?)',(job_id,json.dumps(report,ensure_ascii=False)))
 
-    def allocate(self, key, candidate, *, conflict='uniquify', exists=lambda p: False):
+    def allocate(self, key, candidate, *, conflict='uniquify', exists=lambda p: False, repair_extension=False):
         """Freeze paths in SQL before IO; never steal another asset's filename."""
         with self.transaction() as db:
             old = db.execute('SELECT path FROM assets WHERE key=?', (key,)).fetchone()
             if old:
-                return old['path']
+                if not repair_extension or Path(old['path']).suffix.lower()==Path(candidate).suffix.lower():
+                    return old['path']
+                candidate=Path(old['path']).with_suffix(Path(candidate).suffix).as_posix()
             path = Path(candidate)
             for number in range(10000):
                 name = path if not number else path.with_name(f'{path.stem} ({number}){path.suffix}')
@@ -194,7 +215,10 @@ class Repository:
                     raise FanboxError('file_skipped','已按冲突策略跳过现有文件')
                 if occupied and conflict=='prompt':
                     raise FanboxError('conflict_required', '目标文件已存在，请调整冲突策略')
-                db.execute('INSERT INTO assets VALUES(?,?,?)', (key, name.as_posix(), '{}'))
+                if old:
+                    db.execute('UPDATE assets SET path=?,state=? WHERE key=?', (name.as_posix(),'{}',key))
+                else:
+                    db.execute('INSERT INTO assets VALUES(?,?,?)', (key, name.as_posix(), '{}'))
                 return name.as_posix()
             raise FanboxError('path_conflict', '无法分配唯一文件名')
 

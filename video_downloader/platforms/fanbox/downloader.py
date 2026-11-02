@@ -76,17 +76,23 @@ class Downloader:
         raise last
 
     def _one(self,post,asset,options,task_date):
+        asset=asset.for_download()
         key=resource_key(post,asset)
         token=self.gate.acquire('asset:'+key)
         try:
             candidate=asset_path(post,asset,options,task_date)
-            relative=self.repository.allocate(key,candidate,conflict=options['naming']['conflict'],
-                                             exists=lambda name:confined(self.root,name).exists())
-            target=confined(self.root,relative,create=True)
             old=self.repository.asset(key)
-            if options['archive']['incremental'] and old.get('status')=='completed' and target.is_file():
-                if target.stat().st_size==old['size'] and digest_file(target)==old['sha256']:
-                    return dict(old,status='reused',key=key,variant=asset.variant)
+            reusable=False
+            if options['archive']['incremental'] and old and old.get('status')=='completed':
+                previous=confined(self.root,old['path'])
+                reusable=(previous.is_file() and previous.stat().st_size==old['size']
+                          and digest_file(previous)==old['sha256'])
+            relative=self.repository.allocate(key,candidate,conflict=options['naming']['conflict'],
+                exists=lambda name:confined(self.root,name).exists(),
+                repair_extension=asset.kind=='image' and asset.variant=='thumbnail' and not reusable)
+            target=confined(self.root,relative,create=True)
+            if reusable:
+                return dict(old,status='reused',key=key,variant=asset.variant)
             part=confined(self.root,f'.fanbox/parts/{key}.part',create=True)
             meta=confined(self.root,f'.fanbox/parts/{key}.json',create=True)
             import json
@@ -217,4 +223,4 @@ class Downloader:
                 meta.unlink(missing_ok=True)
                 return result
         finally:
-            self.repository.release(token)
+            self.gate.release(token)

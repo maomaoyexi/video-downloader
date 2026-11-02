@@ -1,12 +1,18 @@
-# 多平台视频下载工具 v2.7.0 WebUI
+# 多平台视频下载工具 v2.7.1 WebUI（开发中）
 
-![Version](https://img.shields.io/badge/source-v2.7.0%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/source-v2.7.1%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 面向 Windows 的多平台视频下载与直播录制工具，使用浏览器 WebUI 操作，提供任务队列、批量下载、字幕与音频工具，并支持 FANBOX 内容归档及 Withny 授权存档。
 
-**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
+**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](CHANGELOG.md)** · **[本版发布说明](RELEASE_NOTES.md)**
 
-> 本页对应 v2.7.0 源码。安装包版本与文件请以 Releases 页面实际发布的内容为准。
+> 本页对应 v2.7.1 开发源码，尚未正式发布。当前阶段只同步源码，EXE 与依赖包留到正式发布前再构建；安装包版本与文件请以 Releases 页面实际发布的内容为准。
+
+### v2.7.1 本次更新
+
+- 修复 FANBOX 任务恢复、混合任务确认、封面格式、公开封面、长间隔续租和 CLI 访问设置问题。
+- 统一紧凑设置与整行折叠，修复目录高亮及工具入场顺序，整理使用帮助和报错反馈流程。
+- 完整变化见 [v2.7.1 更新日志](CHANGELOG.md#v271)；安装包、升级步骤和真实校验值见 [发布说明](RELEASE_NOTES.md)。
 
 [下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [已知问题](#已知问题) · [源码运行](#源码运行) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
 
@@ -79,6 +85,8 @@
 
 支持已接入评论源的采集、SRT/ASS 导出和录制报告。不同平台的权限、时间精度与实测范围不同，请结合 `comments-report.json` 及完整性报告检查结果。
 
+当前源码的设置页统一使用紧凑单列表单：标题、分隔线和配置区保持同宽，下拉框按最长选项文字测宽，同组保持等宽，展开时箭头向下、收起时向右；长路径、命名模板和参数文本保留编辑空间。直播设置中的「各平台录制方式」「各平台弹幕默认值」及长说明按需展开。
+
 直播会话和报告保存在 `download/.live-jobs/`。平台入口、追播条件、停止与输出规则见 [使用教程](docs/使用教程.txt)。
 
 ### FANBOX 内容归档
@@ -87,7 +95,7 @@
 
 支持正文、原始 JSON、图片、附件、封面、外链清单、可选评论和粉丝卡，并提供文件复用、归档校验、流量额度与记录。外链只收集，不自动下载其他网站的内容；公开封面不代表正文或附件也有访问权限。
 
-独立扫描 CLI 仅生成清单；需要匿名扫描时，必须显式添加 `--anonymous`。当前限制见[已知问题](#已知问题)。
+独立扫描 CLI 仅生成清单。当前源码中的扫描与归档 CLI 均读取已保存的匿名及 Cookie 设置；`--anonymous` 或 `--cookies PATH` 可覆盖本次访问方式，两者不能同时指定。修复与发布状态见[已知问题](#已知问题)。
 
 ### 字幕、音频与辅助工具
 
@@ -99,25 +107,25 @@
 
 ## 已知问题
 
-单任务执行器停止路由已修复。当前其余六项问题与完整条件见 [RELEASE_NOTES.md](RELEASE_NOTES.md#已知问题)：
+单任务执行器停止路由已在 v2.7.0 修复；以下六项修复纳入 v2.7.1 开发源码。已完成的本地验证与历史试打包见 [准备记录](docs/release-preparation-v2.7.1.md)，正式附件会在发版前重新构建和校验。旧 v2.7.0 附件及原始 SHA-256 保留在 [历史发布说明](docs/releases/v2.7.0.md)。复现记录见 [FANBOX 六项修复验证](docs/fanbox-six-fixes-validation.md)。
 
-| 场景 | 当前限制与规避方式 |
+| 场景 | 当前源码行为 |
 | --- | --- |
-| FANBOX 排队任务暂停或启动失败 | 归档记录可能卡在 `queued`；核对日志，必要时重启程序 |
-| FANBOX 与其他平台混合批量 | 重新下载确认可能失败；请拆成独立任务 |
-| FANBOX 缩略图质量 | 原图 PNG/GIF、缩略图 JPEG 时可能校验失败；暂用原图质量 |
-| FANBOX 预览后下载 | 可能漏存受限帖公开可见的封面；人工核对归档结果 |
-| FANBOX 请求间隔达到或超过 120 秒 | 可能因工作租约过期中断并残留 `running` 状态；避免此设置 |
-| FANBOX 独立扫描 CLI 匿名访问 | 保存的匿名设置可能被忽略；显式传入 `--anonymous`。WebUI 和归档下载 CLI 不受此问题影响 |
+| FANBOX 排队任务暂停或启动失败 | 清理失效活动记录并恢复为可继续状态，修正配置后无需重启即可继续 |
+| FANBOX 与其他平台混合批量 | 入口拒绝混合输入；请分别创建独立任务，不同任务可以并行，归档确认发给所属执行器 |
+| FANBOX 缩略图与封面格式 | 按实际资源 URL 确定扩展名，旧失败资源续跑时可修复路径与格式不一致 |
+| FANBOX 预览后下载 | 可选择受限帖的公开封面；正文和附件仍按权限处理，显式 `accessible_only` 筛选继续生效 |
+| FANBOX 较长请求间隔 | 等待期间每 20 秒续租，异常结束原子保存终态，不再因 180 秒间隔本身残留 `running` |
+| FANBOX 独立扫描 CLI 设置 | 扫描与归档 CLI 均沿用保存的匿名及 Cookie 设置，并支持显式参数覆盖；WebUI 原有行为保持一致 |
 
 ## 源码运行
 
-保留 `视频下载工具v2.7.0-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 Python 3 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
+保留 `视频下载工具v2.7.1-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 64 位 Python 3.12 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
 
 ```powershell
 python scripts/install_live_dependencies.py
 python -m video_downloader.platforms.fanbox.runtime --install
-python ".\视频下载工具v2.7.0-GUI.py"
+python ".\视频下载工具v2.7.1-GUI.py"
 ```
 
 前两条命令按锁定版本准备直播和 FANBOX 的 Python 运行库；yt-dlp、FFmpeg 及平台录制组件仍需在 `dependency/` 中准备。完整安装与依赖说明见[使用教程](docs/使用教程.txt)。
@@ -125,9 +133,9 @@ python ".\视频下载工具v2.7.0-GUI.py"
 命令行选项可通过以下方式查看：
 
 ```powershell
-python ".\视频下载工具v2.7.0-GUI.py" --help
-python ".\视频下载工具v2.7.0-GUI.py" --fanbox-scan --help
-python ".\视频下载工具v2.7.0-GUI.py" --fanbox-download --help
+python ".\视频下载工具v2.7.1-GUI.py" --help
+python ".\视频下载工具v2.7.1-GUI.py" --fanbox-scan --help
+python ".\视频下载工具v2.7.1-GUI.py" --fanbox-download --help
 ```
 
 源码版不会被自动更新下载的 EXE 覆盖。升级源码时请更新主脚本、`video_downloader/`、`resource/` 和对应依赖，保留自己的配置与下载数据。
@@ -153,7 +161,8 @@ python ".\视频下载工具v2.7.0-GUI.py" --fanbox-download --help
 | [Bilibili Cookie 指南](docs/bilibili_cookies_guide.txt) | Bilibili 登录配置 |
 | [Withny HAR 指南](docs/withny_har_guide.txt) | 已授权历史存档保存 |
 | [错误码说明](docs/错误码.txt) | 错误含义与处理建议 |
-| [更新日志](RELEASE_NOTES.md) | 版本变化、已知问题与文件校验值 |
+| [更新日志](CHANGELOG.md) | 按版本整理的功能变化、修复和交互改进 |
+| [发布说明](RELEASE_NOTES.md) | 本版附件、升级步骤、验证边界与文件校验值 |
 
 ## 作者与贡献者
 

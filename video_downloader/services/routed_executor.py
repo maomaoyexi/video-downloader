@@ -16,6 +16,14 @@ def is_fanbox(url):
         return False
 
 
+FANBOX_BATCH_ERROR = 'FANBOX 归档请单独创建任务，不能与其他平台放在同一批次；分别添加的任务可以并行运行'
+
+
+def mixed_fanbox_batch(urls):
+    platforms = [is_fanbox(url) for url in urls]
+    return any(platforms) and not all(platforms)
+
+
 class RoutedDownloadExecutor:
     def __init__(self,video,fanbox,*,batch_factory=None,manager=None,callbacks=None):
         self.video,self.fanbox=video,fanbox
@@ -71,7 +79,17 @@ class RoutedDownloadExecutor:
         if self.batch_child:return self.batch_child[0].get_current_ytdlp_command()
         return self.active.get_current_ytdlp_command()
 
+    def submit_archive_choice(self, request_id, redownload):
+        child = self.batch_child
+        executor = child[0] if child else (None if self.batch_handle is not None else self.active)
+        submit = getattr(executor, 'submit_archive_choice', None)
+        if submit is None:
+            return {'error': '此归档确认已结束，请以当前任务状态为准'}
+        return submit(request_id, redownload)
+
     def batch_download(self,urls,bili_parts_map=None,custom_args=None):
+        if mixed_fanbox_batch(urls):
+            return {'error': FANBOX_BATCH_ERROR}
         if not any(is_fanbox(url) for url in urls):
             return self._start_and_route(self.video,self.video.batch_download,urls,
                                          bili_parts_map=bili_parts_map,custom_args=custom_args)

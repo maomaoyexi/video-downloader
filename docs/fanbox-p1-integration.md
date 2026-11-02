@@ -34,6 +34,7 @@ python -m video_downloader.platforms.fanbox https://www.fanbox.cc/@creator --coo
 也可通过现有 CLI 分发：`run_cli(["--fanbox-scan", URL, "--output", PATH, ...])`。模块入口可独立运行，不依赖 yt-dlp、ffmpeg 或 WebUI 启动。
 
 - `--anonymous`：明确匿名；与显式 `--cookies` 互斥。
+- 扫描与归档下载 CLI 均沿用 `settings.ini` 中的 `FANBOX_ANONYMOUS`、`FANBOX_COOKIE_FILE` 和 `USE_COOKIES`。显式 `--anonymous` 或 `--cookies PATH` 优先于保存设置，仅影响本次命令；未设置凭据路径时使用工具目录的 `cookies.txt`，相对路径也以工具目录为基准。
 - `--options PATH`：读取版本化 FANBOX JSON 设置。
 - `--import-plugin-settings PATH`：迁移插件导出的 JSON；清单附带逐键迁移报告。
 - `--checkpoint PATH`：指定检查点；默认在输出文件名后追加 `.checkpoint.json`。

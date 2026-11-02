@@ -29,7 +29,7 @@ from .service import ScanService, write_json
 from .transport import CurlTransport, HttpTransport
 from .urls import parse_source,source_for_options
 
-_PAUSES={'cancelled','quota_exceeded','quota_busy','rate_limited','challenge_required','access_denied','fallback_required','conflict_required'}
+_PAUSES={'cancelled','lease_expired','quota_exceeded','quota_busy','rate_limited','challenge_required','access_denied','fallback_required','conflict_required'}
 
 
 def summary(state):
@@ -87,10 +87,10 @@ class ArchiveApplication:
                 checkpoint['options_digest']=hashlib.sha256(options_json(scan_options).encode()).hexdigest()
         state['options']=options
         state['scan_options']=scan_options
-        gate=AccountGate(self.repository,cancel,options['network']['api_interval_seconds'])
         job_token,_=self.repository.acquire('job:'+job_id)
         if job_token is None:
             raise FanboxError('job_busy','归档任务仍在运行或等待崩溃租约释放')
+        gate=AccountGate(self.repository,cancel,options['network']['api_interval_seconds'],heartbeat_tokens=[job_token])
         lock=threading.RLock()
         received={}
         last_progress=[0.]
@@ -109,9 +109,11 @@ class ArchiveApplication:
             else:log(f"投稿 {data['id']} · "+('正文受限' if data['restricted'] else f"可保存 {data['files']} 个文件"),
                      'warn' if data['restricted'] else 'info')
 
-        def save():
-            self.repository.heartbeat(job_token)
-            self.repository.save_job(state)
+        def save(*,terminal=False):
+            if terminal:
+                if not self.repository.save_terminal_job(state,job_token):return
+            else:
+                self.repository.save_job(state,lease_token=job_token)
             event={'type':'fanbox_job','data':summary(state)}
             try:
                 self.publish(event)
@@ -285,16 +287,16 @@ class ArchiveApplication:
             log(str(error),'warn' if state['status']=='paused' else 'error')
             if error.code=='quota_exceeded' and options['quota']['on_limit']=='next_day':
                 state['resume_after']=self.repository._day(self.repository.clock(),options['quota']['timezone'])[1]*60
-            stats();save()
+            stats();save(terminal=True)
         except KeyboardInterrupt:
             state['status']='paused';state['phase']='paused'
             state['error']={'code':'cancelled','message':'任务已暂停','retry_after':None}
-            stats();save()
+            stats();save(terminal=True)
             raise
         except (OSError,ValueError,TypeError) as error:
             state['status']='failed';state['phase']='finished'
             state['error']={'code':'archive_error','message':'归档写入或响应处理失败','retry_after':None}
-            stats();save()
+            stats();save(terminal=True)
         finally:
             self.repository.release(job_token)
         return summary(state)

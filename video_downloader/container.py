@@ -300,6 +300,13 @@ class AppContainer:
         def make_task_executor(task, task_state, manager, callbacks, on_finished):
             archives = TaskArchiveSession(tool_dir)
 
+            def fanbox_finished(handle):
+                try:
+                    job_id=task.selection.get('fanbox_job_id')
+                    if job_id:fanbox_controller.finished(job_id)
+                finally:
+                    on_finished(handle)
+
             def task_command(*args, **kwargs):
                 return archives.prepare(build_command(*args, **kwargs))
 
@@ -335,7 +342,7 @@ class AppContainer:
             )
             return RoutedDownloadExecutor(video_executor,FanboxExecutor(fanbox_application,
                 tool_dir=tool_dir,app_state=task_state,download_manager=manager,callbacks=callbacks,
-                on_finished=on_finished,job_id=task.selection.get('fanbox_job_id'),
+                on_finished=fanbox_finished,job_id=task.selection.get('fanbox_job_id'),
                 preview=task.selection.get('fanbox_preview',False),selection=task.selection.get('fanbox_selection')))
 
         download_executor=RoutedDownloadExecutor(download_executor,FanboxExecutor(fanbox_application,
@@ -376,7 +383,8 @@ class AppContainer:
             def exclusive():
                 executor=FanboxExecutor(fanbox_application,tool_dir=tool_dir,app_state=app_state,
                     download_manager=download_manager,callbacks=download_executor.callbacks,
-                    job_id=job_id,preview=preview,selection=selection)
+                    job_id=job_id,preview=preview,selection=selection,
+                    on_finished=lambda handle:fanbox_controller.finished(job_id))
                 result=executor.start_download(url)
                 if result.get('ok'):download_executor.active=executor
                 return result
@@ -388,9 +396,14 @@ class AppContainer:
                 return download_executor.stop_download()
             return {'ok':True}
 
+        def fanbox_job_active(job_id,target):
+            if target!='exclusive':return task_manager.is_task_active(target)
+            return (getattr(download_executor.active,'job_id',None)==job_id
+                    and download_manager.snapshot()['running'])
+
         fanbox_controller=FanboxController(fanbox_application,tool_dir=tool_dir,
             config_getter=app_state.config_snapshot,start=start_fanbox_job,cancel=pause_fanbox_job,
-            publish=app_state.publish)
+            publish=app_state.publish,is_active=fanbox_job_active)
 
         # ---- 直播 WAIT 服务 ----
         probe_service = ProbeService(

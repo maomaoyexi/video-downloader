@@ -44,6 +44,18 @@ def credential_scope(credentials):
     return hashlib.sha256(("fanbox-checkpoint-v1:" + json.dumps(sessions)).encode()).hexdigest()
 
 
+def _cookie_selection(root, config, *, cookies=None, anonymous=False):
+    if anonymous and cookies is not None:
+        raise FanboxError("invalid_config", "匿名模式不能同时指定 Cookie")
+    explicit = cookies is not None
+    cookie_file = Path(cookies if explicit else config.get("FANBOX_COOKIE_FILE") or "cookies.txt")
+    if not cookie_file.is_absolute():
+        cookie_file = Path(root) / cookie_file
+    use_cookies = not anonymous and (explicit or (
+        not int(config.get("FANBOX_ANONYMOUS", 0)) and int(config.get("USE_COOKIES", 1))))
+    return cookie_file, use_cookies and (explicit or cookie_file.exists())
+
+
 def main(argv=None, *, root=None):
     import sys
     for stream in (sys.stdout, sys.stderr):
@@ -75,11 +87,7 @@ def main(argv=None, *, root=None):
         if args.max_posts is not None: options["filters"]["max_posts"] = args.max_posts
         if args.comments is not None: options["content"]["comments"] = args.comments
         options = normalize_options(options)
-        cookie_file = args.cookies if args.cookies else root / "cookies.txt"
-        if args.anonymous and args.cookies:
-            raise FanboxError("invalid_config", "匿名模式不能同时指定 Cookie")
-        use_cookies = not args.anonymous and (args.cookies is not None or
-            (int(config.get("USE_COOKIES", 1)) and cookie_file.exists()))
+        cookie_file, use_cookies = _cookie_selection(root, config, cookies=args.cookies, anonymous=args.anonymous)
         credentials = load_credentials(cookie_file if use_cookies else None)
         checkpoint_path = args.checkpoint or args.output.with_suffix(args.output.suffix + ".checkpoint.json")
         if (args.output.resolve() == checkpoint_path.resolve()

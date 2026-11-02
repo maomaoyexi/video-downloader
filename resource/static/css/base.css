@@ -55,7 +55,7 @@ button{font-family:inherit}
 .nav{display:flex;flex-direction:column;gap:2px}
 .nav .gap{height:14px}
 .ni{display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border-radius:var(--r);color:var(--fg2);font-size:13px;border:none;background:none;cursor:pointer;text-align:left}
-.ni .ico{color:var(--fg3)}
+.ni .ico{color:var(--fg2)}
 .ni:hover{background:var(--surface2);color:var(--fg)}
 .ni.on{background:var(--surface3);color:var(--fg);font-weight:500}
 .ni.on .ico{color:var(--fg)}
@@ -260,6 +260,12 @@ textarea.ta:disabled{color:var(--fg3)}
 .about-head{display:flex;align-items:center;gap:16px}
 .about-mk{width:52px;height:52px;flex:none;border:1px solid var(--fg);border-radius:13px;display:flex;align-items:center;justify-content:center}
 .about-name{font-size:19px;font-weight:600;letter-spacing:-.01em}
+#page-about .about-release-summary{margin:0;padding-left:18px;font-size:13px;color:var(--fg2);line-height:1.85}
+#page-about .about-release-details{font-size:13px;min-width:0}
+#page-about .about-release-details>summary{cursor:pointer;padding:6px 0;color:var(--fg2);line-height:1.6}
+#page-about .about-release-details>summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+#page-about .about-release-body{padding:10px 0 0;overflow-wrap:anywhere}
+#page-about .about-release-body h4{font-size:13px;font-weight:600;margin:3px 0}
 .about-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:56px;align-items:start}
 .about-col{display:flex;flex-direction:column;gap:26px}
 .credits{display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--fg2)}
@@ -310,4 +316,9 @@ textarea.ta:disabled{color:var(--fg3)}
 .exit-screen .ico{color:var(--fg3)}
 
 .task-args-row{padding:3px 0}
-.task-args-row>.lb{width:126px}
+.task-args-toggle{width:fit-content;list-style:none}
+.task-args-toggle::-webkit-details-marker{display:none}
+.task-args-toggle:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.task-args-toggle>.ico{transform:rotate(-90deg);transition:transform .15s ease}
+.task-args-row[open]>.task-args-toggle>.ico{transform:none}
+.task-args-body{padding:8px 0 3px;min-width:0}
