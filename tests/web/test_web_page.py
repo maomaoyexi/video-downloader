@@ -59,6 +59,22 @@ class WebPageTests(unittest.TestCase):
         self.assertIn('id="aboutReleaseDetails"', html)
         self.assertIn('project_root / "CHANGELOG.md"', spec)
 
+    def test_v271_attribution_is_consistent_and_preserves_history(self):
+        from pathlib import Path
+        root = Path(PROJECT_ROOT)
+        statement = "v2.7.1 的全部更新由 maomaoyexi 完成。"
+        for name in ("README.md", "CHANGELOG.md", "RELEASE_NOTES.md", "CREDITS.txt"):
+            self.assertIn(statement, (root / name).read_text(encoding="utf-8"), name)
+        html = (root / "resource/templates/index.html").read_text(encoding="utf-8")
+        author = re.search(r'id="aboutReleaseAuthor">(.*?)</p>', html, re.S)
+        self.assertIsNotNone(author)
+        self.assertEqual(re.sub(r"<[^>]+>", "", author.group(1)), statement)
+        self.assertIn('id="creditV271"', html)
+        self.assertIn("v2.7.0 PR #18", html)
+        self.assertIn("v2.7.0 维护", html)
+        credits = (root / "CREDITS.txt").read_text(encoding="utf-8")
+        self.assertIn("v2.7.0 PR #18 的全部新增功能", credits)
+
     def test_template_keeps_expected_structure(self):
         _skip_if_frozen()
         base = str(PROJECT_ROOT)

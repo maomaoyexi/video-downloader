@@ -100,6 +100,8 @@ async function verifyAboutReleaseNotes(){
   await page.locator('.ni[data-page="about"]').click();
   const title=page.locator('#aboutReleaseTitle'),details=page.locator('#aboutReleaseDetails');
   assert.equal(await title.textContent(),data.version.split(' ')[0]+' 本版更新');
+  assert.equal(await page.locator('#aboutReleaseAuthor').textContent(),'v2.7.1 的全部更新由 maomaoyexi 完成。');
+  assert.ok((await page.locator('#creditV271').textContent()).includes('@maomaoyexi'));
   assert.equal(await page.locator('#aboutReleaseNotes .about-release-summary>li').count(),4);
   assert.equal(await details.evaluate(el=>el.open),false,'详细更新默认收起');
   await details.locator('summary').click();
