@@ -30,6 +30,21 @@ def test_guard_rejects_forced_adds_and_accepts_only_license_files():
                             'cookies.txt', '.AI', 'DOWNLOAD', 'Temp/a']
 
 
+def test_local_repair_launcher_is_ignored_and_rejected_if_forced():
+    names = ['启动修复版.cmd', '启动修复版.CMD']
+    assert violations(names) == names
+    assert local_paths(names) == names
+    result = subprocess.check_output(
+        ['git', 'check-ignore', '--no-index', '--stdin', '-z'], cwd=PROJECT_ROOT,
+        input='启动修复版.cmd\0'.encode('utf-8'))
+    assert result.decode('utf-8').split('\0') == ['启动修复版.cmd', '']
+    tracked = subprocess.run(
+        ['git', 'ls-files', '--error-unmatch', '--', '启动修复版.cmd'], cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert tracked.returncode == 1
+    assert tracked.stdout == b''
+
+
 def test_gitignore_uses_default_deny_for_runtime_and_temporary_scripts():
     root = PROJECT_ROOT
     ignored = ['cookies.txt', 'settings.ini', 'urls.txt', 'download/posts/image.png',

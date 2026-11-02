@@ -11,6 +11,7 @@ import sys
 
 LOCAL_ROOT_PATHS = frozenset({
     'cookies.txt', 'settings.ini', 'urls.txt', 'download', '.ai', '.claude', 'temp',
+    '启动修复版.cmd',
 })
 OBJECT_ID = re.compile(r'(?:[0-9a-f]{40}|[0-9a-f]{64})\Z')
 
@@ -76,7 +77,7 @@ def check(*, staged=False):
     invalid = violations(paths_from(git('ls-files', '--cached', '-z')))
     if invalid:
         print('拒绝提交：根目录 cookies.txt、settings.ini、urls.txt、download、.ai、.claude、'
-              'temp 仅留本地；dependency 仅保留根目录 *.LICENSE，'
+              'temp 和本地启动修复版.cmd 仅留本地；dependency 仅保留根目录 *.LICENSE，'
               'scripts 仅保留明确维护的脚本；测试放入 tests 的功能子目录。', file=sys.stderr)
         for path in invalid:
             print(f'  {ascii(path)}', file=sys.stderr)
