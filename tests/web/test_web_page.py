@@ -63,8 +63,13 @@ class WebPageTests(unittest.TestCase):
         from pathlib import Path
         root = Path(PROJECT_ROOT)
         statement = "v2.7.1 的全部更新由 maomaoyexi 完成。"
-        for name in ("README.md", "CHANGELOG.md", "RELEASE_NOTES.md", "CREDITS.txt"):
+        for name in ("CHANGELOG.md", "CREDITS.txt"):
             self.assertIn(statement, (root / name).read_text(encoding="utf-8"), name)
+        for name in ("README.md", "RELEASE_NOTES.md"):
+            public_document = (root / name).read_text(encoding="utf-8")
+            self.assertNotIn(statement, public_document, name)
+            self.assertNotIn("**v2.7.1 全部更新**", public_document, name)
+            self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| v2\.7\.1 全部更新", name)
         html = (root / "resource/templates/index.html").read_text(encoding="utf-8")
         author = re.search(r'id="aboutReleaseAuthor">(.*?)</p>', html, re.S)
         self.assertIsNotNone(author)

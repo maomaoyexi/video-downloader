@@ -1,6 +1,6 @@
 # v2.7.1 WebUI
 
-文档更新：2026-11-03 · [下载与发布](https://github.com/maomaoyexi/video-downloader/releases) · [使用说明](https://github.com/maomaoyexi/video-downloader/blob/main/README.md)
+发布日期：2026-11-03 · [下载本版](https://github.com/maomaoyexi/video-downloader/releases/tag/v2.7.1) · [使用说明](https://github.com/maomaoyexi/video-downloader/blob/main/README.md)
 
 本次更新集中修复 FANBOX 任务恢复、归档与访问设置问题，完善紧凑设置、折叠交互、使用帮助和报错排查流程。
 
@@ -59,7 +59,10 @@ Windows 绿色版按以下两份文件配套交付，无需安装 Python；具�
 
 ### SHA-256
 
-对应文件的 SHA-256 随本版 Release 实际附件公布，请以发布页面的校验值为准。
+```text
+BCF222450CE9E62120C4AC38420FB917AD5AFC4DE1E2B4799AE39F86E197C339  video-downloader-v2.7.1-GUI.exe
+3A9EA65FEEF4E6634C880465A3052962F4C05FD11599C35B420CBF4538E7300A  video-downloader-v2.7.1-dependencies.zip
+```
 
 ## 已知限制
 
