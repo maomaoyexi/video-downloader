@@ -1,20 +1,12 @@
-# 多平台视频下载工具 v2.7.1 WebUI（正式版）
+# 多平台视频下载工具 v2.7.1 WebUI
 
 ![Version](https://img.shields.io/badge/source-v2.7.1%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 面向 Windows 的多平台视频下载与直播录制工具，使用浏览器 WebUI 操作，提供任务队列、批量下载、字幕与音频工具，并支持 FANBOX 内容归档及 Withny 授权存档。
 
-**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](CHANGELOG.md)** · **[本版发布说明](RELEASE_NOTES.md)**
+**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
 
-> 本页对应已完成功能与修复的 v2.7.1 正式版，面向正式交付。安装包文件和 SHA-256 请以 Releases 页面实际提供的本版附件及发布说明为准。
-
-### v2.7.1 本次更新
-
-**v2.7.1 的全部更新由 maomaoyexi 完成。**
-
-- 修复 FANBOX 任务恢复、混合任务确认、封面格式、公开封面、长间隔续租和 CLI 访问设置问题。
-- 统一紧凑设置与整行折叠，修复目录高亮及工具入场顺序，整理使用帮助和报错反馈流程。
-- 完整变化见 [v2.7.1 更新日志](CHANGELOG.md#v271)；安装包、升级步骤和真实校验值见 [发布说明](RELEASE_NOTES.md)。
+> 本页对应 v2.7.1 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
 
 [下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [已知问题](#已知问题) · [源码运行](#源码运行) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
 
@@ -87,8 +79,6 @@
 
 支持已接入评论源的采集、SRT/ASS 导出和录制报告。不同平台的权限、时间精度与实测范围不同，请结合 `comments-report.json` 及完整性报告检查结果。
 
-当前源码的设置页统一使用紧凑单列表单：标题、分隔线和配置区保持同宽，下拉框按最长选项文字测宽，同组保持等宽，展开时箭头向下、收起时向右；长路径、命名模板和参数文本保留编辑空间。直播设置中的「各平台录制方式」「各平台弹幕默认值」及长说明按需展开。
-
 直播会话和报告保存在 `download/.live-jobs/`。平台入口、追播条件、停止与输出规则见 [使用教程](docs/使用教程.txt)。
 
 ### FANBOX 内容归档
@@ -98,6 +88,13 @@
 支持正文、原始 JSON、图片、附件、封面、外链清单、可选评论和粉丝卡，并提供文件复用、归档校验、流量额度与记录。外链只收集，不自动下载其他网站的内容；公开封面不代表正文或附件也有访问权限。
 
 独立扫描 CLI 仅生成清单。当前源码中的扫描与归档 CLI 均读取已保存的匿名及 Cookie 设置；`--anonymous` 或 `--cookies PATH` 可覆盖本次访问方式，两者不能同时指定。修复与发布状态见[已知问题](#已知问题)。
+
+### 设置与使用帮助
+
+- 设置页采用紧凑单列，下拉框按最长选项文字测宽、同组等宽，长路径和参数保持可编辑宽度。
+- 设置目录和章节标题支持整行展开、收起；下载页“本次 yt-dlp 参数”默认收起，收起不会清空输入。
+- 帮助页按三类、17 个主题组织，提供 18 条常见报错速查、完整手册、本地报错整理与反馈模板。
+- 报错整理不自动读取日志、上传内容或提交反馈；生成后可检查、编辑再复制，敏感信息仍需人工核对。
 
 ### 字幕、音频与辅助工具
 
@@ -109,7 +106,7 @@
 
 ## 已知问题
 
-单任务执行器停止路由已在 v2.7.0 修复；以下六项修复已包含在 v2.7.1 正式版源码中。已完成的验证及历史试打包见 [验证记录](docs/release-preparation-v2.7.1.md)，正式交付文件与校验值以本版 Release 实际附件为准。旧 v2.7.0 附件及原始 SHA-256 保留在 [历史发布说明](docs/releases/v2.7.0.md)。复现记录见 [FANBOX 六项修复验证](docs/fanbox-six-fixes-validation.md)。
+v2.7.0 中记录的以下六项 FANBOX 问题已在本版修复。完整更新内容见 [本版发布说明](RELEASE_NOTES.md#问题修复)，下表列出本版处理方式；各平台的访问权限与续传差异仍以使用说明及实际结果为准。
 
 | 场景 | 当前源码行为 |
 | --- | --- |
@@ -163,16 +160,16 @@ python ".\视频下载工具v2.7.1-GUI.py" --fanbox-download --help
 | [Bilibili Cookie 指南](docs/bilibili_cookies_guide.txt) | Bilibili 登录配置 |
 | [Withny HAR 指南](docs/withny_har_guide.txt) | 已授权历史存档保存 |
 | [错误码说明](docs/错误码.txt) | 错误含义与处理建议 |
-| [更新日志](CHANGELOG.md) | 按版本整理的功能变化、修复和交互改进 |
-| [发布说明](RELEASE_NOTES.md) | 本版附件、升级步骤、验证边界与文件校验值 |
+| [版本更新记录](CHANGELOG.md) | 按版本整理的功能变化、修复和交互改进 |
+| [本版发布说明](RELEASE_NOTES.md) | 本版更新、问题修复、依赖与升级说明 |
 
 ## 作者与贡献者
 
-本版贡献：**maomaoyexi 负责 v2.7.1 全部更新**，包括归档修复、界面与交互、帮助与报错反馈、更新日志、测试和版本维护。下表继续保留历史版本及上游贡献记录。
+**v2.7.1 的全部更新由 maomaoyexi 完成。**
 
 | 贡献者 | 主要贡献 |
 | --- | --- |
-| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | 项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；「本次 yt-dlp 参数」「直播录制设置」及相关设置；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
+| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | **v2.7.1 全部更新**；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；「本次 yt-dlp 参数」「直播录制设置」及相关设置；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
 | [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) | WebUI 重构，以及 v2.4.0 / v2.5.0 的视觉与交互体系重构 |
 | [ErgouTree（@ergou10086）](https://github.com/ergou10086) | NicoChannel、Twitter/X、TwitCasting、MP3 与界面/音频工具；设置、Provider 和目录收拢；PR #15 的归档选择、独立批量封面和 Provider 启动改进；PR #18 的 Rplay、FANBOX 及相关界面与 CLI |
 | [ZheYi101](https://github.com/ZheYi101) | v2.4.0 字幕下载功能 |

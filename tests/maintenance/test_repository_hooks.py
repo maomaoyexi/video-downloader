@@ -18,7 +18,7 @@ from tests.helpers import PROJECT_ROOT
 
 LOCAL_FILES = ['cookies.txt', 'settings.ini', 'urls.txt', 'download/posts/image.png',
                '.ai/state.json', '.claude/state.json', 'temp/plan/文档 with spaces.md',
-               '启动修复版.cmd']
+               '启动修复版.cmd', 'docs/release-preparation-v2.7.1.md']
 PAYLOAD = 'synthetic-local-only-data'
 
 

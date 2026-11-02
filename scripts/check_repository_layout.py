@@ -14,6 +14,7 @@ LOCAL_ROOT_PATHS = frozenset({
     '启动修复版.cmd',
 })
 OBJECT_ID = re.compile(r'(?:[0-9a-f]{40}|[0-9a-f]{64})\Z')
+LOCAL_RELEASE_RECORD = re.compile(r'docs/release-preparation-v[^/]+\.md\Z', re.IGNORECASE)
 
 
 MAINTAINED_SCRIPTS = frozenset({
@@ -48,9 +49,14 @@ def paths_from(data):
     return data.decode('utf-8', errors='surrogateescape').split('\0')
 
 
+def local_only(path):
+    normalized = path.replace('\\', '/')
+    return (normalized.split('/')[0].casefold() in LOCAL_ROOT_PATHS
+            or bool(LOCAL_RELEASE_RECORD.fullmatch(normalized)))
+
+
 def local_paths(paths):
-    return [path for path in paths if path and
-            path.replace('\\', '/').split('/')[0].casefold() in LOCAL_ROOT_PATHS]
+    return [path for path in paths if path and local_only(path)]
 
 
 def violations(paths):
@@ -61,7 +67,7 @@ def violations(paths):
         if not parts:
             continue
         top = parts[0].casefold()
-        if (top in LOCAL_ROOT_PATHS
+        if (local_only(normalized)
                 or (top == 'dependency' and not (
                     len(parts) == 2 and parts[-1].endswith('.LICENSE')))
                 or (top == 'tests' and len(parts) == 2
@@ -77,7 +83,7 @@ def check(*, staged=False):
     invalid = violations(paths_from(git('ls-files', '--cached', '-z')))
     if invalid:
         print('拒绝提交：根目录 cookies.txt、settings.ini、urls.txt、download、.ai、.claude、'
-              'temp 和本地启动修复版.cmd 仅留本地；dependency 仅保留根目录 *.LICENSE，'
+              'temp、本地启动修复版.cmd 和版本发布准备记录仅留本地；dependency 仅保留根目录 *.LICENSE，'
               'scripts 仅保留明确维护的脚本；测试放入 tests 的功能子目录。', file=sys.stderr)
         for path in invalid:
             print(f'  {ascii(path)}', file=sys.stderr)
@@ -133,9 +139,9 @@ def check_push(lines, remote_location):
     commits = set(git('rev-list', '--stdin', input=revisions.encode('ascii')).decode('ascii').splitlines())
     # Also enforce a clean target tree when a new ref points at an existing commit.
     for commit in sorted(commits | tips):
-        invalid = local_paths(paths_from(git('ls-tree', '--name-only', '-z', commit)))
+        invalid = local_paths(paths_from(git('ls-tree', '-r', '--name-only', '-z', commit)))
         if invalid:
-            print(f'拒绝推送：提交 {commit[:12]} 包含根目录本地数据。', file=sys.stderr)
+            print(f'拒绝推送：提交 {commit[:12]} 包含本地数据或内部发布准备记录。', file=sys.stderr)
             for path in invalid:
                 print(f'  {ascii(path)}', file=sys.stderr)
             print('请从尚未推送的每个提交中移除这些路径；追加删除提交仍会上传旧内容。', file=sys.stderr)

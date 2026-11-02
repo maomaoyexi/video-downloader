@@ -45,6 +45,23 @@ def test_local_repair_launcher_is_ignored_and_rejected_if_forced():
     assert tracked.stdout == b''
 
 
+def test_local_release_preparation_records_are_not_publishable():
+    names = ['docs/release-preparation-v2.7.1.md',
+             'docs/release-preparation-v2.8.0.md',
+             'Docs/Release-Preparation-v2.7.1.MD']
+    assert violations(names) == names
+    assert local_paths(names) == names
+    assert violations(['docs/releases/v2.7.1.md', 'RELEASE_NOTES.md']) == []
+    result = subprocess.check_output(
+        ['git', 'check-ignore', '--no-index', '--stdin', '-z'], cwd=PROJECT_ROOT,
+        input=('\0'.join(names[:2]) + '\0').encode('utf-8'))
+    assert result.decode('utf-8').split('\0') == names[:2] + ['']
+    tracked = subprocess.run(
+        ['git', 'ls-files', '--error-unmatch', '--', names[0]], cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert tracked.returncode == 1
+
+
 def test_gitignore_uses_default_deny_for_runtime_and_temporary_scripts():
     root = PROJECT_ROOT
     ignored = ['cookies.txt', 'settings.ini', 'urls.txt', 'download/posts/image.png',

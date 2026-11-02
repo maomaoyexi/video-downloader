@@ -7,6 +7,7 @@
 /.claude/
 /temp/
 /启动修复版.cmd
+/docs/release-preparation-v*.md
 
 # 配置文件（包含用户隐私数据）
 settings.ini
