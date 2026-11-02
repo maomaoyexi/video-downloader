@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args in (["--check"], ["--live-self-check"]):
         return _check_runtime(live_only=args == ["--live-self-check"])
-    print("正在运行 v2.7.1 开发源码；关闭网页后仍按程序原有规则收尾。", flush=True)
+    print("正在运行 v2.7.1 正式版源码；关闭网页后仍按程序原有规则收尾。", flush=True)
     sys.argv = [str(entry), *args]
     runpy.run_path(str(entry), run_name="__main__")
     return 0

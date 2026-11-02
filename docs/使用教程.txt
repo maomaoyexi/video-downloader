@@ -1,5 +1,5 @@
 YT-DLP 多平台视频下载工具 完整使用教程
-适配版本：v2.7.1 WebUI（开发版）（Windows EXE／源码运行版）
+适配版本：v2.7.1 WebUI（正式版，Windows EXE／源码运行版）
 支持平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter / Rplay / FANBOX
 特殊功能：Withny 已授权历史存档 HAR 保存与直播监控；FANBOX 扫描、预览和内容归档
 界面方式：浏览器WebUI（运行 Windows EXE 或 Python 主程序后自动打开浏览器）

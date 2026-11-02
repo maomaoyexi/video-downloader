@@ -1,5 +1,5 @@
 YT-DLP 多平台视频下载工具 常见问题答疑合集
-适配版本：v2.7.1 WebUI（开发版）（Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
+适配版本：v2.7.1 WebUI（正式版，Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
 界面方式：浏览器WebUI（双击 video-downloader-v2.7.1-GUI.exe；源码版运行 视频下载工具v2.7.1-GUI.py）
 直播录制模式：在「设置 → 直播设置」选择自动、追开播、从当前时刻或蹲开播；默认自动，按平台能力核验后执行。
 =====================================

@@ -1,4 +1,4 @@
-# 多平台视频下载工具 v2.7.1 WebUI（开发中）
+# 多平台视频下载工具 v2.7.1 WebUI（正式版）
 
 ![Version](https://img.shields.io/badge/source-v2.7.1%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -6,7 +6,7 @@
 
 **[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](CHANGELOG.md)** · **[本版发布说明](RELEASE_NOTES.md)**
 
-> 本页对应 v2.7.1 开发源码，尚未正式发布。当前阶段只同步源码，EXE 与依赖包留到正式发布前再构建；安装包版本与文件请以 Releases 页面实际发布的内容为准。
+> 本页对应已完成功能与修复的 v2.7.1 正式版，面向正式交付。安装包文件和 SHA-256 请以 Releases 页面实际提供的本版附件及发布说明为准。
 
 ### v2.7.1 本次更新
 
@@ -109,7 +109,7 @@
 
 ## 已知问题
 
-单任务执行器停止路由已在 v2.7.0 修复；以下六项修复纳入 v2.7.1 开发源码。已完成的本地验证与历史试打包见 [准备记录](docs/release-preparation-v2.7.1.md)，正式附件会在发版前重新构建和校验。旧 v2.7.0 附件及原始 SHA-256 保留在 [历史发布说明](docs/releases/v2.7.0.md)。复现记录见 [FANBOX 六项修复验证](docs/fanbox-six-fixes-validation.md)。
+单任务执行器停止路由已在 v2.7.0 修复；以下六项修复已包含在 v2.7.1 正式版源码中。已完成的验证及历史试打包见 [验证记录](docs/release-preparation-v2.7.1.md)，正式交付文件与校验值以本版 Release 实际附件为准。旧 v2.7.0 附件及原始 SHA-256 保留在 [历史发布说明](docs/releases/v2.7.0.md)。复现记录见 [FANBOX 六项修复验证](docs/fanbox-six-fixes-validation.md)。
 
 | 场景 | 当前源码行为 |
 | --- | --- |
