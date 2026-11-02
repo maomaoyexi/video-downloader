@@ -78,8 +78,6 @@ Windows 绿色版按以下两份文件配套交付，无需安装 Python；具�
 
 ## 本次贡献者
 
-**v2.7.1 的全部更新由 maomaoyexi 完成。**
-
 | 贡献者 | 本版贡献 |
 | --- | --- |
 | [maomaoyexi（@maomaoyexi）](https://github.com/maomaoyexi) | v2.7.1 全部更新：FANBOX 修复、界面与交互、帮助与报错反馈、更新日志、测试及版本维护 |

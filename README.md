@@ -165,11 +165,9 @@ python ".\视频下载工具v2.7.1-GUI.py" --fanbox-download --help
 
 ## 作者与贡献者
 
-**v2.7.1 的全部更新由 maomaoyexi 完成。**
-
 | 贡献者 | 主要贡献 |
 | --- | --- |
-| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | **v2.7.1 全部更新**；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；「本次 yt-dlp 参数」「直播录制设置」及相关设置；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
+| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；「本次 yt-dlp 参数」「直播录制设置」及相关设置；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
 | [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) | WebUI 重构，以及 v2.4.0 / v2.5.0 的视觉与交互体系重构 |
 | [ErgouTree（@ergou10086）](https://github.com/ergou10086) | NicoChannel、Twitter/X、TwitCasting、MP3 与界面/音频工具；设置、Provider 和目录收拢；PR #15 的归档选择、独立批量封面和 Provider 启动改进；PR #18 的 Rplay、FANBOX 及相关界面与 CLI |
 | [ZheYi101](https://github.com/ZheYi101) | v2.4.0 字幕下载功能 |
