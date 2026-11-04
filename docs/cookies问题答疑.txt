@@ -9,7 +9,8 @@
 工具箱的「生成 Cookie 模板」只创建空白 Netscape 格式模板和说明，不含登录凭证。
 真实 Cookie 必须从已登录浏览器导出；已有 cookies.txt 不会被覆盖或自动转换格式。
 
-直播录制补充：YouTube、Twitch、Niconico、TwitCasting 和 Twitter/X Spaces 的登录直播通常需要对应平台 Cookie；Bilibili 高画质或登录直播可使用 cookies.txt；NicoChannel 直播还需要在 Firefox 登录以提取 JWT。Cookie 只提供账号登录态，不能绕过会员、付费、地区或 DRM 限制。v2.6.0 原有各平台直播录制由猫猫葉汐A_spy（GitHub：@maomaoyexi）实现与维护。v2.7.0 PR #18 的全部新增功能由 ErgouTree（GitHub：@ergou10086）贡献，其中 Rplay 登录使用独立 Firefox 授权设置。
+直播录制补充：YouTube、Twitch、Niconico、TwitCasting 和 Twitter/X Spaces 的登录直播通常需要对应平台 Cookie；Bilibili 高画质或登录直播可使用 cookies.txt；NicoChannel 直播还需要在 Firefox 登录以提取 JWT。Cookie 只提供账号登录态，不能绕过会员、付费、地区或 DRM 限制。
+贡献来源：v2.6.0 原有各平台直播录制由猫猫葉汐A_spy（GitHub：@maomaoyexi）实现与维护。v2.7.0 合入的 PR #17 由 ErgouTree（GitHub：@ergou10086）完成后续直播框架重构、追播校验、弹幕导出和多任务并发等改进；PR #18 的 Rplay、FANBOX 及相关新增功能同样由 ErgouTree 贡献。原始功能与后续重构的贡献分别保留，其中 Rplay 登录使用独立 Firefox 授权设置。
 
 ------------------------------------------------------------
 一、为什么需要 Cookie？
@@ -52,7 +53,7 @@
 
 4. 放置文件
    - 将导出的文件重命名为：cookies.txt
-   - 放到与 video-downloader-v2.7.1-GUI.exe 同一目录（源码版与 视频下载工具v2.7.1-GUI.py 同目录）
+   - 放到与 video-downloader-v2.8.0-GUI.exe 同一目录（源码版与 视频下载工具v2.8.0-GUI.py 同目录）
    - 不要放入子文件夹
 
 5. 完成
@@ -149,7 +150,7 @@
 配置Cookie后无法下载时，按此清单检查：
 
 □ 文件名为 cookies.txt（不是cookies(1).txt、cookies.txt.txt等）
-□ Cookie 文件位于配置指定的位置；默认与 EXE 或 视频下载工具v2.7.1-GUI.py 同目录
+□ Cookie 文件位于配置指定的位置；默认与 EXE 或 视频下载工具v2.8.0-GUI.py 同目录
 □ 导出格式为Netscape格式（不是JSON、CRT等）
 □ 文件首行为 # Netscape HTTP Cookie File
 □ 每条 Cookie 为 7 个字段，以实际 TAB 分隔，不是空格或字面量 \t

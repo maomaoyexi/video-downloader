@@ -12,6 +12,31 @@ from video_downloader.services.storage import StorageService
 
 
 class StorageServiceTests(unittest.TestCase):
+    def test_history_ignores_malformed_records_without_rewriting_source(self):
+        history_file = Path(self.temp_dir.name) / "download" / "download_history.json"
+        valid = {"url": "https://example.com/post", "platform": "Fanbox", "status": "success"}
+        original = json.dumps([None, "broken", 42, ["bad"], valid]).encode("utf-8")
+        history_file.write_bytes(original)
+
+        self.assertEqual(self.storage.load_history(), [valid])
+        self.assertEqual(history_file.read_bytes(), original)
+        history = self.storage.add_history("https://example.com/new", "new", "Fanbox")
+        self.assertEqual([entry["url"] for entry in history],
+                         ["https://example.com/new", "https://example.com/post"])
+
+    def test_history_path_migration_preserves_malformed_source_records(self):
+        root = Path(self.temp_dir.name)
+        history_file = root / "download" / "download_history.json"
+        valid = {"platform": "YouTube", "filepath": str(root / "YouTube" / "video.mp4")}
+        history_file.write_text(json.dumps([None, "recoverable raw record", valid]), encoding="utf-8")
+
+        loaded = self.storage.load_history()
+        self.assertEqual(len(loaded), 1)
+        self.assertEqual(Path(loaded[0]["filepath"]), root / "download" / "YouTube" / "video.mp4")
+        persisted = json.loads(history_file.read_text(encoding="utf-8"))
+        self.assertEqual(persisted[:2], [None, "recoverable raw record"])
+        self.assertEqual(persisted[2], loaded[0])
+
     def test_old_task_limits_are_clamped_without_losing_other_settings(self):
         (Path(self.temp_dir.name) / "settings.ini").write_text(
             "[settings]\ntask_max_parallel=8\ntask_live_parallel=1\nresolution=720\n", encoding="utf-8")

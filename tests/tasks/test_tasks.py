@@ -429,6 +429,15 @@ class TaskRegressionTests(unittest.TestCase):
         self.assertTrue(wait_until(lambda: not manager.has_active()))
         self.assertEqual(sorted(s["SPEED_LIMIT"] for s in states), [0, .3])
 
+    def test_invalid_speed_config_finishes_item_with_diagnostic_error(self):
+        manager, _, _, _ = self.make(config={"TASK_DOWNLOAD_SPEED_LIMIT": "invalid-speed"})
+        manager.submit(["https://example.com/video"])
+        self.assertTrue(wait_until(lambda: not manager.has_active()))
+        self.assertTrue(wait_until(lambda: manager.list_tasks()[0]["status"] == "failed"))
+        item = manager.list_tasks()[0]["items"][0]
+        self.assertIn("invalid-speed", item["error"])
+        self.assertIsNotNone(item["finished_at"])
+
 
 
 

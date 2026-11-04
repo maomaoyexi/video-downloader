@@ -64,3 +64,39 @@ test('truncated credentials are hidden through the last available character',()=
   const output=redact(prefix);
   assert.ok(!output.includes('DEMO_A')&&!output.includes('DEMO_B'));
 });
+
+const template=fs.readFileSync('resource/templates/index.html','utf8');
+function helpTopic(id){
+  const match=template.match(new RegExp('<details\\b[^>]*id="'+id+'"[^>]*>([\\s\\S]*?)<\\/details>'));
+  assert.ok(match,'帮助主题应存在：'+id);
+  return match[1].replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+}
+test('help points to current settings navigation and exit controls',()=>{
+  const start=helpTopic('help-start'),faq=helpTopic('help-faq');
+  assert.ok(start.includes('下载设置'));
+  assert.match(start,/其他设置目录.*定位.*展开/);
+  assert.match(start,/再次点击当前目录.*收起/);
+  assert.ok(faq.includes('左侧底部「退出工具」'));
+  assert.ok(!faq.includes('✕ 退出'));
+});
+test('help explains sidecar audio stage and partial output failures',()=>{
+  const start=helpTopic('help-start');
+  assert.ok(start.includes('同时输出音频'));
+  assert.match(start,/先.*视频.*再.*提取.*音频/);
+  assert.match(start,/音频阶段.*0%/);
+  assert.match(start,/提取失败.*失败.*视频.*保留/);
+});
+test('help attributes the six FANBOX fixes to the published release',()=>{
+  const fixes=helpTopic('help-fixes');
+  assert.match(fixes,/六项.*v2\.7\.1.*正式发布/);
+  assert.ok(fixes.includes('v2.7.0'));
+  assert.ok(!fixes.includes('查看效果请使用当前修复版入口'));
+  assert.ok(!fixes.includes('当前修复版源码已处理'));
+});
+test('unmatched error guidance does not pretend to classify the error',()=>{
+  const missing=template.match(/id="helpMissingTitle"[\s\S]*?<p>([\s\S]*?)<\/p>/);
+  assert.ok(missing);
+  assert.ok(!missing[1].includes('该报错暂未收录'));
+  assert.ok(missing[1].includes('只收录常见'));
+  assert.ok(missing[1].includes('原因尚未确认'));
+});

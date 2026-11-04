@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>视频下载工具</title>
+  <rect x="2.5" y="2.5" width="27" height="27" rx="6.5" fill="#F7F7F5" stroke="#16161A" stroke-width="1"/>
+  <g transform="translate(7 7) scale(.75)" stroke="#16161A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3v12"/>
+    <path d="M7 10l5 5 5-5"/>
+    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+  </g>
+</svg>

@@ -1,9 +1,9 @@
-VERSION = "v2.7.1 WebUI"
-VERSION_NUM = 20701
+VERSION = "v2.8.0 WebUI"
+VERSION_NUM = 20800
 
 GITHUB_OWNER = "maomaoyexi"
 GITHUB_REPO = "video-downloader"
-EXE_NAME = "视频下载工具v2.7.1-GUI.exe"
+EXE_NAME = "视频下载工具v2.8.0-GUI.exe"
 UPDATE_HOSTS = {
     "github.com",
     "api.github.com",
@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
     "CODEC": "best",
     "AUDIO_QUALITY": "best",
     "OUTPUT_FORMAT": "mp4",
-    "MERGE_MODE": 1,
+    "MERGE_MODE": 1,  # 仅兼容旧配置；实际合并策略使用 AUDIO_MODE。
     "AUDIO_MODE": "0",
     "AUDIO_FORMAT": "mp3",
     "THREADS": 4,
@@ -67,11 +67,11 @@ DEFAULT_CONFIG = {
     "TASK_DOWNLOAD_PARALLEL": 1,
     "TASK_DOWNLOAD_SPEED_LIMIT": 0.0,
     "TASK_ORDER": "none",
-    "ENABLE_LOG": 1,
-    "MP3_BITRATE": 320,
+    "ENABLE_LOG": 1,  # 仅保留旧设置与预设的读写兼容，不控制当前日志。
+    "MP3_BITRATE": 320,  # 仅兼容旧配置；音频工具使用本次请求的码率。
     "AUDIO_OUTPUT_FORMAT": "mp3",
     "AUDIO_RECURSIVE": 0,
-    "DEL_WAV_AFTER_CONVERT": 0,
+    "DEL_WAV_AFTER_CONVERT": 0,  # 仅兼容旧配置，不自动启用删除源文件。
     "BILI_MULTIP_POLICY": "all",
     "YOUTUBE_PO_TOKEN_ENABLED": 0,
     "YTDLP_DEFAULT_ARGS": "",

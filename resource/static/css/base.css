@@ -269,6 +269,11 @@ textarea.ta:disabled{color:var(--fg3)}
 .about-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:56px;align-items:start}
 .about-col{display:flex;flex-direction:column;gap:26px}
 .credits{display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--fg2)}
+#page-about .credits-table{width:100%;table-layout:fixed;border-collapse:collapse;line-height:1.65}
+#page-about .credits-table th,#page-about .credits-table td{padding:9px 12px;border:1px solid var(--line);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+#page-about .credits-table th{background:var(--surface2);color:var(--fg);font-weight:600}
+#page-about .credits-table th:first-child{width:26%}
+#page-about .credits-table tbody tr:nth-child(even){background:var(--surface2)}
 .specrow{display:flex;align-items:baseline;gap:16px}
 .specrow .k{width:132px;flex:none;font-family:var(--mono);font-size:11.5px;color:var(--fg3)}
 .deps{display:flex;flex-direction:column;gap:8px}

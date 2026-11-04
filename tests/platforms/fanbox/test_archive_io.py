@@ -113,6 +113,47 @@ def test_partial_survives_transport_failure_but_not_missing_validator(tmp_path):
     assert (tmp_path/result['path']).read_bytes()==DATA
 
 
+@pytest.mark.parametrize('metadata',[None,[], 'invalid',1])
+def test_invalid_resume_metadata_restarts_without_trusting_partial(tmp_path,metadata):
+    body=Body()
+    downloader,model,asset,options=setup_io(tmp_path,body)
+    key=resource_key(model,asset)
+    part=confined(tmp_path,f'.fanbox/parts/{key}.part',create=True)
+    part.write_bytes(b'untrusted partial')
+    write_json(part.with_suffix('.json'),metadata)
+
+    result=downloader.download(model,asset,options,DATE)
+
+    assert result['status']=='completed'
+    assert (tmp_path/result['path']).read_bytes()==DATA
+    assert body.requests==[{}]
+
+
+@pytest.mark.parametrize('interruption',['cancelled','lease_expired'])
+def test_interrupted_transfer_is_not_promoted_after_final_chunk(tmp_path,interruption):
+    now=[1000.]
+    cancel=threading.Event()
+
+    class InterruptedBody(Body):
+        def transfer(self,*args,**kwargs):
+            super().transfer(*args,**kwargs)
+            if interruption=='cancelled':cancel.set()
+            else:now[0]+=121
+
+    downloader,model,asset,options=setup_io(tmp_path,InterruptedBody())
+    downloader.repository.clock=lambda:now[0]
+    downloader.gate=AccountGate(downloader.repository,cancel,0)
+
+    with pytest.raises(FanboxError) as failure:
+        downloader.download(model,asset,options,DATE)
+
+    assert failure.value.code==interruption
+    key=resource_key(model,asset)
+    assert downloader.repository.asset(key).get('status')!='completed'
+    assert not (tmp_path/asset_path(model,asset,options,DATE)).exists()
+    assert (tmp_path/f'.fanbox/parts/{key}.part').read_bytes()==DATA
+
+
 @pytest.mark.parametrize('template',['../x','/x','C:/x','a/../../x','a\\x','{unknown}'])
 def test_paths_reject_traversal_and_unknown_tokens(template):
     with pytest.raises(FanboxError):render(template,{'title':'safe'})

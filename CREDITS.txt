@@ -14,19 +14,24 @@ https://github.com/ZheYi101
 
 主要贡献
 - DarkKandaoMaster：WebUI 界面与交互重构
-- ErgouTree：MP3 音频单独下载；v2.3.0 NicoChannel、Twitter/X 与 TwitCasting 直播支持、UI 改版、音频格式转换、响度统一和音量调整工具
+- ErgouTree：PR #1 的 Bilibili 视频、多 P 选择、代码分层与页面资源拆分；PR #2 的单条与批量 CLI；PR #4 的分离音画、同时输出音频、仅音频和不处理四种音频输出模式及 m4a/mp3/wav 选项；v2.3.0 NicoChannel、Twitter/X 与 TwitCasting 直播支持、界面功能、音频格式转换、响度统一和音量调整工具
 - 猫猫葉汐A_spy：项目原版与维护；v2.3.0 Withny 已授权历史存档下载、直播监控录制、中性配色切换及音频工具界面对齐调整
 - DarkKandaoMaster：v2.4.0 UI 重构
 - ErgouTree：v2.4.0 其他更新与修复
-- ZheYi101：v2.4.0 字幕下载功能
+- ZheYi101：PR #12 的随视频下载字幕设置与独立字幕下载工具（v2.4.0）
 - 猫猫葉汐A_spy：v2.4.0 字幕功能修复、生命周期修复及合并适配
 - DarkKandaoMaster：v2.5.0 WebUI 视觉与交互体系重构
-- ErgouTree：v2.5.0 设置控件补充、TwitCasting 下载与进度增强、BgUtils Provider 集成及依赖和下载目录收拢
-- 猫猫葉汐A_spy：v2.6.0 YouTube、Bilibili、Twitch、Niconico、NicoChannel、TwitCasting、Twitter/X Spaces 各平台直播入口识别、直播录制策略、断流处理与实时状态展示；任务页「本次 yt-dlp 参数」和「直播录制设置」两个按钮及相关设置功能、Cookie 模板修复、TwitCasting 密码表及失效记录清理、HLS 回退、完成后 `.ytdl` 清理、回归测试与相关文档整理
+- ErgouTree：v2.5.0 PR #13 的设置控件、细分下载进度与当前命令查看；默认及本次 yt-dlp 自定义参数；代理直连与环境代理处理、TwitCasting HLS 下载改进、BgUtils Provider 集成及依赖和下载目录收拢
+- 猫猫葉汐A_spy：v2.6.0 YouTube、Bilibili、Twitch、Niconico、NicoChannel、TwitCasting、Twitter/X Spaces 各平台直播入口识别、直播录制策略、断流处理与实时状态展示；任务页「本次 yt-dlp 参数」和「直播录制设置」两个按钮及后续交互整合；Cookie 模板修复、TwitCasting 密码表及失效记录清理、HLS 回退、完成后 `.ytdl` 清理、回归测试与相关文档整理。默认与本次 yt-dlp 自定义参数能力源自 ErgouTree 的 PR #13，按钮与后续交互贡献分别保留
 - ErgouTree（@ergou10086）：PR #15 下载归档选择、独立批量封面及 PO Token Provider 启动改进
 
+- ErgouTree（@ergou10086）：v2.7.0 PR #17 在原有多平台直播功能基础上重构直播领域框架，包括平台探测、等待开播、录制会话、引擎适配、断流恢复与追播完整性校验；新增直播弹幕采集及导出、多任务并发与任务队列、网络检测，并完成实用工具修复、TwitCasting 下载重建、项目结构与依赖整理
 - ErgouTree（@ergou10086）：v2.7.0 PR #18 的全部新增功能，包括 Rplay 点播、直播、Twitch 转播、Firefox 授权，以及 FANBOX 扫描、预览、内容归档、筛选、命名、粉丝卡、流量记录和相关 WebUI／命令行功能
 - 猫猫葉汐A_spy（@maomaoyexi）：v2.7.0 单任务执行器停止路由修复与回归测试、版本整合、打包及文档整理
+
+v2.8.0 本版贡献
+maomaoyexi（@maomaoyexi）：依赖缺失检测与完整配套包更新、手动更新回退、任务与资源清理、音频及 FANBOX 边界修复、界面调整、EXE 图标、兼容性维护、回归测试及发布文档。
+本版维护继续保留以下历史作者、PR 与第三方组件署名。
 
 v2.7.1 更新归属
 v2.7.1 的全部更新由 maomaoyexi 完成。
@@ -38,12 +43,53 @@ v2.7.1 的全部更新由 maomaoyexi 完成。
   https://github.com/Brainicism/bgutil-ytdlp-pot-provider
 
 合并来源
-- PR #15「feat: improve archive workflows and provider startup」，作者 ErgouTree（@ergou10086），于 2026-10-13 在上游合并。
-- 2026-10-20 将该 PR 的下载归档选择、独立批量封面及 PO Token 启动改进整合到 v2.6.0 直播录制版，原有作者与贡献者署名保留；v2.6.0 直接作为正式版发布到 GitHub Release。
-  https://github.com/maomaoyexi/video-downloader/pull/15
+以下为 maomaoyexi/video-downloader 主仓库截至 2026-11-03 的 15 个已合并 PR。日期使用 Asia/Shanghai 时区；贡献按实际合并差异和原始提交记录，合入其他作者的代码不改变原作者署名。后续重构保留历史贡献，不将同一功能重复计为新增。
 
-- PR #18 已合并并整合到 v2.7.0；该 PR 的全部新增功能由 ErgouTree（@ergou10086）贡献，历史作者与贡献者署名继续保留。
+- PR #1（2026-07-18），ErgouTree（@ergou10086）：Bilibili 视频下载、多 P 获取与选择、代码分层和页面资源拆分，并修复日期数据嵌入。
+  https://github.com/maomaoyexi/video-downloader/pull/1
+- PR #2（2026-07-20），ErgouTree（@ergou10086）：简易单条与批量 CLI，便于命令行直接下载。
+  https://github.com/maomaoyexi/video-downloader/pull/2
+- PR #3（2026-07-22），由 ErgouTree（@ergou10086）提交：实际合并的是 DarkKandaoMaster 的 WebUI 界面重构与实用功能改进，来自 ergou10086/video-downloader 的上游 PR #1；该部分保留 DarkKandaoMaster 署名，不按本 PR 标题另计音频新增。
+  https://github.com/maomaoyexi/video-downloader/pull/3
+- PR #4（2026-07-23），ErgouTree（@ergou10086）：恢复并补充音频输出设置，支持分离音画、同时输出音频、仅音频和不处理四种模式，以及 m4a/mp3/wav 选项与相关界面调整。
+  https://github.com/maomaoyexi/video-downloader/pull/4
+- PR #5（2026-07-24），由 ErgouTree（@ergou10086）提交：此合并相对第一父提交没有文件差异，保留合并记录；TwitCasting 的实际接入记于 PR #7，不重复计为本项新增。
+  https://github.com/maomaoyexi/video-downloader/pull/5
+- PR #7（2026-07-24），ErgouTree（@ergou10086）：TwitCasting 平台下载接入、密码交互及相关界面与配置。
+  https://github.com/maomaoyexi/video-downloader/pull/7
+- PR #8（2026-07-24），ErgouTree（@ergou10086）：移除误纳入版本控制的 .idea 文件并调整 .gitignore。
+  https://github.com/maomaoyexi/video-downloader/pull/8
+- PR #9（2026-07-25），ErgouTree（@ergou10086）：Everforest 明暗主题与模块化样式、音频格式转换、响度统一及音量调整等工具和界面改进；不将 PR #7 已接入的 TwitCasting 再次计为新增。
+  https://github.com/maomaoyexi/video-downloader/pull/9
+- PR #10（2026-07-27），ErgouTree（@ergou10086）：Twitter/X 下载与 Spaces 链接识别、相关域名处理和界面提示。
+  https://github.com/maomaoyexi/video-downloader/pull/10
+- PR #11（2026-08-04），ErgouTree（@ergou10086）：NicoChannel 存档下载与 Firefox 授权接入，修复 Niconico 下载中断及批量直播存档下载阻塞，补充超时和心跳处理。
+  https://github.com/maomaoyexi/video-downloader/pull/11
+- PR #12（2026-09-06），ZheYi101（@ZheYi101）：随视频下载字幕设置和独立字幕下载工具；后续修复与合并适配仍按原有记录保留猫猫葉汐A_spy 的署名。
+  https://github.com/maomaoyexi/video-downloader/pull/12
+- PR #13（2026-09-18），由 ErgouTree（@ergou10086）提交：设置控件、细分下载进度与当前命令查看、默认及本次 yt-dlp 自定义参数、代理处理、TwitCasting HLS 下载修复、BgUtils Provider 集成和依赖/下载目录整理；同时合入 DarkKandaoMaster 的上游 PR #2 视觉与交互重构，该部分保留原作者署名。
+  https://github.com/maomaoyexi/video-downloader/pull/13
+- PR #15「修复PO Token的导致的二次启动问题」（2026-10-20），ErgouTree（@ergou10086）：归档跳过后的限时重新下载确认、独立批量封面下载，以及 YouTube PO Token Provider 首次启动阻塞修复，纳入 v2.6.0 正式版。
+  https://github.com/maomaoyexi/video-downloader/pull/15
+- PR #17（2026-10-28），ErgouTree（@ergou10086）：将原有集中在 download_executor.py 的直播核心重构为独立的 video_downloader/live/ 框架，补充会话、追播校验、弹幕、多任务、网络检测及工具等改进，随 v2.7.0 发布；猫猫葉汐A_spy 的原始多平台直播功能与后续修复贡献继续保留。
+  https://github.com/maomaoyexi/video-downloader/pull/17
+- PR #18（2026-11-01），ErgouTree（@ergou10086）：在既有直播框架上接入 Rplay 点播、直播、Twitch 转播与 Firefox 授权，新增 FANBOX 扫描、预览、归档和相关界面/CLI，随 v2.7.0 发布。
   https://github.com/maomaoyexi/video-downloader/pull/18
+
+上游 PR 的原作者来源
+以下编号属于 ergou10086/video-downloader，与主仓库同号 PR 不同。
+- 上游 PR #1，DarkKandaoMaster（@DarkKandaoMaster）：WebUI 界面重构及实用功能改进，经主仓库 PR #3 合入。
+  https://github.com/ergou10086/video-downloader/pull/1
+- 上游 PR #2，DarkKandaoMaster（@DarkKandaoMaster）：WebUI 视觉与交互体系、明暗主题、响应式布局、历史列表/网格视图及设置和工具面板重构，经主仓库 PR #13 合入。
+  https://github.com/ergou10086/video-downloader/pull/2
+
+未独立合并的相关 PR
+- PR #6 已关闭且未合并，与 PR #7 使用相同的分支头；相关贡献已计入 PR #7，不重复列为独立新增。
+  https://github.com/maomaoyexi/video-downloader/pull/6
+- PR #14 是撤销 PR #12 的提案，已关闭且未合并；该提案不计为已落地改动。
+  https://github.com/maomaoyexi/video-downloader/pull/14
+- PR #16 已关闭且未合并，其分支头提交及直播框架工作后来通过 PR #17 合入，贡献计入 PR #17。
+  https://github.com/maomaoyexi/video-downloader/pull/16
 
 项目仓库
 https://github.com/maomaoyexi/video-downloader

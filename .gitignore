@@ -57,7 +57,7 @@ dist/
 release-output/
 release-assets/
 *.spec
-!视频下载工具v2.7.1-GUI.spec
+!视频下载工具v2.8.0-GUI.spec
 
 # 下载/安装的依赖仅保留根目录的许可证；源码插件和锁文件在 resource 中维护。
 /dependency/*
@@ -67,10 +67,12 @@ release-assets/
 /scripts/*
 !/scripts/install_bililive.py
 !/scripts/install_live_dependencies.py
+!/scripts/sync_live_requirements.py
 !/scripts/build_withny_dependency.py
 !/scripts/check_live_release.py
 !/scripts/check_repository_layout.py
 !/scripts/package_release_assets.py
+!/scripts/generate_dependency_catalog.py
 !/scripts/withny_patch/
 /scripts/withny_patch/*
 !/scripts/withny_patch/chat.go

@@ -4,6 +4,7 @@ import secrets
 import sys
 import threading
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
@@ -11,6 +12,16 @@ from urllib.parse import parse_qs, urlparse
 
 from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS
 from video_downloader.web.rendering import read_error_manual
+
+
+DEPENDENCY_GUARDED_PATHS = frozenset({
+    "/api/start", "/api/start-urls", "/api/start-withny-archive", "/api/start-withny-live",
+    "/api/batch-txt", "/api/download-subtitles", "/api/download-covers",
+    "/api/live/inspect", "/api/bili-playlist",
+    "/api/update-ytdlp", "/api/do-update", "/api/clean-temp",
+    "/api/wav2mp3", "/api/audio-convert", "/api/audio-loudnorm", "/api/audio-volume",
+    "/api/exit", "/api/dependencies/check", "/api/dependencies/update", "/api/dependencies/cancel",
+})
 
 
 @dataclass(frozen=True)
@@ -72,9 +83,13 @@ class HttpHandlerDependencies:
     audio_convert: object = None
     stop_audio_tool: object = None
     fanbox: object = None
+    dependency_manager: object = None
+    maintenance_lock: object = None
 
 
 def create_handler(dependencies):
+    maintenance_lock = dependencies.maintenance_lock or threading.RLock()
+
     class RequestHandler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
             pass
@@ -92,7 +107,7 @@ def create_handler(dependencies):
             token = self.headers.get("X-Session-Token", "")
             if not token and parsed is not None:
                 token = parse_qs(parsed.query).get("token", [""])[0]
-            return secrets.compare_digest(token, dependencies.session_token)
+            return token.isascii() and secrets.compare_digest(token, dependencies.session_token)
 
         def _forbidden(self):
             # As with the recording webhook, unread POST bytes can turn a 403
@@ -133,6 +148,20 @@ def create_handler(dependencies):
                 }, status=200 if manual is not None else 404)
             elif path == "/api/deps":
                 self._json(dependencies.check_deps())
+            elif path == "/api/dependencies":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                summary = query.get("summary", ["0"])
+                if set(query) - {"token", "summary"} or summary not in (["0"], ["1"]):
+                    self._json({"error": "依赖状态接口不接受文件路径或其他查询参数"}, status=400)
+                    return
+                module = dependencies.dependency_manager
+                if module is None:
+                    state = {"available": False, "error": "依赖管理暂不可用"}
+                elif summary == ["1"]:
+                    state = module.snapshot(include_groups=False)
+                else:
+                    state = module.snapshot()
+                self._json(state, status=200 if module is not None else 503)
             elif path == "/api/presets":
                 self._json({"presets": list(dependencies.load_presets().keys())})
             elif path == "/api/history":
@@ -318,6 +347,43 @@ def create_handler(dependencies):
                 return
             if not isinstance(data, dict):
                 self._json({"error": "JSON 请求体必须是对象"}, status=400)
+                return
+            module = dependencies.dependency_manager
+            fanbox_write = path.startswith('/api/fanbox/') and not (
+                path == '/api/fanbox/action' and data.get('action') in ('pause', 'cancel'))
+            tool_write = path == '/api/tool' and data.get('action') in ('update-ytdlp', 'clean-temp')
+            guarded = module is not None and (path in DEPENDENCY_GUARDED_PATHS or fanbox_write or tool_write)
+            with maintenance_lock if guarded else nullcontext():
+                if guarded and not path.startswith('/api/dependencies/'):
+                    state = module.snapshot()
+                    installing = state.get('running') and state.get('action') == 'install'
+                    if installing or (state.get('recovery_required') and path != '/api/exit'):
+                        self._json({"error": "依赖正在安装或等待恢复，请先取消、等待完成或修复依赖后再启动其他操作",
+                                    "code": "dependency_maintenance"}, status=409)
+                        return
+                self._dispatch_post(path, data)
+
+        def _dependency_post(self, path, data):
+            module = dependencies.dependency_manager
+            if module is None:
+                self._json({"error": "依赖更新暂不可用"}, status=503)
+                return
+            command = path.rsplit('/', 1)[-1]
+            if command not in {"check", "update", "cancel"}:
+                self.send_error(404)
+                return
+            if data:
+                self._json({"error": "依赖操作包含不支持的参数"}, status=400)
+                return
+            if command == 'cancel':
+                self._json(module.cancel())
+                return
+            result = module.check() if command == 'check' else module.update()
+            self._json(result)
+
+        def _dispatch_post(self, path, data):
+            if path.startswith('/api/dependencies/'):
+                self._dependency_post(path, data)
                 return
             if path.startswith('/api/fanbox/'):
                 self._fanbox_post(path,data)

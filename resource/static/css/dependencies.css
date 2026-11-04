@@ -1,0 +1,27 @@
+/* 依赖更新沿用现有模态与单色风格。 */
+.dependency-dialog{width:620px;max-height:88vh}
+.dependency-body{gap:12px}
+.dependency-version{font-size:11.5px}
+.dependency-overview{display:flex;flex-direction:column;gap:6px}
+.dependency-summary{font-size:14px;line-height:1.6}
+.dependency-counts{font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.dependency-distribution,.dependency-hint{font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.dependency-operation{padding:10px 12px;background:var(--surface2);border-radius:var(--r);font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.dependency-progress{display:flex;align-items:center;gap:10px;margin-top:8px}
+.dependency-progress[hidden]{display:none}
+.dependency-progress progress{width:100%;height:7px;accent-color:var(--fg)}
+.dependency-progress span{flex:none;font-size:11px}
+.dependency-recovery{padding:10px 12px;border:1px solid var(--warn);color:var(--warn);border-radius:var(--r);font-size:12px;line-height:1.65}
+.dependency-missing{padding-top:12px;border-top:1px solid var(--line);font-size:12px}
+.dependency-missing-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:0}
+.dependency-missing-list li{font-family:var(--mono);font-size:10.5px;line-height:1.6;overflow-wrap:anywhere}
+.dependency-body>a{align-self:flex-start;font-size:12px}
+.dependency-footer{flex-wrap:wrap;justify-content:flex-end}
+.dependency-footer [hidden]{display:none}
+@media(max-width:600px){
+  .dependency-manager{padding:12px}
+  .dependency-dialog{width:100%;max-height:calc(100dvh - 24px)}
+  .dependency-body{padding:12px;gap:10px}
+  .dependency-footer{padding:10px 12px;gap:7px}
+  .dependency-footer .btn{flex:1 1 130px;white-space:normal;height:auto;min-height:34px;padding:6px 8px;font-size:12px}
+}

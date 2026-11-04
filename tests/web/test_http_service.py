@@ -3,9 +3,11 @@ import io
 import queue
 import threading
 import time
+import tempfile
 import unittest
 from dataclasses import replace
 from contextlib import redirect_stderr
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import Mock, patch
@@ -210,6 +212,18 @@ class HttpServiceTests(unittest.TestCase):
             self.request("/api/config", token=False)
         self.assertEqual(raised.exception.code, 403)
 
+    def test_api_rejects_non_ascii_token_without_dropping_connection(self):
+        for path, headers in (
+            ("/api/config", {"X-Session-Token": "invalid-\u00e9"}),
+            ("/api/config?token=invalid-%E9%9B%AA", {}),
+        ):
+            with self.subTest(path=path):
+                request = Request(self.url + path, headers=headers)
+                with self.assertRaises(HTTPError) as raised:
+                    urlopen(request, timeout=2)
+                self.assertEqual(raised.exception.code, 403)
+        self.assertEqual(self.request("/api/config")[0], 200)
+
     def test_cover_route_serves_found_image(self):
         status, body, headers = self.request("/api/cover?path=known")
         self.assertEqual(status, 200)
@@ -386,6 +400,28 @@ class HttpServiceTests(unittest.TestCase):
             self.request("/api/save-config", method="POST", payload={"output_dir": "changed"})
         self.assertEqual(raised.exception.code, 500)
         self.assertEqual(dependencies.app_state.config_snapshot(), {"output_dir": "downloads"})
+
+    def test_save_config_rejects_fractional_integer_without_changing_saved_settings(self):
+        from video_downloader.core.constants import DEFAULT_CONFIG
+        from video_downloader.core.validation import validate_config
+        from video_downloader.services.storage import StorageService
+
+        with tempfile.TemporaryDirectory() as directory:
+            self.service.stop()
+            state = self.dependencies.app_state
+            state.replace_config(DEFAULT_CONFIG)
+            storage = StorageService(Path(directory), state, validate_config, lambda *args: None, lambda *args: None)
+            dependencies = replace(self.dependencies, validate_config=validate_config, save_config=storage.save_config)
+            self.service = HttpService(lambda: create_handler(dependencies), port=0)
+            self.url = self.service.start()
+            self.assertEqual(self.request("/api/save-config", method="POST", payload={"THREADS": "8"})[0], 200)
+            with self.assertRaises(HTTPError) as raised:
+                self.request("/api/save-config", method="POST", payload={"THREADS": 2.5})
+            self.assertEqual(raised.exception.code, 400)
+            self.assertIn("THREADS", json.loads(raised.exception.read())["error"])
+            self.assertEqual(json.loads(self.request("/api/config")[1])["config"]["THREADS"], 8)
+            storage.load_config()
+            self.assertEqual(json.loads(self.request("/api/config")[1])["config"]["THREADS"], 8)
 
     def test_reset_config_failure_restores_previous_config(self):
         self.service.stop()

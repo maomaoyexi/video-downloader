@@ -5,6 +5,19 @@ from video_downloader.core.validation import validate_config
 
 
 class ConfigValidationTests(unittest.TestCase):
+    def test_fractional_numbers_do_not_silently_change_integer_settings(self):
+        for key, value, previous in (
+            ("THREADS", 4.9, 4),
+            ("TASK_MAX_PARALLEL", 2.5, 2),
+            ("LIVE_DANMAKU_OFFSET_MS", -0.5, 0),
+            ("DOWNLOAD_SUBTITLES", 0.5, 0),
+            ("PROXY_ENABLED", 1.5, 0),
+        ):
+            with self.subTest(key=key):
+                config, errors = validate_config({key: value})
+                self.assertTrue(any(key in error for error in errors), errors)
+                self.assertEqual(config[key], previous)
+
     def test_task_live_parallel_default_and_bounds(self):
         self.assertEqual(validate_config({})[0]["TASK_LIVE_PARALLEL"], 2)
         for value in (2, 5):

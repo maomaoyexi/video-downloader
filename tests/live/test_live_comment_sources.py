@@ -264,7 +264,7 @@ def test_capture_cookie_snapshot_exit_status_and_cleanup(tmp_path):
     capture=CommentCapture(session,['x','--cookies',str(cookie)],{'LIVE_DANMAKU_ENABLED':1},force_kill=Mock())
     with patch('video_downloader.live.danmaku.capture.subprocess.Popen')as spawn:
         spawn.return_value.poll.return_value=0;capture.start()
-        request=json.loads((capture.root/'request.json').read_text())
+        request=json.loads((capture.root/'request.json').read_text(encoding='utf-8'))
         assert request['owner_pid']==os.getpid() and request['command'][-1]!=str(cookie)
         (capture.root/'capture-status.json').write_text('{"status":"running"}')
         assert capture.finish()['status']=='partial'

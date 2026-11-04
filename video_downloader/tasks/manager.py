@@ -298,23 +298,23 @@ class TaskManager:
             self._complete(task)
 
     def _run_item(self, task, item):
-        config = dict(task.config)
-        video_limit = float(config.get("TASK_DOWNLOAD_SPEED_LIMIT", 0))
-        if item.kind != "live" and video_limit > 0:
-            configured = float(config.get("SPEED_LIMIT", 0))
-            config["SPEED_LIMIT"] = min(configured, video_limit) if configured > 0 else video_limit
-        state = TaskAppState(self._base_app_state, task.id, config,
-                             publish=lambda event: self._on_state(task, item, event))
-        done, dm = threading.Event(), DownloadManager()
-        callbacks = TaskCallbacks(
-            log=lambda msg, level="info": self._on_log(task, item, msg, level),
-            update_progress=lambda percent, status=None, speed="", eta="", stage="video":
-                self._on_progress(task, item, percent, status, speed, eta, stage),
-            add_history=lambda *args, **kwargs: self._on_history(task, item, *args, **kwargs),
-            broadcast_download_state=lambda: None,
-            emit_event=lambda event_type, data=None: self._on_event(task, item, event_type, data),
-            cancel_idle_timer=self._cancel_idle, start_idle_timer=lambda: None)
         try:
+            config = dict(task.config)
+            video_limit = float(config.get("TASK_DOWNLOAD_SPEED_LIMIT", 0))
+            if item.kind != "live" and video_limit > 0:
+                configured = float(config.get("SPEED_LIMIT", 0))
+                config["SPEED_LIMIT"] = min(configured, video_limit) if configured > 0 else video_limit
+            state = TaskAppState(self._base_app_state, task.id, config,
+                                 publish=lambda event: self._on_state(task, item, event))
+            done, dm = threading.Event(), DownloadManager()
+            callbacks = TaskCallbacks(
+                log=lambda msg, level="info": self._on_log(task, item, msg, level),
+                update_progress=lambda percent, status=None, speed="", eta="", stage="video":
+                    self._on_progress(task, item, percent, status, speed, eta, stage),
+                add_history=lambda *args, **kwargs: self._on_history(task, item, *args, **kwargs),
+                broadcast_download_state=lambda: None,
+                emit_event=lambda event_type, data=None: self._on_event(task, item, event_type, data),
+                cancel_idle_timer=self._cancel_idle, start_idle_timer=lambda: None)
             executor = self._executor_factory(task, state, dm, callbacks, lambda _handle: done.set())
             with self._lock:
                 if task.cancel_requested:

@@ -1143,11 +1143,8 @@ class DownloadExecutor:
                 self.kill_process_tree(proc)
                 return
             line_q, read_done = self._start_reader(proc)
-            live_connected = False
-            live_start_time = time.time()
-            live_size = ""
-            live_speed = ""
-            live_frag = ""
+            ffmpeg_size = ""
+            ffmpeg_speed = ""
             password_required = False
             password_retry = False
             init_fragment_error = False
@@ -1155,33 +1152,12 @@ class DownloadExecutor:
             tc_access_error = False
             tc_cookie_error = False
             parallel_plugin_error = False
-            live_timeout = (int(self._app_state.config_snapshot().get("LIVE_DOWNLOAD_TIMEOUT", 0)) * 60
-                            if is_live_download and effective_platform == "Niconico" else 0)
-            deadline = time.monotonic() + live_timeout if live_timeout else None
-            timed_out = False
-
-            def fmt_live_status():
-                elapsed = int(time.time() - live_start_time)
-                mins, secs = divmod(elapsed, 60)
-                hrs, mins = divmod(mins, 60)
-                time_str = f"{hrs}:{mins:02d}:{secs:02d}" if hrs > 0 else f"{mins}:{secs:02d}"
-                parts = [part for part in [live_size, live_frag, live_speed] if part]
-                parts.append(f"录制 {time_str}")
-                return "直播录制中 - " + " | ".join(parts), live_speed
-
             while not read_done.is_set() or not line_q.empty():
                 if handle.cancel_event.is_set():
-                    break
-                if deadline is not None and time.monotonic() >= deadline:
-                    timed_out = True
-                    self.kill_process_tree(proc)
                     break
                 try:
                     line = line_q.get(timeout=0.5)
                 except queue.Empty:
-                    if live_connected:
-                        status_text, speed = fmt_live_status()
-                        self._update_progress(-1, status_text, speed=speed, eta="", stage=current_stage)
                     continue
                 line = line.strip()
                 if not line:
@@ -1190,11 +1166,6 @@ class DownloadExecutor:
                 archived_id = archived_video_id(line)
                 if archived_id:
                     archived_ids.add(archived_id)
-
-                if is_live_download and not live_connected and ("Connecting to WebSocket" in line or "Downloading m3u8" in line):
-                    live_connected = True
-                    live_start_time = time.time()
-                    self._update_progress(-1, "直播录制中...", stage=current_stage)
 
                 parallel_plugin_error = parallel_plugin_error or self._is_twitcasting_parallel_plugin_error(line)
                 is_error = "ERROR" in line or parallel_plugin_error
@@ -1221,9 +1192,6 @@ class DownloadExecutor:
                     re.search(r"(?:size|Lsize)=\s*\S+", line)
                     or re.search(r"frame=\s*\d+", line) and re.search(r"fps=", line)
                 ) and any(value in line for value in ["time=", "bitrate=", "speed=", "fps="])
-                has_ytdlp_live = is_live_download and re.search(r"\d+\.?\d*\s*[KMG]iB", line) and re.search(r"\d+\.?\d*\s*[KMG]iB/s", line)
-                has_fragment = is_live_download and "fragment" in line.lower() and ("Downloading" in line or "Downloaded" in line)
-                is_live_progress = has_ytdlp_live or has_ffmpeg_progress or has_fragment
                 is_keyword = any(kw in line for kw in [
                     "Destination:", "Merging formats", "Deleting original", "Extracting URL",
                     "Downloading webpage", "Connecting to WebSocket", "has already been recorded",
@@ -1235,17 +1203,15 @@ class DownloadExecutor:
                     self._log(line, "error")
                 elif is_warning:
                     self._log(line, "warn")
-                elif not has_pct and not (is_live_progress and not is_keyword):
+                elif not has_pct and not (has_ffmpeg_progress and not is_keyword):
                     if is_keyword and len(line) < 200:
-                        self._log(line, "info")
-                    elif live_connected and len(line) < 200 and not any(skip in line for skip in ["[download]", "[hls]", "[fragment]"]):
                         self._log(line, "info")
 
                 title_match = re.search(r"\[download\] Destination: (.+)", line)
                 if not title_match:
                     title_match = re.search(r'\[Merger\] Merging formats into "(.+)"', line)
                 if title_match:
-                    raw_path = title_match.group(1).replace('"', "").replace("'", "").strip()
+                    raw_path = title_match.group(1).strip().strip('"')
                     # 合并输出行给出最终文件名，优先于分离流的中间文件，用于定位同名封面。
                     output_path = raw_path
                     video_title = os.path.basename(raw_path)
@@ -1261,53 +1227,25 @@ class DownloadExecutor:
                         eta=eta,
                         stage=current_stage,
                     )
-                elif is_live_progress:
-                    if has_ytdlp_live:
-                        size_match = re.search(r"(\d+\.?\d*\s*[KMG]iB)", line)
-                        speed_match = re.search(r"(\d+\.?\d*\s*[KMG]iB/s)", line)
-                        if size_match:
-                            live_size = "已下载 " + size_match.group(1).replace(" ", "")
-                        if speed_match:
-                            live_speed = speed_match.group(1).replace(" ", "")
-                    elif has_ffmpeg_progress:
-                        size_match = re.search(r"(?:size|Lsize)=\s*(\d+\.?\d*\s*[kKmMgG][bB]?|N/A)", line)
-                        speed_match = re.search(r"speed=\s*(\d+\.?\d*x)", line)
-                        fps_match = re.search(r"fps=\s*(\d+)", line)
-                        bitrate_match = re.search(r"bitrate=\s*(\d+\.?\d*\s*kbits/s)", line)
-                        time_match = re.search(r"time=(\d+:\d+:\d+\.\d+|\d+:\d+\.\d+)", line)
-                        if size_match and size_match.group(1) != "N/A":
-                            live_size = "已下载 " + size_match.group(1).replace(" ", "")
-                        if speed_match:
-                            live_speed = speed_match.group(1).replace(" ", "")
-                        elif fps_match:
-                            live_speed = f"{fps_match.group(1)} fps"
-                        elif bitrate_match:
-                            live_speed = bitrate_match.group(1).replace(" ", "")
-                        if time_match:
-                            parts = time_match.group(1).split(".")[0].split(":")
-                            if len(parts) == 3:
-                                live_start_time = time.time() - (int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2]))
-                    elif has_fragment:
-                        fragment_match = re.search(r"fragment\s+(\d+)", line, re.IGNORECASE)
-                        if fragment_match:
-                            live_frag = f"分片 {fragment_match.group(1)}"
-                    if is_live_download:
-                        status_text, speed = fmt_live_status()
-                    else:
-                        detail = " | ".join(part for part in [live_size, live_speed] if part)
-                        status_text = "FFmpeg 下载中" + (f" - {detail}" if detail else "...")
-                        speed = live_speed
-                    self._update_progress(-1, status_text, speed=speed, eta="", stage=current_stage)
+                elif has_ffmpeg_progress:
+                    size_match = re.search(r"(?:size|Lsize)=\s*(\d+\.?\d*\s*[kKmMgG][bB]?|N/A)", line)
+                    speed_match = re.search(r"speed=\s*(\d+\.?\d*x)", line)
+                    fps_match = re.search(r"fps=\s*(\d+)", line)
+                    bitrate_match = re.search(r"bitrate=\s*(\d+\.?\d*\s*kbits/s)", line)
+                    if size_match and size_match.group(1) != "N/A":
+                        ffmpeg_size = "已下载 " + size_match.group(1).replace(" ", "")
+                    if speed_match:
+                        ffmpeg_speed = speed_match.group(1).replace(" ", "")
+                    elif fps_match:
+                        ffmpeg_speed = f"{fps_match.group(1)} fps"
+                    elif bitrate_match:
+                        ffmpeg_speed = bitrate_match.group(1).replace(" ", "")
+                    detail = " | ".join(part for part in [ffmpeg_size, ffmpeg_speed] if part)
+                    status_text = "FFmpeg 下载中" + (f" - {detail}" if detail else "...")
+                    self._update_progress(-1, status_text, speed=ffmpeg_speed, eta="", stage=current_stage)
 
             self._close_process(proc)
             self._download_manager.clear_process(handle, proc)
-            if timed_out:
-                stats["fail"] = 1
-                self._log("[直播] 达到录制时限，已保留下载部分并继续队列", "warn")
-                self._update_progress(0, "录制超时，已保留下载部分")
-                self._add_history(url, video_title, effective_platform, "timeout", output_path)
-                update_stats()
-                return
             rc = proc.returncode if proc.returncode is not None else -1
             if archived_ids and not archive_retry and not self._download_manager.is_cancelled(handle):
                 retry = self._wait_for_archive_choice(handle, url, effective_platform, archived_ids)
@@ -1331,8 +1269,9 @@ class DownloadExecutor:
                 self._update_progress(0, "已停止", "", "")
             elif rc == 0:
                 # 模式 2（同时输出音频）：下载完成后用 ffmpeg 从合并文件提取音频
+                audio_succeeded = audio_mode != "2"
                 if audio_mode == "2" and output_path and os.path.isfile(output_path):
-                    self._extract_audio_from_video(output_path, audio_fmt, handle=handle, overwrite=archive_retry)
+                    audio_succeeded = self._extract_audio_from_video(output_path, audio_fmt, handle=handle, overwrite=archive_retry)
                 if handle.cancel_event.is_set():
                     self._log("[停止] 下载已取消", "warn")
                     self._update_progress(0, "已停止", "", "", stage="audio" if audio_mode == "2" else current_stage)
@@ -1348,6 +1287,14 @@ class DownloadExecutor:
                 if output_path and os.path.isfile(output_path):
                     self._remember_twitcasting_password(url, effective_platform, cmd)
                     self._remove_ytdl_sidecar(output_path)
+                if not audio_succeeded:
+                    stats["fail"] = 1
+                    detail = "视频已保留" if output_path and os.path.isfile(output_path) else "未找到最终视频文件"
+                    self._log(f"[音频提取] 失败，{detail}", "error")
+                    self._update_progress(0, f"音频提取失败，{detail}", "", "", stage="audio")
+                    self._add_history(url, video_title, effective_platform, "fail", output_path)
+                    update_stats()
+                    return
                 stats["ok"] = 1
                 self._log("[完成] 下载成功！", "success")
                 self._update_progress(1, "下载完成", "", "")
@@ -1749,41 +1696,16 @@ class DownloadExecutor:
                             self.kill_process_tree(proc)
                             break
                         line_q, read_done = self._start_reader(proc)
-                        # Niconico 直播超时控制：正在直播的链接不加 --live-from-start 时
-                        # yt-dlp 会无限等待新分片。通过 LIVE_DOWNLOAD_TIMEOUT 限制单链接
-                        # 最长下载时间，超时后自动终止并跳到下一个链接。
-                        nico_live_dl = (effective_platform == "Niconico"
-                                        and is_live_for_url)
-                        live_timeout_min = int(config_snapshot.get("LIVE_DOWNLOAD_TIMEOUT", 0))
-                        download_start = time.time()
-                        download_timed_out = False
-                        # 直播进度跟踪（用于非百分比输出的场景）
-                        batch_live_size = ""
-                        batch_live_speed = ""
-                        batch_live_frag = ""
-                        batch_live_start = time.time()
+                        # 点播字节量日志按时间节流；直播时限和心跳由 LiveRunner 处理。
+                        batch_size = ""
+                        batch_speed = ""
+                        byte_log_start = time.time()
                         while not read_done.is_set() or not line_q.empty():
                             if handle.cancel_event.is_set():
                                 break
-                            # 超时检查：仅对 Niconico 直播生效，0 表示不限时
-                            if nico_live_dl and live_timeout_min > 0:
-                                elapsed = (time.time() - download_start) / 60
-                                if elapsed >= live_timeout_min:
-                                    self._log(f"  ⏱ 下载超时（{live_timeout_min}分钟），已跳过", "warn")
-                                    self.kill_process_tree(proc)
-                                    download_timed_out = True
-                                    break
                             try:
                                 line = line_q.get(timeout=0.5).strip()
                             except queue.Empty:
-                                # 心跳日志：没有新输出时，对 Niconico 直播显示录制时长
-                                if nico_live_dl:
-                                    elapsed = int(time.time() - batch_live_start)
-                                    if elapsed > 0 and elapsed % 30 == 0:
-                                        frag_info = f" | {batch_live_frag}" if batch_live_frag else ""
-                                        size_info = f" | {batch_live_size}" if batch_live_size else ""
-                                        spd_info = f" | {batch_live_speed}" if batch_live_speed else ""
-                                        self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}", stage=current_stage)
                                 continue
                             if not line:
                                 continue
@@ -1823,7 +1745,6 @@ class DownloadExecutor:
                                     frag_match = re.search(r"fragment\s+(\d+)", line, re.IGNORECASE)
                                     if frag_match:
                                         frag_num = int(frag_match.group(1))
-                                        batch_live_frag = f"分片 {frag_num}"
                                         if frag_num <= 1 or frag_num % 10 == 0:
                                             self._log(f"  {line}", "info")
                                 elif has_size and not line.startswith("[download] "):
@@ -1831,18 +1752,18 @@ class DownloadExecutor:
                                     size_match = re.search(r"(\d+\.?\d*\s*[KMG]iB)", line)
                                     speed_match = re.search(r"(\d+\.?\d*\s*[KMG]iB/s)", line)
                                     if size_match:
-                                        batch_live_size = "已下载 " + size_match.group(1).replace(" ", "")
+                                        batch_size = "已下载 " + size_match.group(1).replace(" ", "")
                                     if speed_match:
-                                        batch_live_speed = speed_match.group(1).replace(" ", "")
+                                        batch_speed = speed_match.group(1).replace(" ", "")
                                     # 每 30 秒记一次数据量日志
-                                    elapsed = int(time.time() - batch_live_start)
+                                    elapsed = int(time.time() - byte_log_start)
                                     if elapsed > 0 and elapsed % 30 == 0:
-                                        self._log(f"  {batch_live_size} | {batch_live_speed}", "info")
+                                        self._log(f"  {batch_size} | {batch_speed}", "info")
                             # === 进度更新 ===
                             path_match = re.search(r"\[download\] Destination: (.+)", line) \
                                 or re.search(r'\[Merger\] Merging formats into "(.+)"', line)
                             if path_match:
-                                output_path = path_match.group(1).replace('"', "").replace("'", "").strip()
+                                output_path = path_match.group(1).strip().strip('"')
                                 self._log(f"  → {os.path.basename(output_path)}", "info")
                             progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
                             ffmpeg_progress = (
@@ -1870,22 +1791,8 @@ class DownloadExecutor:
                                     eta="",
                                     stage=current_stage,
                                 )
-                            elif nico_live_dl and (batch_live_frag or batch_live_size):
-                                # Niconico 直播无百分比输出：用数据量/分片数显示活动状态
-                                frag_info = f" | {batch_live_frag}" if batch_live_frag else ""
-                                size_info = f" | {batch_live_size}" if batch_live_size else ""
-                                spd_info = f" | {batch_live_speed}" if batch_live_speed else ""
-                                elapsed = int(time.time() - batch_live_start)
-                                self._update_progress(-1, f"[{index}/{len(urls)}] 录制中 {elapsed//60}m{elapsed%60:02d}s{frag_info}{size_info}{spd_info}", stage=current_stage)
                         self._close_process(proc)
                         self._download_manager.clear_process(handle, proc)
-                        if download_timed_out:
-                            # 下载超时：不视为失败，已下载的部分保留，继续下一个链接
-                            self._log(f"[{index}/{len(urls)}] ⏱ 超时跳过（已下载部分保留）", "warn")
-                            self._add_history(url, "", effective_platform, "timeout", output_path)
-                            url_done = True
-                            update_stats()
-                            continue
                         if handle.cancel_event.is_set():
                             stopped = True
                             self._log(f"[{index}/{len(urls)}] ✗ 已取消", "warn")
@@ -1908,8 +1815,9 @@ class DownloadExecutor:
                                 update_stats()
                                 continue
                         if rc == 0:
+                            audio_succeeded = audio_mode != "2"
                             if audio_mode == "2" and output_path and os.path.isfile(output_path):
-                                self._extract_audio_from_video(
+                                audio_succeeded = self._extract_audio_from_video(
                                     output_path,
                                     audio_fmt,
                                     handle=handle,
@@ -1930,6 +1838,14 @@ class DownloadExecutor:
                             if output_path and os.path.isfile(output_path):
                                 self._remember_twitcasting_password(url, effective_platform, cmd, config_snapshot)
                                 self._remove_ytdl_sidecar(output_path)
+                            if not audio_succeeded:
+                                stats["fail"] += 1
+                                detail = "视频已保留" if output_path and os.path.isfile(output_path) else "未找到最终视频文件"
+                                self._log(f"[{index}/{len(urls)}] ✗ 音频提取失败，{detail}", "error")
+                                self._add_history(url, "", effective_platform, "fail", output_path)
+                                url_done = True
+                                update_stats()
+                                continue
                             stats["ok"] += 1
                             self._log(f"[{index}/{len(urls)}] ✓ 完成", "success")
                             self._add_history(url, "", effective_platform, "success", output_path)

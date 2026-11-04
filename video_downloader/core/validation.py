@@ -157,6 +157,8 @@ def validate_config(values, base=None):
         if key not in DEFAULT_CONFIG:
             continue
         try:
+            if (key in integer_ranges or key in booleans) and isinstance(value, float) and not value.is_integer():
+                raise ValueError
             if key in enums:
                 value = str(value)
                 if value not in enums[key]:

@@ -8,7 +8,11 @@ import {execFileSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 const {chromium}=await import(process.env.FANBOX_PLAYWRIGHT_MODULE||pathToFileURL('temp/fanbox-ui-qa/node_modules/playwright/index.mjs').href);
 const root=process.cwd(),data=JSON.parse(execFileSync('python',['-c','import json;from video_downloader.core.constants import DEFAULT_CONFIG,VERSION;from video_downloader.platforms.fanbox.options import normalize_options;print(json.dumps(dict(config=DEFAULT_CONFIG,version=VERSION,options=normalize_options())))'],{encoding:'utf8'}));
+const artifactDir=path.resolve(process.env.FANBOX_QA_ARTIFACT_DIR||path.join(root,'..','debug','验证记录'));
+fs.mkdirSync(artifactDir,{recursive:true});
 let config=structuredClone(data.config),options=data.options,created=[],jobs=[];
+let downloadState={running:false,phase:'idle',generation:0};
+const eventClients=new Set(),dependencyRequests=[];
 function configuredFanboxOptions(){
   const value=structuredClone(options),saved=JSON.parse(config.FANBOX_OPTIONS||'{}');
   const merge=(target,source)=>Object.entries(source).forEach(([key,item])=>{
@@ -23,7 +27,11 @@ const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');let body='';for await(const chunk of req)body+=chunk;
   if(url.pathname.startsWith('/api/')){
     const name=url.pathname;
-    if(name==='/api/events'){res.writeHead(200,{'Content-Type':'text/event-stream'});res.write('data: '+JSON.stringify({type:'ready',data:{logs:[],tasks:[],fanbox_jobs:jobs,download:{running:false}}})+'\n\n');return;}
+    if(name==='/api/events'){
+      eventClients.add(res);res.on('close',()=>eventClients.delete(res));
+      res.writeHead(200,{'Content-Type':'text/event-stream'});
+      res.write('data: '+JSON.stringify({type:'ready',data:{logs:[],tasks:[],fanbox_jobs:jobs,...downloadState}})+'\n\n');return;
+    }
     let result={};
     if(name==='/api/config')result={version:data.version,config};
     if(name==='/api/save-config'){config={...config,...JSON.parse(body)};result={ok:true};}
@@ -45,6 +53,12 @@ const server=http.createServer(async(req,res)=>{
     if(name==='/api/fanbox/history')result={runs:[job]};
     if(name==='/api/history')result={history:[{platform:'Fanbox',url:job.source,title:'sample',time:'2026-10-31'}]};
     if(name==='/api/tasks')result={tasks:[],version:0};
+    if(name.startsWith('/api/dependencies')){
+      dependencyRequests.push({path:url.pathname,summary:url.searchParams.get('summary'),body});
+      result=name==='/api/dependencies'?{available:true,running:false,phase:'completed',action:'check',
+        catalog_version:data.version.split(' ')[0].slice(1),file_count:3,existing_count:3,missing_count:0,error_count:0,unchecked_count:0,
+        missing_files:[],recovery_required:false}:{ok:true};
+    }
     if(name==='/api/help/error-manual')result={title:'错误与排查手册',text:fs.readFileSync(path.join(root,'docs/错误码.txt'),'utf8'),source:'docs/错误码.txt'};
     if(name==='/api/live/capabilities')result={platforms:{YouTube:{catch_up:'supported',live_edge:true},Twitch:{catch_up:'supported',live_edge:true}}};
     res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(result));return;
@@ -75,6 +89,40 @@ async function settleLiveLayout(){
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   });
 }
+async function verifySharedDownloadState(){
+  await page.evaluate(()=>selectPlatform('Withny'));
+  await page.locator('#btnWithnyLive').waitFor({state:'visible'});
+  for(const state of [{running:true,phase:'running'},{running:false,phase:'suspended'},
+      {running:true,phase:'stopping'},{running:false,phase:'idle'}]){
+    downloadState={...state,generation:downloadState.generation+1};
+    for(const type of ['ready','download_state']){
+      const payload=type==='ready'?{logs:[],tasks:[],fanbox_jobs:[],...downloadState}:downloadState;
+      for(const client of eventClients)client.write('data: '+JSON.stringify({type,data:payload})+'\n\n');
+      await page.waitForFunction(({running,phase})=>{
+        const occupied=running||phase==='suspended';
+        return ['btnStart','btnWithnyLive','btnSubtitleDownload','btnCoverDownload']
+          .every(id=>document.getElementById(id).disabled===occupied)
+          && document.getElementById('btnStop').disabled===(!running||phase==='stopping');
+      },state);
+    }
+  }
+  await page.evaluate(()=>selectPlatform('YouTube'));
+  console.log('通过：真实SSE初始/增量事件在运行、挂起、停止中和空闲时统一所有下载入口，含Withny');
+}
+async function verifyDependencySummaryEntry(){
+  await page.locator('.ni[data-page="about"]').click();
+  await page.locator('#openDependencyManager').click();
+  await page.waitForFunction(()=>document.getElementById('dependencyStatusSummary').textContent==='配套外置依赖文件已齐全');
+  const reads=dependencyRequests.filter(item=>item.path==='/api/dependencies');
+  assert.ok(reads.length>0&&reads.every(item=>item.summary==='1'),'当前窗口只读取轻量状态');
+  assert.deepEqual(dependencyRequests.filter(item=>item.body).map(item=>({path:item.path,body:JSON.parse(item.body)})),
+    [{path:'/api/dependencies/check',body:{}}]);
+  await page.screenshot({path:path.join(artifactDir,'依赖检测-轻量状态.png'),animations:'disabled'});
+  await page.locator('#depCloseManager').click();
+  assert.equal(await page.locator('#dependencyManagerPanel').isVisible(),false);
+  await page.locator('.ni[data-page="download"]').click();
+  console.log('通过：真实浏览器点击依赖入口、自动缺失检测、轻量状态显示和关闭；未执行更新');
+}
 async function openLivePlatforms(){
   for(const id of ['livePlatformModes','liveCommentPlatforms']){
     const details=page.locator('#set-live details').filter({has:page.locator('#'+id)});
@@ -100,12 +148,12 @@ async function verifyAboutReleaseNotes(){
   await page.locator('.ni[data-page="about"]').click();
   const title=page.locator('#aboutReleaseTitle'),details=page.locator('#aboutReleaseDetails');
   assert.equal(await title.textContent(),data.version.split(' ')[0]+' 本版更新');
-  assert.equal(await page.locator('#aboutReleaseAuthor').textContent(),'v2.7.1 的全部更新由 maomaoyexi 完成。');
+  assert.equal(await page.locator('#aboutReleaseAuthor').textContent(),'本版功能与维护：maomaoyexi。');
   assert.ok((await page.locator('#creditV271').textContent()).includes('@maomaoyexi'));
   assert.equal(await page.locator('#aboutReleaseNotes .about-release-summary>li').count(),4);
   assert.equal(await details.evaluate(el=>el.open),false,'详细更新默认收起');
   await details.locator('summary').click();
-  assert.equal(await details.locator('ol>li').count(),6,'本版六项FANBOX修复应完整显示');
+  assert.equal(await details.locator('ol>li').count(),6,'本版六类更新应完整显示');
   assert.equal(await details.locator('.about-release-body').isVisible(),true);
   await details.locator('summary').focus();await page.keyboard.press('Space');
   assert.equal(await details.evaluate(el=>el.open),false);
@@ -118,7 +166,7 @@ async function verifyAboutReleaseNotes(){
       await page.locator('#aboutReleaseNotes').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
       const layout=await page.locator('.pad').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
       assert.ok(layout.scroll<=layout.client+1,`${theme}/${width}: 本版更新不能撑宽关于页`);
-      await page.screenshot({path:path.resolve(root,'..','debug','验证记录',`关于软件-v2.7.1-更新日志-${theme}-${width}.png`),animations:'disabled'});
+      await page.screenshot({path:path.resolve(artifactDir,`关于软件-${data.version.split(' ')[0]}-更新日志-${theme}-${width}.png`),animations:'disabled'});
     }
   }
   await page.setViewportSize({width:1440,height:1000});
@@ -148,7 +196,7 @@ async function verifyHelpSupport(){
   await page.locator('#helpCloseManual').click();await manualButton.click();await settleLiveLayout();
   assert.equal(requests.filter(item=>item.url.endsWith('/api/help/error-manual')).length,reads,'重新展开可复用已加载手册');
   await page.locator('#helpMissingTitle').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','未知错误-完整手册.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'未知错误-完整手册.png'),animations:'disabled'});
   await page.locator('#helpCloseManual').click();
 
   await page.locator('#helpOpenOrganizer').click();
@@ -195,7 +243,7 @@ async function verifyHelpSupport(){
       const layout=await page.locator('.pad').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
       assert.ok(layout.scroll<=layout.client+1,`${theme}/${width}: 完整手册和反馈表单不能横向溢出`);
       await page.locator('#helpReportOutputPanel').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'center'}));
-      await page.screenshot({path:path.resolve(root,'..','debug','验证记录',`未知错误-反馈预览-${theme}-${width}.png`),animations:'disabled'});
+      await page.screenshot({path:path.resolve(artifactDir,`未知错误-反馈预览-${theme}-${width}.png`),animations:'disabled'});
     }
   }
   await page.locator('#helpCloseSupport').click();
@@ -281,7 +329,9 @@ async function verifyHelpGuide(){
   assert.equal(await page.locator('#helpGuide .help-topic[open]').count(),17);
   await errorEntries.evaluateAll(items=>items.forEach(el=>{el.open=true;}));
   assert.ok(!(await page.locator('#help-fixes').textContent()).includes('六项仍待修复'));
-  assert.ok((await page.locator('#help-fixes').textContent()).includes('旧 v2.7.0 发布附件未重新打包'));
+  const fixesText=await page.locator('#help-fixes').textContent();
+  assert.ok(fixesText.includes('已随 v2.7.1 正式发布'));
+  assert.ok(fixesText.includes('v2.7.0 的旧附件保持原样'));
   for(const theme of ['light','dark']){
     await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
     for(const width of [1920,1440,1100,768,375]){
@@ -302,23 +352,23 @@ async function verifyHelpGuide(){
   await settleLiveLayout();
   assert.deepEqual(await page.locator('#helpGuide .help-topic[open]').evaluateAll(items=>items.map(el=>el.id)),['help-start'],
     '刷新后默认只展开快速开始');
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-分组折叠-浅色.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-分组折叠-浅色.png'),animations:'disabled'});
   await page.locator('#help-errors>summary').click();
   await page.locator('#help-error-ffmpeg-exit>summary').click();
   await page.locator('#help-error-ffmpeg-exit').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'center'}));
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-错误速查-浅色.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-错误速查-浅色.png'),animations:'disabled'});
   await page.setViewportSize({width:375,height:900});
   await page.locator('#help-error-ffmpeg-exit').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-错误速查-窄屏.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-错误速查-窄屏.png'),animations:'disabled'});
   await page.setViewportSize({width:1440,height:1000});
   await page.locator('#help-errors>summary').click();
   await page.locator('#help-troubleshooting').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-文件排查.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-文件排查.png'),animations:'disabled'});
   await page.locator('.pad').evaluate(el=>el.scrollTo({top:0,behavior:'instant'}));
   await page.evaluate(()=>document.documentElement.dataset.theme='dark');await settleLiveLayout();
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-分组折叠-深色.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-分组折叠-深色.png'),animations:'disabled'});
   await page.setViewportSize({width:375,height:900});await settleLiveLayout();
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','使用帮助-分组折叠-窄屏.png'),animations:'disabled'});
+  await page.screenshot({path:path.resolve(artifactDir,'使用帮助-分组折叠-窄屏.png'),animations:'disabled'});
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>document.documentElement.dataset.theme='light');
   await page.locator('.ni[data-page="download"]').click();
@@ -327,6 +377,8 @@ async function verifyHelpGuide(){
 try{
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('http://127.0.0.1:'+server.address().port);await page.locator('[data-fanbox-option="fan_cards.scope"]').waitFor({state:'attached'});
+  await verifySharedDownloadState();
+  await verifyDependencySummaryEntry();
   await verifyAboutReleaseNotes();
   await verifyHelpGuide();
   await page.locator('.ni[data-page="tools"]').click();
@@ -441,10 +493,10 @@ try{
   await page.locator('[data-fanbox-option="fan_cards.scope"]').waitFor({state:'attached'});
   assert.equal(await argsFold.evaluate(el=>el.open),false,'刷新后仍默认收起');
   assert.equal(await taskArgs.isVisible(),false);
-  await page.locator('.compose-wrap').screenshot({path:path.resolve(root,'..','debug','验证记录','本次参数-默认收起.png')});
+  await page.locator('.compose-wrap').screenshot({path:path.resolve(artifactDir,'本次参数-默认收起.png')});
   await argsToggle.click();
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#taskArgsToggle>.ico')).transform==='none');
-  await page.locator('.compose-wrap').screenshot({path:path.resolve(root,'..','debug','验证记录','本次参数-展开.png')});
+  await page.locator('.compose-wrap').screenshot({path:path.resolve(artifactDir,'本次参数-展开.png')});
   await argsToggle.click();
   console.log('通过：本次参数默认收起、整按钮/键盘切换、值保留、单条/多链接/TXT批量提交、失败保留/成功清空、FANBOX隐藏恢复、明暗主题和窄屏');
   await page.locator('.ni[data-page="settings"]').click();
@@ -628,7 +680,7 @@ try{
   assert.equal((await arrowState()).open,false,'只聚焦不能把箭头误判为展开');
   await stream.click();
   assert.deepEqual(await arrowState(),{open:true,transform:'none'});
-  await page.screenshot({path:path.resolve(root,'..','debug','验证记录','直播正式接入-下拉展开.png')});
+  await page.screenshot({path:path.resolve(artifactDir,'直播正式接入-下拉展开.png')});
   await stream.press('Escape');
   assert.deepEqual(await arrowState(),{open:false,transform:'matrix(0, -1, 1, 0, 0, 0)'});
   await stream.press('Alt+ArrowDown');
@@ -698,7 +750,7 @@ try{
   for(const [id,value] of [['s_task_parallel','4'],['s_task_live_parallel','3'],['s_task_download_parallel','2'],['s_task_download_speed','1.5']])await page.locator('#'+id).fill(value);
   await page.locator('#s_task_order').selectOption('download_first');
   await page.locator('#s_ytdlp_default_args').fill('--sleep-requests 1');
-  await switchOn('sw_log',false);
+  assert.equal(await page.locator('#sw_log').count(),0,'失效日志开关不再作为可编辑设置');
   await page.locator('#fanboxAnonymous').check();
   await page.locator('#fanboxCookieFile').fill('fixture-cookies.txt');
   await page.locator('#fanboxSettingsFields [data-fanbox-option="network.file_concurrency"]').fill('3');
@@ -716,15 +768,17 @@ try{
     USE_COOKIES:1,COOKIE_MODE:2,BROWSER_NAME:'firefox',BROWSER_PROFILE:'synthetic-profile',RPLAY_FIREFOX_PROFILE:'synthetic-rplay',
     DOWNLOAD_SUBTITLES:1,SUBTITLE_TYPE:'manual',SUBTITLE_LANGS:'ja.*,en.*',WIN_FILENAMES:0,STRICT_FILENAME:1,
     BILI_MULTIP_POLICY:'select',YOUTUBE_PO_TOKEN_ENABLED:1,TASK_MAX_PARALLEL:4,TASK_LIVE_PARALLEL:3,TASK_DOWNLOAD_PARALLEL:2,
-    TASK_DOWNLOAD_SPEED_LIMIT:1.5,TASK_ORDER:'download_first',TASK_MIXED_PARALLEL:1,YTDLP_DEFAULT_ARGS:'--sleep-requests 1',ENABLE_LOG:0,
+    TASK_DOWNLOAD_SPEED_LIMIT:1.5,TASK_ORDER:'download_first',TASK_MIXED_PARALLEL:1,YTDLP_DEFAULT_ARGS:'--sleep-requests 1',
     FANBOX_ANONYMOUS:1,FANBOX_COOKIE_FILE:'fixture-cookies.txt'};
   for(const [key,value] of Object.entries(otherSaved))assert.equal(config[key],value,`${key}应提交真实保存入口`);
+  assert.equal(config.ENABLE_LOG,otherOriginalConfig.ENABLE_LOG,'保存现行设置应保留旧版日志兼容值');
   const savedFanbox=JSON.parse(config.FANBOX_OPTIONS);
   assert.equal(savedFanbox.network.file_concurrency,3);
   assert.deepEqual(savedFanbox.naming.favorites,['images/{title}.jpg','images/{post_id}.jpg']);
   assert.equal(savedFanbox.naming.images,'images/{title}.jpg');
   await reloadSettings();
   const otherReloaded=await page.evaluate(()=>collectCfg());
+  assert.equal(Object.hasOwn(otherReloaded,'ENABLE_LOG'),false,'当前页面不再提交无效日志设置');
   for(const [key,value] of Object.entries(otherSaved))assert.equal(otherReloaded[key],value,`${key}刷新后应保留`);
   const reloadedFanbox=JSON.parse(otherReloaded.FANBOX_OPTIONS);
   assert.equal(reloadedFanbox.network.file_concurrency,3);
@@ -739,14 +793,14 @@ try{
   await page.setViewportSize({width:1440,height:3000});await page.evaluate(()=>applyTheme('light',false));await settleLiveLayout();
   for(const [id,name] of [['set-output','输出画质'],['set-network','网络代理'],['set-cookie','Cookie登录'],['set-platform','平台专项'],['set-tasks','任务并发']]){
     await page.locator('#'+id).scrollIntoViewIfNeeded();
-    await page.locator('#'+id).screenshot({path:path.resolve(root,'..','debug','验证记录',`全设置紧凑-${name}.png`)});
+    await page.locator('#'+id).screenshot({path:path.resolve(artifactDir,`全设置紧凑-${name}.png`)});
   }
   await page.setViewportSize({width:1440,height:1100});
 
   await page.evaluate(()=>document.documentElement.dataset.theme='light');
   await page.locator('#set-live').scrollIntoViewIfNeeded();
   await closeLiveDetails();
-  const livePreview=process.env.LIVE_LAYOUT_SCREENSHOT||path.resolve(root,'..','debug','验证记录','直播正式接入-预览.png');
+  const livePreview=process.env.LIVE_LAYOUT_SCREENSHOT||path.resolve(artifactDir,'直播正式接入-预览.png');
   fs.mkdirSync(path.dirname(livePreview),{recursive:true});
   await page.locator('#set-live').screenshot({path:livePreview});
   for(const [mode,disabled] of [['0',true],['1',true],['2',false],['3',false]]){

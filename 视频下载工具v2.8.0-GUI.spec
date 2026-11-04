@@ -6,7 +6,7 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 project_root = Path(SPECPATH)
 sys.path.insert(0, str(project_root / "dependency" / "live-python"))
 sys.path.insert(0, str(project_root / "dependency" / "fanbox-python"))
-entry_script = project_root / "视频下载工具v2.7.1-GUI.py"
+entry_script = project_root / "视频下载工具v2.8.0-GUI.py"
 resource_root = project_root / "resource"
 plugin_root = resource_root / "yt-dlp-plugins"
 packaging_deps = project_root / "build" / "packaging-deps"
@@ -17,6 +17,7 @@ datas = [
     (str(project_root / "dependency" / "defusedxml.LICENSE"), "licenses"),
     (str(project_root / "dependency" / "NDGR-protocol.LICENSE"), "licenses"),
     (str(resource_root / "dependencies" / "live-python.lock.json"), "licenses"),
+    (str(resource_root / "dependencies" / "dependency-catalog.json"), "dependencies"),
     (str(resource_root / "templates"), "templates"),
     (str(resource_root / "static"), "static"),
     (str(project_root / "docs" / "错误码.txt"), "docs"),
@@ -60,7 +61,8 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="视频下载工具v2.7.1-GUI",
+    name="视频下载工具v2.8.0-GUI",
+    icon=str(resource_root / "icons" / "app-icon.ico"),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

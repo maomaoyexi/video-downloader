@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/static/css/live-settings.css?v=live-compact-1">
 <link rel="stylesheet" href="/static/css/fanbox.css">
 <link rel="stylesheet" href="/static/css/help.css?v=help-topics-1">
+<link rel="stylesheet" href="/static/css/dependencies.css?v=dependency-update-1">
 </head>
 <body>
 
@@ -481,7 +482,6 @@
               <div class="sh"><b>高级与诊断</b><span class="rule"></span></div>
               <div class="row args-setting-row"><span class="lb">默认 yt-dlp 参数</span><textarea class="ctl mono" id="s_ytdlp_default_args" maxlength="4000" rows="3" spellcheck="false" placeholder='每次下载都会添加，例如：--sleep-requests 1'></textarea></div>
               <div class="hint">参数使用空格分隔；含空格的值请用英文引号包裹。本次参数会追加在默认参数之后。</div>
-              <div class="row"><span class="lb">运行日志</span><span class="sw on" id="sw_log" onclick="toggleSwitch(this)"><i></i></span><span class="hint">写入 logs/ 目录</span></div>
             </section>
           </div>
         </div>
@@ -657,6 +657,9 @@
             <p><b>播放列表 / 频道：</b>支持情况由平台和链接类型决定，不能保证所有平台的列表或频道都能下载。Rplay 请使用单个点播或直播间入口；FANBOX 按创作者、帖子等归档入口处理。</p>
             <p><b>批量：</b>在输入框里每行粘一个链接；或把链接写进工具目录的 <span class="code">urls.txt</span>，用工具页的「TXT 混合批量下载」。</p>
             <p><b>FANBOX 单独建任务：</b>不要把 FANBOX 与其他平台链接混在同一个任务内；不同任务仍可并行。</p>
+            <p><b>下载设置：</b>从左侧主导航进入「下载设置」。点击其他设置目录项会定位并展开对应章节；再次点击当前目录项可展开或收起，章节标题也支持整行点击。</p>
+            <p><b>音频与进度：</b>在「下载设置 → 输出与画质」选择「同时输出音频」时，先完成视频下载，再从视频中提取配套音频。同一进度条会切换到音频阶段并从 0% 重新计算，不是两阶段加权后的任务总百分比。</p>
+            <p><b>提取失败：</b>配套音频提取失败时，该链接按失败记录，已成功保存的视频会保留。检查 FFmpeg 和具体任务日志，不能只凭视频存在就判断音视频都已完成。</p>
                 </div>
               </details>
               <details class="dsec help-topic" id="help-args">
@@ -937,7 +940,7 @@
                       <dl class="help-error-details">
                         <div><dt>含义</dt><dd>收到网页、错误文档，或图片文件头/解码与预期不符。</dd></div>
                         <div><dt>常见原因</dt><dd>可能是权限或实际响应异常；旧资源记录也可能存在扩展名不匹配。</dd></div>
-                        <div><dt>处理步骤</dt><dd>查看对应资源明细与登录状态；当前修复版支持续跑时修正旧失败资源的错误路径。</dd></div>
+                        <div><dt>处理步骤</dt><dd>查看对应资源明细与登录状态；续跑时支持修正旧失败资源的错误路径，仍需按实际响应验证文件内容。</dd></div>
                         <div><dt>重试建议</dt><dd>确认响应或配置后再试，不要仅修改扩展名冒充有效文件。</dd></div>
                       </dl>
                     </details>
@@ -991,7 +994,7 @@
                   <p>更多报错见程序目录内的 <span class="code">docs/错误码.txt</span>。排查或反馈时保留首次具体错误及前后日志，并先遮盖凭据等敏感内容。</p>
                   <section class="help-missing-error" aria-labelledby="helpMissingTitle">
                     <h4 class="help-subtitle" id="helpMissingTitle">没有找到你的报错？</h4>
-                    <p>该报错暂未收录，原因尚未确认。请保留相关文件和前后日志，先查完整手册；仍无法解决时，整理信息后反馈。</p>
+                    <p>速查只收录常见情况；如果没有找到匹配条目，具体原因尚未确认。请保留相关文件和前后日志，先查完整手册；仍无法解决时，整理信息后反馈。</p>
                     <div class="help-support-actions">
                       <button class="btn sm" type="button" id="helpOpenManual" aria-controls="helpManualPanel" aria-expanded="false">查看完整错误手册</button>
                       <button class="btn sm" type="button" id="helpOpenOrganizer" aria-controls="helpSupportPanel">整理报错信息</button>
@@ -1033,11 +1036,12 @@
             <p><b>速度慢：</b>先检查线路、代理、平台限流和同时运行的任务，再调整并发。下载限速推荐 5–10 MB/s；高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担。</p>
             <p><b>提示需要登录：</b>先确认账号在浏览器里能观看，再按对应平台的 Cookie、Firefox 或凭据文件方式配置。</p>
             <p><b>中断了：</b>续传取决于平台、资源和下载方式。普通 yt-dlp 下载通常可复用未完成文件；TwitCasting 会校验并复用完整分片；FANBOX 按检查点及资源验证决定复用或重下；Rplay 未完成文件重试会重下。</p>
-            <p><b>关闭网页：</b>有任务时确认关闭后，任务继续在后台运行；无任务时关闭网页，程序会在 30 秒后退出。不要关闭后端控制台，彻底退出请用「✕ 退出」。</p>
-            <p><b>网站改版下不动：</b>普通 yt-dlp 提取失败可在工具页更新核心；Rplay 插件或 FANBOX 接口兼容问题还应检查程序与配套依赖版本，并保留相关日志。</p>
+            <p><b>关闭网页：</b>有任务时确认关闭后，任务继续在后台运行；无任务时关闭网页，程序会在 30 秒后退出。不要关闭后端控制台，彻底退出请用左侧底部「退出工具」。</p>
+                  <p><b>网站改版下不动：</b>普通 yt-dlp 提取失败可在工具页更新核心；Rplay 插件或 FANBOX 接口兼容问题还应检查程序与配套依赖版本，并保留相关日志。</p>
+                  <p><b>自动更新失败：</b>更新弹窗提供「前往 GitHub 手动更新」。关闭旧程序后，按发布页说明下载新版 EXE 和配套依赖，保留设置、Cookie 与 download/；若已退出程序后替换失败，本地错误说明中也会保留链接。</p>
                   <h4 class="help-subtitle">排查与反馈清单</h4>
                   <ol>
-                    <li>记录程序版本、当前修复版或旧发布附件、平台、链接类型，以及使用的操作入口。</li>
+                    <li>记录程序版本、使用源码运行还是发布附件、平台、链接类型，以及使用的操作入口。</li>
                     <li>写清操作步骤、预期结果和实际结果，保留首次具体报错及前后日志，不只截最后一行退出码。</li>
                     <li>先确认同一账号在浏览器中有访问权限，再核对对应登录方式、代理、配套依赖、磁盘空间和输出目录权限。</li>
                     <li>在工具页「打开日志目录」，并优先查看具体任务日志；直播还应核对 <span class="code">download/.live-jobs/</span> 中的会话报告与 <span class="code">comments-report.json</span>。</li>
@@ -1046,10 +1050,10 @@
                 </div>
               </details>
               <details class="dsec help-topic" id="help-fixes">
-                <summary><svg class="ico s14"><use href="#i-wrench"></use></svg><span class="help-topic-heading"><span class="help-topic-title">当前修复版说明</span><span class="help-topic-hint">当前修复版与旧发布附件的区别</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                <summary><svg class="ico s14"><use href="#i-wrench"></use></svg><span class="help-topic-heading"><span class="help-topic-title">FANBOX 修复与版本说明</span><span class="help-topic-hint">六项修复的发布版本与旧版升级说明</span></span><svg class="ico s14 help-topic-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
                 <div class="help-topic-body">
             <p>单任务模式下，跨 FANBOX 后新任务成功启动但停止仍指向旧执行器的问题已修复。</p>
-            <p>当前修复版源码已处理以下 FANBOX 问题。旧 v2.7.0 发布附件未重新打包，查看效果请使用当前修复版入口。</p>
+            <p>以下六项 FANBOX 修复已随 v2.7.1 正式发布。v2.7.0 的旧附件保持原样，仍使用旧版时请按升级说明更新；源码后续调整不自动改变已发布附件。</p>
             <ol>
               <li>排队任务暂停、取消或启动失败后可继续处理，失效活动记录会按实际任务状态清理。</li>
               <li>同一任务拒绝 FANBOX 与其他平台混合链接；分别创建的任务仍可并行，确认消息按当前执行器归属处理。</li>
@@ -1078,66 +1082,73 @@
               </div>
             </div>
 
-            <section class="sect" id="aboutReleaseNotes" aria-labelledby="aboutReleaseTitle">
-              <div class="sh"><b id="aboutReleaseTitle">v2.7.1 本版更新</b><span class="rule"></span></div>
-              <p class="notice" id="aboutReleaseAuthor">v2.7.1 的全部更新由 <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">maomaoyexi</a> 完成。</p>
-              <ul class="about-release-summary">
-                <li>修复 FANBOX 任务恢复、确认归属、封面格式、公开封面、续租与 CLI 访问设置。</li>
-                <li>设置页紧凑单列、整行展开收起，修复目录高亮跳动和工具卡片入场顺序。</li>
-                <li>“本次 yt-dlp 参数”默认收起，保留原有提交和清空规则。</li>
-                <li>帮助页分组折叠，提供错误速查、完整手册及本地报错整理和反馈模板。</li>
-              </ul>
-              <details class="about-release-details" id="aboutReleaseDetails">
-                <summary>查看 v2.7.1 详细更新</summary>
-                <div class="dsec about-release-body">
-                  <h4>FANBOX 六项修复</h4>
-                  <ol>
-                    <li>排队任务暂停、取消或启动失败后清理失效状态，允许继续；有效租约仍防止重复运行。</li>
-                    <li>FANBOX 与其他平台分别创建任务，混合输入在入口校验，重下载确认发送给所属执行器。</li>
-                    <li>封面、缩略图扩展名按实际资源 URL 处理，恢复旧失败资源时可修正错误路径。</li>
-                    <li>预览后可选受限帖公开封面，正文与附件仍按访问权限处理。</li>
-                    <li>较长请求间隔期间持续续租，异常收尾核对所有权并保存终态。</li>
-                    <li>扫描、归档 CLI 沿用保存的匿名和 Cookie 设置，显式参数优先且互斥。</li>
-                  </ol>
-                  <h4>界面与帮助</h4>
-                  <p>下拉框按文字长度测宽、同组等宽，保留长参数空间；目录与章节标题整行切换，内部折叠不抢占高亮；工具卡片按顺序入场。</p>
-                  <p>帮助分为三类、17 个主题，默认只展开快速开始；18 条常见报错按含义、原因、步骤和重试建议说明。未找到报错时可查看完整手册，或本地整理并检查反馈预览。</p>
-                  <p>本地整理尝试遮盖常见敏感信息，不自动读取日志、上传或提交反馈，复制前仍需人工检查。</p>
-                  <h4>升级提示</h4>
-                  <p>源码升级需同步主入口、程序模块、前端资源及同版依赖，并重启后端。保留配置、凭据、密码表和下载目录；普通任务队列不跨进程恢复。</p>
-                </div>
-              </details>
-            </section>
-
             <div class="sect">
               <div class="sh"><b>支持平台</b><span class="rule"></span></div>
               <div class="chips" id="aboutPlatforms"></div>
               <p class="notice">Rplay 提供已接入的点播与直播支持；FANBOX 提供权限范围内的内容归档；Withny 提供已授权历史存档保存与直播监控录制。各平台支持的链接、认证和续传方式不同。</p>
             </div>
 
+            <section class="sect" id="aboutReleaseNotes" aria-labelledby="aboutReleaseTitle">
+              <div class="sh"><b id="aboutReleaseTitle">v2.8.0 本版更新</b><span class="rule"></span></div>
+              <p class="notice" id="aboutReleaseAuthor">本版功能与维护：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">maomaoyexi</a>。</p>
+              <ul class="about-release-summary">
+                <li>新增依赖缺失检测和完整配套包更新，保留备份、取消、恢复及手动入口。</li>
+                <li>自动更新失败时可重试或前往 GitHub 手动更新。</li>
+                <li>修复任务停止、音频结果、异常数据恢复与设置状态问题。</li>
+                <li>EXE 使用统一图标，清理失效代码并保留旧配置和接口兼容。</li>
+              </ul>
+              <details class="about-release-details" id="aboutReleaseDetails">
+                <summary>查看 v2.8.0 详细更新</summary>
+                <div class="dsec about-release-body">
+                  <h4>本版六类更新</h4>
+                  <ol>
+                    <li>依赖窗口只检测托管外置文件是否缺失；用户确认后下载同版完整配套包，校验后备份和替换，默认保留自行升级的 yt-dlp。</li>
+                    <li>主程序与依赖更新失败均保留 GitHub 官方手动入口；依赖维护支持取消、失败恢复和未完成事务提示。</li>
+                    <li>修复启动过程中停止、取消或启动失败后的占用清理；停止、命令查询及启动交接期间的归档确认跟随实际活动执行器。</li>
+                    <li>音频提取失败保留视频并按失败记录；损坏的直播会话、历史条目及磁盘或通知异常不再阻断正常清理。</li>
+                    <li>FANBOX 校验续传元数据与文本标注结构，最终文件发布前复核取消和租约所有权，保留既有权限及公开封面规则。</li>
+                    <li>修复设置目录误折叠、Withny 初始和重连按钮状态及依赖窗口初始化；CLI 提前分流，移除无效日志控件与旧直播死分支。</li>
+                  </ol>
+                  <h4>兼容与说明</h4>
+                  <p>EXE 图标与页面品牌标识一致。旧配置、预设及兼容接口保留；直播依赖 JSON 锁与手动安装清单由维护脚本同步。缺失检测不代表文件内容或平台可用性已验证。</p>
+                  <p>代理开关不是全部请求的总开关；更新及部分探测可能沿用系统或环境代理，自定义参数与 TUN／VPN 也会影响出口。各平台访问权限和续传条件仍以实际响应为准。</p>
+                  <h4>升级提示</h4>
+                  <p>EXE 和完整依赖 ZIP 使用同一版本。源码升级同步主入口、程序模块、前端资源和依赖并重启后端；保留配置、凭据、密码表与 download/。普通任务队列不跨进程恢复。</p>
+                </div>
+              </details>
+            </section>
+
             <div class="sect">
-              <div class="sh"><b>贡献者</b><span class="rule"></span></div>
+              <div class="sh"><b>作者与贡献者</b><span class="rule"></span></div>
               <div class="credits">
-                <div class="specrow" id="creditV271"><span class="k">v2.7.1 全部更新</span><span><a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — FANBOX 修复、界面与交互、帮助与报错反馈、更新日志、测试和版本维护。</span></div>
-                <div class="specrow"><span class="k">原版作者</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a></span></div>
-                <div class="specrow"><span class="k">v2.1.0 UI 重构</span><span>强壮的砍刀 <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a></span></div>
-                <div class="specrow"><span class="k">v2.3.0 平台与工具</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — NicoChannel、Twitter/X、TwitCasting、音频工具</span></div>
-                <div class="specrow"><span class="k">v2.3.0 Withny</span><span>猫猫葉汐A_spy — 历史存档、直播录制</span></div>
-                <div class="specrow"><span class="k">v2.4.0 UI</span><span>DarkKandaoMaster <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a> — UI 重构</span></div>
-                <div class="specrow"><span class="k">v2.4.0 字幕</span><span>ZheYi101 <a href="https://github.com/ZheYi101" target="_blank" rel="noopener noreferrer">@ZheYi101</a> — 字幕下载；猫猫葉汐A_spy — 修复与合并适配</span></div>
-                <div class="specrow"><span class="k">v2.4.0 更新</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — 其他更新与修复</span></div>
-                <div class="specrow"><span class="k">v2.5.0 WebUI</span><span>DarkKandaoMaster <a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">@DarkKandaoMaster</a> — 视觉与交互体系重构</span></div>
-                <div class="specrow"><span class="k">v2.6.0 上游修复</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — Cookie 模板、TwitCasting 密码表、HLS 路径及恢复、文件对话框回退与相关测试</span></div>
-                <div class="specrow"><span class="k">v2.6.0 直播与任务设置</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — 各平台直播入口、录制策略、断流处理与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」两个按钮及相关功能</span></div>
-                <div class="specrow"><span class="k">v2.5.0 功能</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — 设置控件、TwitCasting、Provider 与目录收拢</span></div>
-                <div class="specrow"><span class="k">v2.7.0 PR #18</span><span>ErgouTree <a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">@ergou10086</a> — Rplay 点播、直播与 Firefox 授权；FANBOX 扫描、预览、归档及相关 WebUI / CLI</span></div>
-                <div class="specrow"><span class="k">v2.7.0 维护</span><span>猫猫葉汐A_spy <a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">@maomaoyexi</a> — 单任务停止路由修复、回归测试、版本整合与文档维护</span></div>
+                <table class="credits-table" id="aboutContributors" aria-label="作者与贡献者">
+                  <thead><tr><th scope="col">贡献者</th><th scope="col">主要贡献</th></tr></thead>
+                  <tbody>
+                    <tr id="creditV271">
+                      <td><a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy（@maomaoyexi）</a></td>
+                      <td>v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、<code>.ytdl</code> 清理、合并适配、测试和文档</td>
+                    </tr>
+                    <tr>
+                      <td><a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">DarkKandaoMaster（强壮的砍刀）</a></td>
+                      <td>WebUI 重构，以及 v2.4.0 / v2.5.0 的视觉与交互体系重构</td>
+                    </tr>
+                    <tr>
+                      <td><a href="https://github.com/ergou10086" target="_blank" rel="noopener noreferrer">ErgouTree（@ergou10086）</a></td>
+                      <td>Bilibili 视频与多 P、NicoChannel、Twitter/X、TwitCasting；单条/批量 CLI、音频输出与工具；下载进度、命令查看、yt-dlp 自定义参数、代理、Provider 和目录整理；归档选择与独立封面；PR #17 的直播框架重构、追播校验、弹幕及多任务；PR #18 的 Rplay、FANBOX 及相关界面与 CLI</td>
+                    </tr>
+                    <tr>
+                      <td><a href="https://github.com/ZheYi101" target="_blank" rel="noopener noreferrer">ZheYi101</a></td>
+                      <td>PR #12 的随视频下载字幕设置与独立字幕下载工具（v2.4.0）</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="notice">完整版本、已合并 PR 与上游贡献来源见 <a href="https://github.com/maomaoyexi/video-downloader/blob/main/CREDITS.txt" target="_blank" rel="noopener noreferrer">CREDITS.txt</a>。</p>
               </div>
             </div>
           </div>
 
           <div class="panel show" style="gap:16px">
-            <div class="ptitle" style="padding-bottom:0"><svg class="ico s18"><use href="#i-check"></use></svg><b>依赖状态</b></div>
+            <div class="ptitle" style="padding-bottom:0"><svg class="ico s18"><use href="#i-check"></use></svg><b>依赖状态</b><button class="btn sm" id="openDependencyManager" type="button">更新依赖</button></div>
             <div class="deps" id="depStatus"></div>
           </div>
 
@@ -1148,12 +1159,36 @@
   </div>
 </div>
 
+<!-- ====== 依赖更新 ====== -->
+<div class="scrim dependency-manager" id="dependencyManagerPanel" role="dialog" aria-modal="true" aria-labelledby="dependencyManagerTitle" tabindex="-1">
+  <div class="dlg dependency-dialog">
+    <div class="dhead"><svg class="ico s18" aria-hidden="true"><use href="#i-toolbox"></use></svg><b id="dependencyManagerTitle">依赖检测与更新</b><button class="btn sm" id="depCloseManager" type="button">关闭</button></div>
+    <div class="dbody dependency-body">
+      <p class="dim dependency-version" id="dependencyCatalogVersion">正在读取配套依赖信息…</p>
+      <div class="dependency-overview"><b class="dependency-summary" id="dependencyStatusSummary">正在检测缺失依赖…</b><p class="dependency-counts mono dim" id="dependencyCounts"></p></div>
+      <p class="dependency-hint dim">这里只检测外置组件；源码 Python 运行库按 README 维护，EXE 内置库随主程序更新。</p>
+      <p class="dependency-recovery" id="dependencyRecoveryNotice" role="alert" hidden></p>
+      <div class="dependency-operation" aria-live="polite">
+        <p id="dependencyMessage" role="status">正在读取依赖状态…</p>
+        <div class="dependency-progress" id="dependencyProgress" hidden><progress id="dependencyProgressBar" max="100" aria-label="依赖操作进度"></progress><span class="mono" id="dependencyProgressText">进行中</span></div>
+      </div>
+      <section class="dependency-missing" id="dependencyMissingSection" aria-labelledby="dependencyMissingTitle" hidden><b id="dependencyMissingTitle">缺失文件</b><ul class="dependency-missing-list" id="dependencyMissingFiles"></ul><p class="dependency-hint dim" id="dependencyMissingNote"></p></section>
+      <p class="dependency-distribution dim" id="dependencyDistributionNote">更新时下载当前版本的完整配套依赖包。</p>
+      <p class="dependency-hint dim">更新会保留单独升级的 yt-dlp；其他需要更新的组件会先备份再替换。配置、Cookie 和下载内容会保留。</p>
+      <p class="dependency-hint dim">缺失检测只检查文件是否存在，不代表文件内容或运行兼容性已验证。</p>
+      <a id="dependencyManualLink" href="https://github.com/maomaoyexi/video-downloader/releases/latest" target="_blank" rel="noopener noreferrer">前往 GitHub 手动下载依赖 ↗</a>
+      <p class="dependency-hint dim">关闭面板不会取消后台操作；需要停止时点击「取消操作」。</p>
+    </div>
+    <div class="dfoot dependency-footer"><button class="btn" id="depCheckDependencies" type="button" disabled>重新检测</button><button class="btn pri" id="depUpdateDependencies" type="button" disabled>更新依赖</button><button class="btn gh" id="depCancelOperation" type="button" disabled hidden>取消操作</button></div>
+  </div>
+</div>
+
 <!-- ====== 版本更新 ====== -->
 <div class="scrim" id="updatePanel">
   <div class="dlg" style="width:460px">
-    <div class="dhead"><svg class="ico s18"><use href="#i-arrow-up"></use></svg><b>发现新版本</b></div>
+    <div class="dhead"><svg class="ico s18"><use href="#i-arrow-up"></use></svg><b id="updatePanelTitle">发现新版本</b></div>
     <div class="dbody">
-      <div class="specrow" style="font-size:12.5px"><span class="k">版本</span><span class="mono"><span id="updateCurVer"></span> → <span id="updateNewVer" class="txt-ok"></span></span></div>
+      <div class="specrow" id="updateVersionRow" style="font-size:12.5px"><span class="k">版本</span><span class="mono"><span id="updateCurVer"></span> → <span id="updateNewVer" class="txt-ok"></span></span></div>
       <div class="notes" id="updateNotes">正在获取更新内容…</div>
       <div id="updateProgress" style="display:none;flex-direction:column;gap:7px">
         <div class="srow" style="font-size:12px"><span class="dim" id="updateProgText">正在下载更新…</span><span class="pct mono" id="updateProgPct">0%</span></div>
@@ -1162,6 +1197,10 @@
       </div>
       <div id="updateDone" style="display:none;align-items:center;gap:9px;font-size:12.5px">
         <svg class="ico s14 txt-ok"><use href="#i-check"></use></svg><span id="updateDoneMsg">更新完成！程序将自动重启。</span>
+      </div>
+      <div id="updateManual" style="display:none;font-size:12px;line-height:1.7">
+        <a id="updateManualLink" href="https://github.com/maomaoyexi/video-downloader/releases/latest" target="_blank" rel="noopener noreferrer">前往 GitHub 手动更新 ↗</a>
+        <p class="dim">关闭旧程序后，下载新版 EXE 和配套依赖包；保留设置、Cookie 与 download/，按发布页升级说明替换。</p>
       </div>
     </div>
     <div class="dfoot" id="updateActions">
@@ -1276,7 +1315,8 @@
 <script src="/static/js/audio-volume.js"></script>
 <script src="/static/js/settings-controls.js?v=all-settings-1"></script>
 <script src="/static/js/help-support.js?v=help-support-1"></script>
-<script src="/static/js/app.js?v=all-settings-1"></script>
+<script src="/static/js/app.js?v=redundancy-cleanup-1"></script>
+<script src="/static/js/dependencies.js?v=dependency-summary-1"></script>
 <script src="/static/js/fanbox.js"></script>
 </body>
 </html>

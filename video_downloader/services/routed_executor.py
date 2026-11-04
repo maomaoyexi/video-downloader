@@ -66,6 +66,14 @@ class RoutedDownloadExecutor:
         return self._start_and_route(self.video,self.video.submit_password,
                                      url,password,request_id=request_id)
 
+    def _running_executor(self):
+        manager=self.manager or getattr(self.fanbox,'manager',None)
+        kind=manager.snapshot()['kind'] if manager is not None else None
+        # begin() can accept a job before its start method returns and updates active.
+        if kind is not None:
+            return self.fanbox if kind.startswith('fanbox') else self.video
+        return self.active
+
     def stop_download(self):
         if self.batch_handle is not None:
             self.manager.request_stop(kind_prefix='fanbox_batch')
@@ -73,15 +81,15 @@ class RoutedDownloadExecutor:
             if child is not None:
                 child[1].suspend();child[0].stop_download()
             return {'ok':True,'stopping':True}
-        return self.active.stop_download()
+        return self._running_executor().stop_download()
 
     def get_current_ytdlp_command(self):
         if self.batch_child:return self.batch_child[0].get_current_ytdlp_command()
-        return self.active.get_current_ytdlp_command()
+        return self._running_executor().get_current_ytdlp_command()
 
     def submit_archive_choice(self, request_id, redownload):
         child = self.batch_child
-        executor = child[0] if child else (None if self.batch_handle is not None else self.active)
+        executor = child[0] if child else (None if self.batch_handle is not None else self._running_executor())
         submit = getattr(executor, 'submit_archive_choice', None)
         if submit is None:
             return {'error': '此归档确认已结束，请以当前任务状态为准'}
@@ -97,8 +105,6 @@ class RoutedDownloadExecutor:
         handle=self.manager.begin('fanbox_batch')
         if handle is None:return {'error':'当前已有任务'}
         self.batch_handle=handle
-        config=self.fanbox.state.config_snapshot()
-        self.callbacks.cancel_idle_timer()
         def worker():
             try:
                 from video_downloader.services.download_manager import DownloadManager
@@ -130,10 +136,16 @@ class RoutedDownloadExecutor:
                 self.callbacks.broadcast_download_state()
                 self.callbacks.start_idle_timer()
         try:
+            config=self.fanbox.state.config_snapshot()
+            self.callbacks.cancel_idle_timer()
             self.batch_thread=threading.Thread(target=worker,name='routed-batch',daemon=True)
             self.batch_thread.start()
-        except RuntimeError:
+        except Exception:
             self.batch_handle=None;self.manager.finish(handle)
+            try:
+                self.callbacks.broadcast_download_state()
+            finally:
+                self.callbacks.start_idle_timer()
             return {'error':'批量任务启动失败'}
         self.callbacks.broadcast_download_state()
         return {'ok':True}

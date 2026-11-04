@@ -1,4 +1,6 @@
 """Keep cancellation attached to the executor that accepted the current job."""
+import threading
+
 import pytest
 
 from video_downloader.services.download_manager import DownloadManager
@@ -196,3 +198,74 @@ def test_independent_task_routers_keep_parallel_jobs_and_cancellation_separate()
     assert not second_video.handle.cancel_event.is_set()
     assert second.stop_download()['stopping']
     assert second_video.handle.cancel_event.is_set()
+
+
+@pytest.mark.parametrize('new_url', [VIDEO_URL, FANBOX_URL])
+@pytest.mark.parametrize('explicit_manager', [True, False])
+def test_stop_during_accepted_start_reaches_current_executor(new_url, explicit_manager):
+    router, video, fanbox = make_router()
+    current = video if new_url == VIDEO_URL else fanbox
+    previous = fanbox if current is video else video
+    previous_url = FANBOX_URL if current is video else VIDEO_URL
+    assert router.start_download(previous_url)['ok']
+    previous.complete()
+    if not explicit_manager:
+        router.manager = None
+
+    accepted, release = threading.Event(), threading.Event()
+    start = current.start_download
+
+    def blocked_start(url, **kwargs):
+        result = start(url, **kwargs)
+        accepted.set()
+        assert release.wait(3)
+        return result
+
+    current.start_download = blocked_start
+    thread = threading.Thread(target=lambda: router.start_download(new_url), daemon=True)
+    thread.start()
+    try:
+        assert accepted.wait(2)
+        assert router.get_current_ytdlp_command() == {'command': current.name}
+        assert router.stop_download()['stopping']
+        assert current.handle.cancel_event.is_set()
+        assert current.stop_calls == 1
+        assert previous.stop_calls == 0
+    finally:
+        release.set()
+        thread.join(3)
+
+
+@pytest.mark.parametrize('explicit_manager', [True, False])
+def test_archive_choice_during_accepted_start_reaches_current_executor(explicit_manager):
+    router, video, fanbox = make_router()
+    assert router.start_download(FANBOX_URL)['ok']
+    fanbox.complete()
+    if not explicit_manager:
+        router.manager = None
+
+    accepted, release = threading.Event(), threading.Event()
+    choices = []
+    start = video.start_download
+
+    def blocked_start(url, **kwargs):
+        result = start(url, **kwargs)
+        accepted.set()
+        assert release.wait(3)
+        return result
+
+    def confirm_archive(request_id, redownload):
+        choices.append((request_id, redownload))
+        return {'ok': True}
+
+    video.start_download = blocked_start
+    video.submit_archive_choice = confirm_archive
+    thread = threading.Thread(target=lambda: router.start_download(VIDEO_URL), daemon=True)
+    thread.start()
+    try:
+        assert accepted.wait(2)
+        assert router.submit_archive_choice('current-request', True) == {'ok': True}
+        assert choices == [('current-request', True)]
+    finally:
+        release.set()
+        thread.join(3)

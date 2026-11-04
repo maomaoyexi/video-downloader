@@ -223,9 +223,12 @@ class StorageService:
                         history = json.load(file)
                     if not isinstance(history, list):
                         return []
+                    # 返回值忽略损坏条目；路径迁移写回时仍保留原始列表中的记录。
+                    source_history = history
+                    history = [entry for entry in history if isinstance(entry, dict)]
                     if self._migrate_history_paths(history):
                         try:
-                            self._write_history(history)
+                            self._write_history(source_history)
                         except OSError:
                             # Migration persistence is best-effort; history remains usable.
                             pass

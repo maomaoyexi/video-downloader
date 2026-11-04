@@ -1,11 +1,14 @@
 """测试入口文件使用 AppContainer 结构。"""
 from tests.helpers import PROJECT_ROOT
 import ast
+import contextlib
+import io
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
-MAIN_SCRIPT = PROJECT_ROOT / "视频下载工具v2.7.1-GUI.py"
+MAIN_SCRIPT = PROJECT_ROOT / "视频下载工具v2.8.0-GUI.py"
 
 
 class MainEntrypointTests(unittest.TestCase):
@@ -33,6 +36,20 @@ class MainEntrypointTests(unittest.TestCase):
         calls = [ast.unparse(node.func) for node in ast.walk(main_funcs[0])
                  if isinstance(node, ast.Call)]
         self.assertIn("app.main", calls, "main() 应委托给 app.main()")
+
+    def test_startup_message_is_not_duplicated_by_entrypoint(self):
+        startup_message = "正在启动 WebUI 服务器..."
+        main_func = next(node for node in self.tree.body
+                         if isinstance(node, ast.FunctionDef) and node.name == "main")
+        namespace = {
+            "VERSION": "test",
+            "app": SimpleNamespace(main=lambda: print(startup_message)),
+        }
+        exec(compile(ast.Module(body=[main_func], type_ignores=[]), str(MAIN_SCRIPT), "exec"), namespace)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            namespace["main"]()
+        self.assertEqual(output.getvalue().splitlines().count(startup_message), 1)
 
     def test_container_is_constructed(self):
         """验证 AppContainer 在模块级别被构造。"""

@@ -407,12 +407,18 @@ class LiveRunner:
             else:
                 reason = "user"
         except Exception as exc:
-            session.event("exception", error=type(exc).__name__, frames=[
-                {"file": Path(frame.filename).name, "line": frame.lineno, "function": frame.name}
-                for frame in traceback.extract_tb(exc.__traceback__)[-4:]])
-            self.log(f"[直播] 录制异常：{type(exc).__name__}；详情请检查会话报告", "error")
             if proc and proc.poll() is None:
                 forced = not process.stop(proc, self.force_kill)
+            try:
+                session.event("exception", error=type(exc).__name__, frames=[
+                    {"file": Path(frame.filename).name, "line": frame.lineno, "function": frame.name}
+                    for frame in traceback.extract_tb(exc.__traceback__)[-4:]])
+            except OSError:
+                pass  # A full recording disk must not prevent process cleanup.
+            try:
+                self.log(f"[直播] 录制异常：{type(exc).__name__}；详情请检查会话报告", "error")
+            except Exception:
+                pass  # Notification failures must not interrupt finalization.
         finally:
             for media_clock, _ in clocks:
                 media_clock.stop()
@@ -470,13 +476,15 @@ class LiveRunner:
                 checker.concatenate(session, report)
             if catch_up_evidence:
                 report["catch_up"] = catch_up_evidence.to_dict()
+            files = report["files"]
+            primary = report.get("joined") or next((file for file in files if file["valid"]), files[0] if files else {})
             if str(config.get("AUDIO_MODE", "0")) == "2" and report["files"] and report["conclusion"] != "failed":
                 self.progress(-1, "正在导出直播音频...")
                 audio_format = config.get("AUDIO_FORMAT", "mp3")
                 codec = {"mp3": ["-c:a", "libmp3lame", "-b:a", "320k"],
                          "m4a": ["-c:a", "aac", "-b:a", "256k"], "wav": ["-c:a", "pcm_s16le"]}.get(audio_format)
                 if codec:
-                    source = report.get("joined", report["files"][0])["path"]
+                    source = primary["path"]
                     audio = session.root / ("audio." + audio_format)
                     try:
                         exported = subprocess.run([checker.ffmpeg, "-v", "error", "-nostdin", "-y", "-i", source,
@@ -515,8 +523,7 @@ class LiveRunner:
             status = "earliest"
         else:
             status = "success"
-        paths = report["files"]
         return {"status": status, "title": title, "report": report_path,
-                "output": report.get("joined", {}).get("path", paths[0]["path"] if paths else ""),
+                "output": primary.get("path", ""),
                 "conclusion": report["conclusion"], "stop_reason": reason,
                 "error_lines": error_lines}

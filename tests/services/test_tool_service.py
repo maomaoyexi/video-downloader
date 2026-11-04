@@ -124,7 +124,7 @@ class ToolServiceTests(unittest.TestCase):
 
     def test_handle_tool_action_routes_folder_actions(self):
         with tempfile.TemporaryDirectory() as directory:
-            tool_dir = Path(directory)
+            tool_dir = Path(directory).resolve()
             service = create_service(tool_dir)
             with patch.object(service, "open_folder", side_effect=lambda path: {"path": path}):
                 self.assertEqual(service.handle_tool_action("open-downloads"), {"path": tool_dir / "download"})

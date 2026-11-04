@@ -131,14 +131,7 @@
 #set-live>.settings-section-body>.sh,
 #set-live>.settings-section-body>.live-platform-modes{grid-column:1/-1}
 
-/* 输出区单独收紧，避免简短选项随整个设置页拉长。 */
-#set-output .output-settings-grid,
-#set-output .output-settings-switches{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px 36px;
-  max-width:980px;
-}
+/* 输出区布局由后加载的 settings-compact.css 统一维护。 */
 #set-output .output-settings-group{
   display:flex;
   flex-direction:column;
@@ -149,11 +142,6 @@
 #set-output .row>.lb{width:112px}
 #set-output .sel{max-width:340px}
 @media(max-width:900px){
-  #set-output .output-settings-grid,
-  #set-output .output-settings-switches{
-    grid-template-columns:minmax(0,1fr);
-    max-width:520px;
-  }
   #set-live>.settings-section-body{max-width:520px}
 }
 @media(max-width:640px){

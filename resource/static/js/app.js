@@ -374,7 +374,6 @@ function applyConfig(s) {
   onTcPasswordChange();
   setSwitch('sw_youtube_po_token', s.YOUTUBE_PO_TOKEN_ENABLED);
   $('s_ytdlp_default_args').value = s.YTDLP_DEFAULT_ARGS || '';
-  setSwitch('sw_log', s.ENABLE_LOG);
   if(s.BILI_MULTIP_POLICY !== undefined) $('s_bili_policy').value = s.BILI_MULTIP_POLICY;
   // 音频输出格式设置（audio-convert.js 负责 UI 初始化）
   if(s.AUDIO_OUTPUT_FORMAT !== undefined && $('audioOutFormat')) $('audioOutFormat').value = s.AUDIO_OUTPUT_FORMAT;
@@ -473,9 +472,12 @@ function renderLiveCommentPlatforms(preserve = false) {
   host.querySelectorAll('select').forEach(el => { el.value = liveCommentPlatforms[el.dataset.liveCommentPlatform] || 'inherit'; });
 }
 
-function renderLivePlatformModes() {
+function renderLivePlatformModes(preserve = false) {
   const host = $('livePlatformModes');
   if(!host) return;
+  if(preserve) host.querySelectorAll('select[data-live-platform]').forEach(select => {
+    livePlatformModes[select.dataset.livePlatform] = select.value;
+  });
   const caps = liveCapabilities || {
     YouTube: {catch_up:'supported', live_edge:true},
     Twitch: {catch_up:'supported', live_edge:true}
@@ -506,7 +508,7 @@ async function loadLiveCapabilities() {
     const r = await api('/api/live/capabilities');
     if(r && r.platforms) {
       liveCapabilities = r.platforms;
-      renderLivePlatformModes();
+      renderLivePlatformModes(true);
       renderLiveCommentPlatforms(true);
     }
   } catch(e) { /* 使用静态兜底 */ }
@@ -553,7 +555,9 @@ function initSettingsSectionToggles(items, onToggle) {
     panel.section.classList.toggle('is-collapsed', !expanded);
     for(const button of panel.buttons) {
       button.setAttribute('aria-expanded', String(expanded));
-      button.title = (expanded ? '收起' : '展开') + panel.title;
+      button.title = button.classList.contains('settings-toc-item')
+        ? '选择' + panel.title + '；再次点击可展开或收起'
+        : (expanded ? '收起' : '展开') + panel.title;
       button.setAttribute('aria-label', button.title);
     }
     if(persist) {
@@ -596,7 +600,7 @@ function initSettingsSectionToggles(items, onToggle) {
         button.insertAdjacentHTML(button === item ? 'beforeend' : 'afterbegin',
           '<svg class="ico s14 settings-section-chevron" aria-hidden="true" focusable="false"><use href="#i-chevron"></use></svg>');
       }
-      button.onclick = () => onToggle(section);
+      button.onclick = () => onToggle(section, button);
       return button;
     });
     const title = header.querySelector('b')?.textContent || item.textContent.trim();
@@ -663,10 +667,11 @@ function initSettingsToc() {
     }
     interruptScroll();
   };
-  const jumpToSection = target => {
+  const jumpToSection = (target, button) => {
     if(!target) return;
+    const selecting = button?.classList.contains('settings-toc-item') && activeTarget !== target.id;
     interruptScroll();
-    sectionControls.setExpanded(target.id, !sectionControls.isExpanded(target.id));
+    sectionControls.setExpanded(target.id, selecting || !sectionControls.isExpanded(target.id));
     pendingTarget = target.id;
     setActive(target.id);
     target.scrollIntoView({behavior:'smooth', block:'start'});
@@ -779,7 +784,6 @@ function collectCfg() {
     TC_SAVE_PASSWORD_XLSX: isOn('sw_tc_remember') && isOn('sw_tc_xlsx')?1:0,
     YOUTUBE_PO_TOKEN_ENABLED: isOn('sw_youtube_po_token')?1:0,
     YTDLP_DEFAULT_ARGS: $('s_ytdlp_default_args').value.trim(),
-    ENABLE_LOG: isOn('sw_log')?1:0,
     BILI_MULTIP_POLICY: $('s_bili_policy').value,
   };
 }
@@ -1914,6 +1918,18 @@ async function prepareLiveTask(url) {
 let sseRetryDelay = 1000;
 const SSE_MAX_RETRY = 16000;
 
+function applyDownloadState(state) {
+  syncAudioToolState(state);
+  download_running = Boolean(state.running);
+  downloadGeneration = state.generation;
+  const occupied = download_running || state.phase === 'suspended';
+  for(const id of ['btnStart', 'btnWithnyLive', 'btnSubtitleDownload', 'btnCoverDownload']) {
+    const button = $(id);
+    if(button) button.disabled = occupied;
+  }
+  $('btnStop').disabled = !download_running || state.phase === 'stopping';
+}
+
 function connectSSE() {
   if(evtSource) evtSource.close();
   evtSource = new EventSource('/api/events?token=' + encodeURIComponent(SESSION_TOKEN));
@@ -1936,15 +1952,7 @@ function connectSSE() {
       renderProgress(evt.data);
     } else if(evt.type === 'download_state') {
       if(evt.task_id) return;
-      const d = evt.data;
-      syncAudioToolState(d);
-      download_running = Boolean(d.running);
-      downloadGeneration = d.generation;
-      $('btnStart').disabled = download_running || d.phase === 'suspended';
-      $('btnWithnyLive').disabled = download_running || d.phase === 'suspended';
-      $('btnStop').disabled = !download_running || d.phase === 'stopping';
-      if($('btnSubtitleDownload')) $('btnSubtitleDownload').disabled = download_running || d.phase === 'suspended';
-      if($('btnCoverDownload')) $('btnCoverDownload').disabled = download_running || d.phase === 'suspended';
+      applyDownloadState(evt.data);
       if(!download_running) $('topline').style.width = '0';
       if(!download_running) closeArchiveChoice();
       renderTasks(tasksCache);
@@ -1986,14 +1994,8 @@ function connectSSE() {
     } else if(evt.type === 'ready') {
       taskSnapshotVersion++;
       const readyData = Array.isArray(evt.data) ? {logs:evt.data, running:false} : evt.data;
-      syncAudioToolState(readyData);
-      downloadGeneration = readyData.generation;
+      applyDownloadState(readyData);
       (readyData.logs || []).forEach(e => addLog(e));
-      download_running = Boolean(readyData.running);
-      $('btnStart').disabled = download_running || readyData.phase === 'suspended';
-      $('btnStop').disabled = !download_running || readyData.phase === 'stopping';
-      if($('btnSubtitleDownload')) $('btnSubtitleDownload').disabled = download_running || readyData.phase === 'suspended';
-      if($('btnCoverDownload')) $('btnCoverDownload').disabled = download_running || readyData.phase === 'suspended';
       if(readyData.progress) renderProgress(readyData.progress);
       if(Array.isArray(readyData.live_watch)) renderLiveWatch(readyData.live_watch);
       api('/api/live/recordings').then(data => (data.recordings || []).reverse().forEach(renderLiveRecording)).catch(() => {});
@@ -2258,9 +2260,41 @@ function escAttr(s) {
 
 // ========== 自动更新 ==========
 let updateInfo = null;
+let updateCheckFailed = false;
+
+function showUpdateFailure(message, checkOnly = false) {
+  updateCheckFailed = checkOnly || !updateInfo?.download_url;
+  if(updateCheckFailed) {
+    updateInfo = null;
+    $('updateNotes').textContent = '未能获取可用的更新信息，可重新检查或前往发布页手动更新。';
+  }
+  $('updatePanelTitle').textContent = updateCheckFailed ? '检查更新失败' : '更新失败';
+  $('updateVersionRow').style.display = updateInfo ? '' : 'none';
+  $('updateProgText').textContent = (updateCheckFailed ? '检查更新失败: ' : '更新失败: ') + message;
+  $('updateProgText').className = 'txt-err';
+  $('updateProgress').style.display = 'flex';
+  $('updateDone').style.display = 'none';
+  $('updateManual').style.display = 'block';
+  $('updateActions').style.display = '';
+  $('btnDoUpdate').disabled = false;
+  $('btnDoUpdate').textContent = updateCheckFailed ? '重新检查' : '重试';
+  showUpdatePanel();
+}
 
 function handleUpdateAvailable(data) {
+  const recovering = updateCheckFailed || $('updateManual').style.display !== 'none';
+  updateCheckFailed = false;
   updateInfo = data;
+  $('updatePanelTitle').textContent = '发现新版本';
+  $('updateVersionRow').style.display = '';
+  $('updateManual').style.display = 'none';
+  if(recovering) {
+    $('updateProgress').style.display = 'none';
+    $('updateDone').style.display = 'none';
+    $('updateActions').style.display = '';
+    $('btnDoUpdate').disabled = false;
+    $('btnDoUpdate').textContent = '一键更新';
+  }
   $('updateBadge').style.display = 'inline-flex';
   replayAnimation($('updateBadge'), 'attention');
   $('updateBadgeText').textContent = '有新版本 ' + (data.latest_version || '');
@@ -2272,14 +2306,11 @@ function handleUpdateAvailable(data) {
 
 function handleUpdateProgress(data) {
   if(data.error) {
-    $('updateProgText').textContent = '更新失败: ' + data.error;
-    $('updateProgText').className = 'txt-err';
-    $('updateProgress').style.display = 'flex';
-    $('updateActions').style.display = '';
-    $('btnDoUpdate').disabled = false;
-    $('btnDoUpdate').textContent = '重试';
+    showUpdateFailure(data.error);
     return;
   }
+  updateCheckFailed = false;
+  $('updateManual').style.display = 'none';
   $('updateProgress').style.display = 'flex';
   $('updateActions').style.display = 'none';
   const pct = Math.round(data.percent || 0);
@@ -2303,30 +2334,48 @@ function hideUpdatePanel() { $('updatePanel').classList.remove('show'); }
  */
 async function checkUpdateNow() {
   showToast('正在检查更新…', 'working');
+  if(updateCheckFailed) {
+    $('btnDoUpdate').disabled = true;
+    $('btnDoUpdate').textContent = '检查中…';
+  }
   try {
     await api('/api/check-update');
     for(let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 500));
       const s = await api('/api/update-status');
       if(s.checking) continue;
-      if(s.error) { showToast('检查更新失败: ' + s.error, 'error'); return; }
+      if(s.error) { showUpdateFailure(s.error, true); return; }
       if(s.update_available) handleUpdateAvailable(s);
-      else showToast('已是最新版本', 'success');
+      else {
+        if(updateCheckFailed) hideUpdatePanel();
+        updateCheckFailed = false;
+        $('updateManual').style.display = 'none';
+        $('btnDoUpdate').disabled = false;
+        $('btnDoUpdate').textContent = '一键更新';
+        showToast('已是最新版本', 'success');
+      }
       return;
     }
-    showToast('检查更新超时，请稍后重试', 'error');
+    showUpdateFailure('检查更新超时，请稍后重试', true);
   } catch(e) {
-    showToast('检查更新失败: ' + e.message, 'error');
+    showUpdateFailure(e.message, true);
   }
 }
 
 async function doUpdateNow() {
+  if(updateCheckFailed) {
+    await checkUpdateNow();
+    return;
+  }
   if(!updateInfo || !updateInfo.download_url) {
-    showToast('暂无下载链接，请稍后重试', 'error');
+    showUpdateFailure('暂无下载链接，请重新检查或手动更新', true);
     return;
   }
   $('btnDoUpdate').disabled = true;
   $('btnDoUpdate').textContent = '更新中…';
+  $('updateManual').style.display = 'none';
+  $('updateDone').style.display = 'none';
+  $('updateActions').style.display = 'none';
   $('updateProgText').textContent = '正在下载更新…';
   $('updateProgText').className = 'dim';
   $('updateProgress').style.display = 'flex';

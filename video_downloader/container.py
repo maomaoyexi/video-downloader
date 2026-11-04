@@ -42,6 +42,7 @@ from .services.network_diagnostics import NetworkDiagnostics
 from .services.po_token_provider import PoTokenProviderService
 from .services.storage import StorageService
 from .services.tools import ToolService
+from .services.dependency_manager import DependencyManager
 from .services.updater import UpdaterService
 from .tasks import TaskManager
 from .tasks.manager import TaskCallbacks
@@ -62,6 +63,7 @@ class WiredApp:
     cancel_idle_timer: Callable[[], None]
     start_idle_timer: Callable[[], None]
     main: Callable[[], None]
+    dependency_manager: object = None
 
 
 class AppContainer:
@@ -106,6 +108,10 @@ class AppContainer:
         idle_timer: threading.Timer | None = None
         live_watch_service: LiveWatchService | None = None
         task_manager: TaskManager | None = None
+        dependency_manager = None
+        maintenance_lock = threading.RLock()
+        shutting_down = threading.Event()
+        watch_paused_for_recovery = threading.Event()
 
         def cancel_idle_timer() -> None:
             nonlocal idle_timer
@@ -123,12 +129,15 @@ class AppContainer:
                 return
             if task_manager is not None and task_manager.has_active():
                 return
+            if dependency_manager is not None and dependency_manager.snapshot().get("running"):
+                return
 
             def do_idle_exit() -> None:
                 if (not download_manager.snapshot()["running"] and not app_state.has_sse_clients()
                         and download_manager.snapshot()["accepting"]
                         and not live_watch_service.has_active_jobs()
-                        and not task_manager.has_active()):
+                        and not task_manager.has_active()
+                        and not dependency_manager.snapshot().get("running")):
                     add_log(f"[系统] 浏览器已关闭，{IDLE_TIMEOUT}秒无活动，自动退出", "warn")
                     request_exit()
 
@@ -377,18 +386,26 @@ class AppContainer:
                 return True
 
         def start_fanbox_job(job_id,url,preview,selection):
-            if task_mode_enabled():
-                return task_manager.submit([url],selection={'fanbox_job_id':job_id,'fanbox_preview':preview,
-                                                           'fanbox_selection':selection})
-            def exclusive():
-                executor=FanboxExecutor(fanbox_application,tool_dir=tool_dir,app_state=app_state,
-                    download_manager=download_manager,callbacks=download_executor.callbacks,
-                    job_id=job_id,preview=preview,selection=selection,
-                    on_finished=lambda handle:fanbox_controller.finished(job_id))
-                result=executor.start_download(url)
-                if result.get('ok'):download_executor.active=executor
-                return result
-            return task_manager.start_exclusive(exclusive)
+            # 次日自动继续也走这里，必须与 HTTP 启动和依赖安装使用同一门禁。
+            with maintenance_lock:
+                if dependency_manager is None or shutting_down.is_set():
+                    return {'error':'程序正在初始化或退出，请稍后重试','code':'dependency_maintenance'}
+                dependency_state = dependency_manager.snapshot()
+                if dependency_state.get('recovery_required') or (
+                        dependency_state.get('running') and dependency_state.get('action') == 'install'):
+                    return {'error':'请先完成依赖维护或恢复备份，再继续归档','code':'dependency_maintenance'}
+                if task_mode_enabled():
+                    return task_manager.submit([url],selection={'fanbox_job_id':job_id,'fanbox_preview':preview,
+                                                               'fanbox_selection':selection})
+                def exclusive():
+                    executor=FanboxExecutor(fanbox_application,tool_dir=tool_dir,app_state=app_state,
+                        download_manager=download_manager,callbacks=download_executor.callbacks,
+                        job_id=job_id,preview=preview,selection=selection,
+                        on_finished=lambda handle:fanbox_controller.finished(job_id))
+                    result=executor.start_download(url)
+                    if result.get('ok'):download_executor.active=executor
+                    return result
+                return task_manager.start_exclusive(exclusive)
 
         def pause_fanbox_job(job_id,target):
             if target!='exclusive':return task_manager.cancel(target)
@@ -403,7 +420,7 @@ class AppContainer:
 
         fanbox_controller=FanboxController(fanbox_application,tool_dir=tool_dir,
             config_getter=app_state.config_snapshot,start=start_fanbox_job,cancel=pause_fanbox_job,
-            publish=app_state.publish,is_active=fanbox_job_active)
+            publish=app_state.publish,is_active=fanbox_job_active,operation_lock=maintenance_lock)
 
         # ---- 直播 WAIT 服务 ----
         probe_service = ProbeService(
@@ -555,6 +572,19 @@ class AppContainer:
             has_active_downloads=task_manager.has_active,
         )
 
+        dependency_manager = DependencyManager(
+            tool_dir,
+            download_manager=download_manager,
+            has_active_downloads=lambda: task_manager.has_active() or (
+                not watch_paused_for_recovery.is_set() and live_watch_service.has_active_jobs()),
+            cancel_idle_timer=cancel_idle_timer,
+            start_idle_timer=start_idle_timer,
+            broadcast_download_state=broadcast_download_state,
+            maintenance_lock=maintenance_lock,
+            log=add_log,
+            emit_event=emit_event,
+        )
+
         check_deps = tool_service.check_deps
         update_ytdlp = tool_service.update_ytdlp
         clean_temp = tool_service.clean_temp
@@ -609,6 +639,9 @@ class AppContainer:
             return live_watch_service.cancel(job_id)
 
         def request_exit() -> None:
+            shutting_down.set()
+            if not dependency_manager.close(timeout=35):
+                add_log("[依赖] 已请求取消维护；未完成事务将保留备份，供下次启动后修复", "warn")
             fanbox_controller.stop()
             download_executor.stop_download()
             network_diagnostics.stop()
@@ -638,6 +671,8 @@ class AppContainer:
                 render_html_page=render_html_page,
                 serve_static_file=serve_static_file,
                 check_deps=check_deps,
+                dependency_manager=dependency_manager,
+                maintenance_lock=maintenance_lock,
                 load_presets=load_presets,
                 load_history=load_history,
                 cancel_idle_timer=cancel_idle_timer,
@@ -704,9 +739,28 @@ class AppContainer:
                 add_log("[提示] yt-dlp: github.com/yt-dlp/yt-dlp/releases", "warn")
                 add_log("[提示] ffmpeg: www.gyan.dev/ffmpeg/builds/ (full_build)", "warn")
             config = app_state.config_snapshot()
-            live_watch_service.start()
+            if dependency_manager.snapshot().get("recovery_required"):
+                watch_paused_for_recovery.set()
+                add_log("[依赖] 发现未完成的维护，直播监控将等待依赖修复后再启动", "warn")
+
+                def resume_watch_after_recovery():
+                    while not shutting_down.wait(.25):
+                        with maintenance_lock:
+                            state = dependency_manager.snapshot()
+                            if not state.get("recovery_required") and not (
+                                    state.get("running") and state.get("action") == "install"):
+                                if not shutting_down.is_set():
+                                    watch_paused_for_recovery.clear()
+                                    live_watch_service.start()
+                                return
+
+                threading.Thread(target=resume_watch_after_recovery,
+                                 name="dependency-watch-recovery", daemon=True).start()
+            else:
+                live_watch_service.start()
 
             url = http_service.start()
+            dependency_manager.check()
             start_idle_timer()
             print("=" * 50, flush=True)
             print(f"  WebUI 已启动!", flush=True)
@@ -740,6 +794,7 @@ class AppContainer:
             request_exit=request_exit,
             app_state=app_state,
             updater=updater,
+            dependency_manager=dependency_manager,
             log=add_log,
             cancel_idle_timer=cancel_idle_timer,
             start_idle_timer=start_idle_timer,

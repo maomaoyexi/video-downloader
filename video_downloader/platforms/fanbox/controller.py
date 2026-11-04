@@ -25,12 +25,13 @@ from .verification import VerificationService,report_header
 
 
 class FanboxController:
-    def __init__(self,application,*,tool_dir,config_getter,start,cancel,publish=None,is_active=None):
+    def __init__(self,application,*,tool_dir,config_getter,start,cancel,publish=None,is_active=None,
+                 operation_lock=None):
         self.application,self.root=application,Path(tool_dir)
         self.config=config_getter;self.start=start;self.cancel=cancel
         self.is_active=is_active or (lambda job_id,target:True)
         self.publish=publish or (lambda event:None)
-        self.lock=threading.RLock();self.active={}
+        self.lock=operation_lock or threading.RLock();self.active={}
         self.verifier=VerificationService(application,self._verification_event)
         self._snapshot=[];self.access_error=None
         self.stopping=threading.Event()

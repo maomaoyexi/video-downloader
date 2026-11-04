@@ -49,9 +49,9 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     root = Path(__file__).resolve().parents[1]
-    entry = root / "视频下载工具v2.7.1-GUI.py"
+    entry = root / "视频下载工具v2.8.0-GUI.py"
     if not entry.is_file():
-        print("[启动失败] 当前修复目录缺少 视频下载工具v2.7.1-GUI.py。", file=sys.stderr, flush=True)
+        print("[启动失败] 当前修复目录缺少 视频下载工具v2.8.0-GUI.py。", file=sys.stderr, flush=True)
         return 2
     if sys.version_info[:2] != (3, 12) or sys.maxsize <= 2**32:
         print("[启动失败] 当前本地运行依赖需要 64 位 Python 3.12。", file=sys.stderr, flush=True)
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args in (["--check"], ["--live-self-check"]):
         return _check_runtime(live_only=args == ["--live-self-check"])
-    print("正在运行 v2.7.1 正式版源码；关闭网页后仍按程序原有规则收尾。", flush=True)
+    print("正在运行 v2.8.0 正式版源码；关闭网页后仍按程序原有规则收尾。", flush=True)
     sys.argv = [str(entry), *args]
     runpy.run_path(str(entry), run_name="__main__")
     return 0

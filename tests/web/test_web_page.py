@@ -1,5 +1,6 @@
 from tests.helpers import PROJECT_ROOT
 import os
+import html as html_parser
 import re
 import sys
 import tempfile
@@ -17,6 +18,25 @@ def _skip_if_frozen():
 
 
 class WebPageTests(unittest.TestCase):
+    def test_about_contributors_match_readme_as_four_summary_rows(self):
+        root = Path(PROJECT_ROOT)
+        document = (root / "resource/templates/index.html").read_text(encoding="utf-8")
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        table = re.search(r'<table\b[^>]*id="aboutContributors"[^>]*>(.*?)</table>', document, re.S)
+        self.assertIsNotNone(table, "关于页应按 README 合并为贡献者与主要贡献两列表格")
+        body = re.search(r"<tbody>(.*?)</tbody>", table.group(1), re.S)
+        rows = re.findall(r"<tr\b[^>]*>(.*?)</tr>", body.group(1), re.S)
+        expected = re.findall(r"^\| \[([^\]]+)\]\((https://github\.com/[^)]+)\) \| (.+) \|$",
+                              readme, re.M)
+        self.assertEqual(len(expected), 4)
+        self.assertEqual(len(rows), 4)
+        for row, (name, url, contribution) in zip(rows, expected):
+            cells = re.findall(r"<td\b[^>]*>(.*?)</td>", row, re.S)
+            self.assertEqual(len(cells), 2)
+            text = [html_parser.unescape(re.sub(r"<[^>]+>", "", cell)).strip() for cell in cells]
+            self.assertEqual(text, [name, contribution.replace("`", "")])
+            self.assertIn(f'href="{url}"', cells[0])
+
     def test_error_manual_preserves_current_document_text(self):
         _skip_if_frozen()
         expected = (Path(PROJECT_ROOT) / "docs" / "错误码.txt").read_bytes().decode("utf-8")
@@ -59,7 +79,7 @@ class WebPageTests(unittest.TestCase):
         self.assertIn('id="aboutReleaseDetails"', html)
         self.assertIn('project_root / "CHANGELOG.md"', spec)
 
-    def test_v271_attribution_is_consistent_and_preserves_history(self):
+    def test_current_attribution_preserves_v271_history(self):
         from pathlib import Path
         root = Path(PROJECT_ROOT)
         statement = "v2.7.1 的全部更新由 maomaoyexi 完成。"
@@ -69,16 +89,15 @@ class WebPageTests(unittest.TestCase):
             public_document = (root / name).read_text(encoding="utf-8")
             self.assertNotIn(statement, public_document, name)
             self.assertNotIn("**v2.7.1 全部更新**", public_document, name)
-            self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| v2\.7\.1 全部更新", name)
+            self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| v2\.8\.0 ", name)
         html = (root / "resource/templates/index.html").read_text(encoding="utf-8")
         author = re.search(r'id="aboutReleaseAuthor">(.*?)</p>', html, re.S)
         self.assertIsNotNone(author)
-        self.assertEqual(re.sub(r"<[^>]+>", "", author.group(1)), statement)
+        self.assertEqual(re.sub(r"<[^>]+>", "", author.group(1)), "本版功能与维护：maomaoyexi。")
         self.assertIn('id="creditV271"', html)
-        self.assertIn("v2.7.0 PR #18", html)
-        self.assertIn("v2.7.0 维护", html)
         credits = (root / "CREDITS.txt").read_text(encoding="utf-8")
         self.assertIn("v2.7.0 PR #18 的全部新增功能", credits)
+        self.assertIn("v2.7.0 单任务执行器停止路由修复", credits)
 
     def test_template_keeps_expected_structure(self):
         _skip_if_frozen()

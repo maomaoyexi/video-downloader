@@ -22,6 +22,9 @@ from video_downloader.core.constants import (
 from video_downloader.core.platform import asset_digest, is_allowed_update_url, parse_version_tag, version_num_to_str
 
 
+MANUAL_UPDATE_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+
+
 class UpdaterService:
     def __init__(self, download_manager, emit_event, log, broadcast_download_state, kill_process_tree,
                  has_active_downloads=None):
@@ -51,6 +54,7 @@ class UpdaterService:
             "total_size": 0,
             "update_done": False,
             "error": None,
+            "manual_update_url": MANUAL_UPDATE_URL,
         }
 
     def snapshot(self):
@@ -64,6 +68,9 @@ class UpdaterService:
     def _update_status(self, values):
         with self._status_lock:
             self._status.update(values)
+
+    def _error_result(self, message):
+        return {"error": message, "manual_update_url": MANUAL_UPDATE_URL}
 
     def _fetch_url(self, url, timeout=10):
         req = urllib_request.Request(url, headers={
@@ -147,7 +154,8 @@ class UpdaterService:
     def check_update(self):
         if not self._check_lock.acquire(blocking=False):
             status = self.snapshot()
-            return {"has_update": status["update_available"], "checking": True}
+            return {"has_update": status["update_available"], "checking": True,
+                    "manual_update_url": MANUAL_UPDATE_URL}
         self._update_status({"checking": True, "error": None})
         release_info = None
         error = None
@@ -181,6 +189,7 @@ class UpdaterService:
                 "download_url": release_info["download_url"],
                 "download_size": release_info["download_size"],
                 "download_digest": release_info["download_digest"],
+                "manual_update_url": MANUAL_UPDATE_URL,
             }
         self._update_status({
             "update_available": False,
@@ -197,29 +206,30 @@ class UpdaterService:
             "current_version": VERSION,
             "latest_version": version_num_to_str(VERSION_NUM),
             "error": error,
+            "manual_update_url": MANUAL_UPDATE_URL,
         }
 
     def do_update(self):
         with self._download_lock:
             status = self.snapshot()
             if status["downloading"]:
-                return {"error": "已在下载更新中"}
+                return self._error_result("已在下载更新中")
             url = status.get("download_url")
             if not status.get("update_available") or not url:
-                return {"error": "没有可用的下载链接，请先检查更新"}
+                return self._error_result("没有可用的下载链接，请先检查更新")
             if not is_allowed_update_url(url):
-                return {"error": "更新下载地址不在可信来源列表中"}
+                return self._error_result("更新下载地址不在可信来源列表中")
             expected_size = int(status.get("download_size") or 0)
             expected_digest = str(status.get("download_digest") or "").lower()
             if expected_size > MAX_UPDATE_SIZE:
-                return {"error": "更新文件超过允许的大小限制"}
+                return self._error_result("更新文件超过允许的大小限制")
             if not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
-                return {"error": "发布信息缺少有效的 SHA-256，已禁止自动更新"}
+                return self._error_result("发布信息缺少有效的 SHA-256，已禁止自动更新")
             if not self._download_manager.suspend():
-                return {"error": "请先停止当前下载任务再更新"}
+                return self._error_result("请先停止当前下载任务再更新")
             if self._has_active_downloads():
                 self._download_manager.resume()
-                return {"error": "请先停止或完成任务队列再更新"}
+                return self._error_result("请先停止或完成任务队列再更新")
             self._broadcast_download_state()
             self._update_status({
                 "downloading": True,
@@ -259,10 +269,11 @@ class UpdaterService:
             self._update_status({"error": message, "downloading": False})
             self._download_manager.resume()
             self._broadcast_download_state()
-            self._log(f"[更新] {message}", "error")
+            self._log(f"[更新] {message}；手动更新：{MANUAL_UPDATE_URL}", "error")
             self._emit_event("update_progress", {
                 "percent": status["download_progress"],
                 "error": message,
+                "manual_update_url": MANUAL_UPDATE_URL,
             })
 
         def download_and_replace():
@@ -296,6 +307,7 @@ class UpdaterService:
                     target_path = os.path.join(os.path.dirname(current_exe), os.path.basename(current_exe))
                     current_pid = os.getpid()
                     error_path = os.path.join(tmp_dir, "_update_error.txt")
+                    manual_instructions = "请先退出旧程序，再下载新版 EXE 和配套依赖包；保留 settings.ini、presets.json、cookies.txt 和 download/。"
                     bat_content = f'''@echo off
 chcp 936 >nul
 echo 正在更新...
@@ -306,18 +318,24 @@ if not errorlevel 1 (
     timeout /t 1 /nobreak >nul
     goto wait
 )
-copy /y "{tmp_path}" "{target_path}" >nul
+copy /y "{tmp_path}" "{target_path}" > "{error_path}" 2>&1
 if errorlevel 1 (
-    echo 更新失败！
-    pause
+    echo 更新文件替换失败，请手动更新。 >> "{error_path}"
+    echo GitHub 手动更新：{MANUAL_UPDATE_URL} >> "{error_path}"
+    echo {manual_instructions} >> "{error_path}"
+    start "" "%SystemRoot%\\System32\\notepad.exe" "{error_path}"
     exit /b 1
 )
 echo 更新完成！正在启动新版本...
-start "" "{target_path}"
+start "" "{target_path}" > "{error_path}" 2>&1
 if errorlevel 1 (
-    echo 无法启动新版本，请手动运行："{target_path}" > "{error_path}"
+    echo 无法启动新版本，请手动运行："{target_path}" >> "{error_path}"
+    echo GitHub 手动更新：{MANUAL_UPDATE_URL} >> "{error_path}"
+    echo {manual_instructions} >> "{error_path}"
+    start "" "%SystemRoot%\\System32\\notepad.exe" "{error_path}"
     exit /b 1
 )
+del /q "{error_path}"
 del /q "{tmp_path}"
 del "%~f0"
 rmdir "{tmp_dir}"
@@ -375,7 +393,7 @@ rmdir "{tmp_dir}"
         except Exception as exc:
             message = f"无法启动更新线程: {exc}"
             fail_update(message)
-            return {"error": message}
+            return self._error_result(message)
         return {"ok": True, "message": "开始下载更新..."}
 
     def start_check_thread(self, silent=True):

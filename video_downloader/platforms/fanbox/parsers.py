@@ -105,6 +105,9 @@ def parse_post(value: dict, options: dict | None = None) -> Post:
     def add_text(text, index, block_type="p", raw=None):
         if not isinstance(text, str):
             raise FanboxError("schema_changed", "投稿文本结构变化")
+        for field in ("styles", "links"):
+            if not isinstance((raw or {}).get(field, []), list):
+                raise FanboxError("schema_changed", "段落标注结构变化")
         post.blocks.append({"type": block_type, "text": text,
                             "styles": copy.deepcopy((raw or {}).get("styles", [])),
                             "links": copy.deepcopy((raw or {}).get("links", []))})

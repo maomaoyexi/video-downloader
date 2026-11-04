@@ -92,6 +92,17 @@ def test_malformed_post_is_schema_error(change):
     assert failure.value.code=='schema_changed'
 
 
+@pytest.mark.parametrize('field',['styles','links'])
+def test_malformed_article_span_container_is_reported_by_scan(field):
+    value=post('article',{'blocks':[{'type':'p','text':'public text',field:None}]})
+    result=ScanService(FanboxClient(FakeTransport([[value]]))).scan('https://sample.fanbox.cc')
+
+    assert result['status']=='failed'
+    assert result['posts']==[]
+    assert result['errors'][0]['code']=='schema_changed'
+    assert result['errors'][0]['stage']=='post'
+
+
 def test_url_embeds_duplicate_images_and_partial_comments_resume():
     value=post('article',{'blocks':[{'type':'image','imageId':'a'},{'type':'image','imageId':'a'},
         {'type':'url_embed','urlEmbedId':'d'},{'type':'url_embed','urlEmbedId':'p'},

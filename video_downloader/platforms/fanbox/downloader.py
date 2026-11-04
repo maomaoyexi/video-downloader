@@ -100,6 +100,8 @@ class Downloader:
                 previous=json.loads(meta.read_text(encoding='utf-8'))
             except (OSError,ValueError):
                 previous={}
+            if not isinstance(previous,dict):
+                previous={}
             offset=part.stat().st_size if part.is_file() else 0
             etag=previous.get('etag','')
             if offset and (not isinstance(etag,str) or not etag.startswith('"') or previous.get('key')!=key):
@@ -216,6 +218,9 @@ class Downloader:
                 result={'status':'completed','size':part.stat().st_size,'sha256':digest_file(part),
                         'variant':asset.variant,'key':key,'path':relative,
                         'resource_path':resource_record_key(asset.url)}
+                # Transfer completion and local validation may outlive cancellation
+                # or a work lease. Keep the partial until ownership is confirmed.
+                self.gate.check()
                 # Recheck parent/link boundaries immediately before promotion.
                 target=confined(self.root,relative,create=True)
                 os.replace(part,target)

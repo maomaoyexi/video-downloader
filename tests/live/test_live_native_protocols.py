@@ -128,7 +128,7 @@ def test_withny_wait_markers_and_opaque_private_clock_cache(tmp_path):
     assert transport.json.call_count==2
     assert transport.json.call_args.kwargs['headers']['Authorization']=='Bearer credential-value-123'
     assert 'Authorization' not in metadata['http_headers']
-    assert 'credential-value-123' not in engine.private.read_text()
+    assert 'credential-value-123' not in engine.private.read_text(encoding='utf-8')
     engine.close()
     assert not engine.private.exists() and not engine.private_cache.exists()
 

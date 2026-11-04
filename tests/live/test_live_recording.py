@@ -242,6 +242,36 @@ class RecordingTests(unittest.TestCase):
         self.assertEqual(result["stop_reason"], "user")
         self.assertTrue(Path(result["report"]).exists())
 
+    def test_disk_full_journal_failure_stops_child_before_releasing_process(self):
+        runner = self.runner()
+        proc = SimpleNamespace(stdout=io.BytesIO(b'LIVE_META:{"title":"fixture"}\n'), returncode=None)
+        proc.poll = lambda: proc.returncode
+        spawned = threading.Event()
+        cleared_while_alive = []
+        runner.clear_process = lambda child: cleared_while_alive.append(child.poll() is None)
+        original_open = Path.open
+
+        def open_file(path, mode="r", *args, **kwargs):
+            if spawned.is_set() and path.is_relative_to(self.root) and any(flag in mode for flag in "wax"):
+                raise OSError(28, "fixture disk full")
+            return original_open(path, mode, *args, **kwargs)
+
+        def spawn(*args, **kwargs):
+            spawned.set()
+            return proc
+
+        def stop(child, force_kill):
+            child.returncode = 1
+            return True
+
+        with patch.object(Path, "open", open_file), patch.object(process, "spawn", side_effect=spawn), \
+             patch.object(process, "stop", side_effect=stop):
+            with self.assertRaises(OSError):
+                runner.run(["fixture"], url="fixture", platform="fixture", mode="live_edge",
+                           config={}, cancel=threading.Event())
+        self.assertIsNotNone(proc.poll(), "journal failure must not leave the recording child alive")
+        self.assertEqual(cleared_while_alive, [False])
+
     def test_exit_zero_without_media_is_never_success(self):
         runner = self.runner()
         proc = SimpleNamespace(stdout=io.BytesIO(), poll=lambda: 0, wait=lambda timeout: 0, returncode=0)
@@ -650,6 +680,36 @@ class RealMediaTests(unittest.TestCase):
                     self.assertEqual(report["conclusion"], "complete", report)
                 else:
                     self.assertNotEqual(report["conclusion"], "complete", report)
+
+    def test_primary_output_prefers_verified_part_after_recording_retry(self):
+        paths = AppPaths(self.root / "verified-primary-output")
+        paths.executable = lambda name, suffix: Path({"ffmpeg": self.ffmpeg, "ffprobe": self.ffprobe}[name])
+        runner = LiveRunner(paths, ".exe", log=Mock(), progress=Mock(), publish_process=lambda child: True,
+                            clear_process=Mock(), force_kill=Mock(), emit_event=Mock())
+        outputs = []
+
+        def spawn(command, **kwargs):
+            output = Path(command[command.index("-P") + 1]) / "recording.mp4"
+            if outputs:
+                shutil.copyfile(self.media, output)
+                code = 0
+            else:
+                output.write_bytes(b"corrupt recording fixture")
+                code = 9
+            outputs.append(output)
+            return SimpleNamespace(stdout=io.BytesIO(), poll=lambda: code,
+                                   wait=lambda timeout: code, returncode=code)
+
+        cancel = threading.Event()
+        cancel.wait = Mock(return_value=False)
+        with patch.object(process, "spawn", side_effect=spawn):
+            result = runner.run(["fixture"], url="fixture", platform="fixture", mode="live_edge",
+                                config={"LIVE_MAX_RETRIES": 1}, cancel=cancel)
+        report = json.loads(Path(result["report"]).read_text(encoding="utf-8"))
+        self.assertEqual([file["valid"] for file in report["files"]], [False, True], report)
+        self.assertEqual(result["output"], str(outputs[1]))
+        self.assertEqual(result["status"], "gaps")
+        self.assertTrue(all(output.is_file() for output in outputs))
 
     @unittest.skipUnless(os.name == "nt", "Windows console integration")
     def test_actual_hidden_console_ctrl_c_closes_media(self):

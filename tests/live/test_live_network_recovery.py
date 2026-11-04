@@ -17,6 +17,17 @@ from video_downloader.live.runner import LiveRunner
 ROOT=PROJECT_ROOT
 
 
+def verified_recovery_files(report, session):
+    # The first part is created after the fixture's monotonic beginning.
+    # A new part >=20s later cannot start before the all-endpoint 503 window.
+    # It may start during the outage and wait: valid media then requires recovery.
+    parts = session["parts"]
+    cutoff = parts[0]["started_at"] + 20
+    recovery_parts = [part for part in parts[1:] if part["started_at"] >= cutoff]
+    return [file for file in report["files"] if file["valid"] and any(
+        Path(file["path"]).is_relative_to(Path(part["directory"])) for part in recovery_parts)]
+
+
 @pytest.mark.skipif(os.environ.get('LIVE_EXTENDED_TESTS')!='1',reason='set LIVE_EXTENDED_TESTS=1 for 145-second outage acceptance')
 def test_real_live_hls_survives_90_second_complete_endpoint_outage(tmp_path):
     ffmpeg=ROOT/'dependency/ffmpeg.exe'
@@ -65,9 +76,10 @@ def test_real_live_hls_survives_90_second_complete_endpoint_outage(tmp_path):
                 config={'LIVE_MIN_FREE_MB':64,'LIVE_MAX_RETRIES':5,'LIVE_WATCHDOG_SECONDS':60},cancel=cancel)
         import json
         report=json.loads(Path(result['report']).read_text(encoding='utf8'))
+        session=json.loads(Path(result['report']).with_name('session.json').read_text(encoding='utf8'))
         assert all(hits[k]>0 for k in hits),hits
         assert report['conclusion']=='gaps',report
-        assert any(f['valid'] for f in report['files']),report
+        assert verified_recovery_files(report,session),report
         assert result['output'] and Path(result['output']).is_file()
         print('OUTAGE_90S_ACCEPTANCE',hits,report['conclusion'],[(f['duration'],f['valid']) for f in report['files']])
     finally:

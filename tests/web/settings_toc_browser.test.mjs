@@ -64,6 +64,7 @@ async function scrollTrace(direction){
   },direction);
 }
 async function clickAndTrack(target){
+  const selectedBefore=await active()===target;
   const collapsedBefore=await page.locator('#'+target).evaluate(el=>el.classList.contains('is-collapsed'));
   await page.evaluate(()=>{
     window.__tocTrace=[];
@@ -89,7 +90,7 @@ async function clickAndTrack(target){
   const trace=await page.evaluate(()=>{window.__tocObserver.disconnect();return window.__tocTrace;});
   assert.ok(trace.length>0&&trace.every(id=>id===target),`平滑跳转期间应保留所选章节 ${target}：${JSON.stringify(trace)}`);
   assert.equal(await active(),target);
-  await assertCollapsed(target,!collapsedBefore);
+  await assertCollapsed(target,selectedBefore?!collapsedBefore:false);
 }
 const collapsedKey='video-dl-settings-collapsed-sections';
 const tocToggle=id=>page.locator(`#settingsToc .settings-section-toggle[data-section="${id}"]`);
@@ -134,7 +135,7 @@ async function expandAllSections(){
 async function collapsedSelection(current='set-network'){
   await page.evaluate(current=>{
     for(const section of document.querySelectorAll('.settings-section:not(.is-collapsed)')){
-      document.querySelector(`.settings-toc-item[data-target="${section.id}"]`).click();
+      section.querySelector(':scope > .settings-section-heading').click();
     }
     const button=document.querySelector(`.settings-toc-item[data-target="${current}"]`);
     button.click();button.click();
@@ -186,14 +187,18 @@ async function pointerPosition(button,part){
 async function heldToggle(button,part,hold,label){
   await button.scrollIntoViewIfNeeded();await frames(3);
   const before=await active(),target=await button.getAttribute('data-section');
+  const isToc=await button.evaluate(el=>el.classList.contains('settings-toc-item'));
   const wasCollapsed=await page.locator('#'+target).evaluate(el=>el.classList.contains('is-collapsed'));
   const position=await pointerPosition(button,part);
   await beginPressTrace();
   await page.mouse.move(position.x,position.y);await page.mouse.down();
   await frames(2);await page.waitForTimeout(Math.max(0,hold-34));
   await page.mouse.up();await waitForClickScroll();
-  await finishPressTrace(label,[before,target]);
-  assert.equal(await active(),target);await assertCollapsed(target,!wasCollapsed);
+  const trace=await finishPressTrace(label,[before,target]);
+  const firstTarget=trace.findIndex(entry=>entry.id===target);
+  assert.ok(firstTarget>=0&&trace.slice(firstTarget).every(entry=>entry.id===target),
+    label+'选中目标后不得闪回原章节：'+JSON.stringify(trace));
+  assert.equal(await active(),target);await assertCollapsed(target,isToc&&before!==target?false:!wasCollapsed);
 }
 try{
   await page.goto('http://127.0.0.1:'+server.address().port);
@@ -236,7 +241,7 @@ try{
   await scrollAfterFold(10000,'set-advanced');
 
   // 收起后续章节，覆盖长选项收缩将 scrollTop 压到新页面底部的边界。
-  await tocToggle('set-tasks').click();await tocToggle('set-advanced').click();
+  await headerToggle('set-tasks').click();await headerToggle('set-advanced').click();
   await waitForClickScroll();await manualTop();
   await occasionalSummary.evaluate(summary=>{
     const pad=document.querySelector('.pad');
@@ -310,8 +315,11 @@ try{
   await collapsedSelection();
   await beginPressTrace();
   for(const target of ['set-output','set-live']){
+    assert.notEqual(await active(),target,'快速切换应从未选中的目录开始');
+    await assertCollapsed(target,true);
     const position=await pointerPosition(tocToggle(target),'span');
     await page.mouse.move(position.x,position.y);await page.mouse.down();await frames(2);await page.mouse.up();
+    await assertCollapsed(target,false);
   }
   await waitForClickScroll();
   await finishPressTrace('快速切换不同目录',['set-network','set-output','set-live']);
@@ -321,11 +329,35 @@ try{
   await page.keyboard.down('Space');await frames(2);await page.waitForTimeout(100);await page.keyboard.up('Space');
   await waitForClickScroll();await finishPressTrace('按住空格激活当前目录',['set-network']);
   await assertCollapsed('set-network',false);
+  for(const key of ['Enter','Space']){
+    for(const collapsed of [true,false]){
+      if(collapsed)await collapsedSelection();else await expandAllSections();
+      const target='set-output',button=tocToggle(target);
+      await button.focus();await frames(3);
+      const before=await active();
+      assert.notEqual(before,target,'键盘首次激活应从未选中的目录开始');
+      await assertCollapsed(target,collapsed);
+      await beginPressTrace();
+      await page.keyboard.down(key);await frames(2);await page.waitForTimeout(100);
+      await page.keyboard.up(key);await waitForClickScroll();
+      const label=`未选中${collapsed?'已收起':'已展开'}目录 ${key} 首次定位`;
+      const trace=await finishPressTrace(label,[before,target]);
+      const firstTarget=trace.findIndex(entry=>entry.id===target);
+      assert.ok(firstTarget>=0&&trace.slice(firstTarget).every(entry=>entry.id===target),
+        label+'选中目标后不得闪回原章节：'+JSON.stringify(trace));
+      assert.equal(await active(),target);
+      await assertCollapsed(target,false);
+    }
+  }
   await expandAllSections();
   const outputToc=page.locator('.settings-toc-item[data-target="set-output"]');
+  assert.notEqual(await active(),'set-output','鼠标首次激活应从未选中的目录开始');
+  await assertCollapsed('set-output',false);
+  await heldToggle(outputToc,'span',100,'未选中已展开目录按住100ms首次定位');
+  await assertCollapsed('set-output',false);
   await clickPart(outputToc,'span');
   assert.equal(await page.locator('#set-output').evaluate(el=>el.classList.contains('is-collapsed')),true,
-    '点击目录文字本身应收起已经展开的配置，而不只是导航');
+    '已经选中后再次点击目录文字应收起配置');
   await clickPart(outputToc,'span');
   assert.equal(await page.locator('#set-output').evaluate(el=>el.classList.contains('is-collapsed')),false,
     '再次点击目录文字应展开配置');
@@ -349,7 +381,7 @@ try{
   await page.locator('#s_resolution').selectOption('720');await assertCollapsed('set-output',false);
   await manualTop();
   assert.equal(await page.locator('#settingsToc .settings-section-toggle').count(),10,
-    '左侧每个目录整行都应为展开/收起按钮');
+    '左侧每个目录整行都应为可定位并切换当前章节的按钮');
   assert.equal(await page.locator('.settings-toc-row').count(),0,'目录应直接使用整行按钮，不保留旧小箭头wrapper');
   assert.equal(await page.locator('#settingsToc .settings-toc-item>.settings-section-chevron').count(),10);
   const sample=await scrollTrace('down');
@@ -435,11 +467,15 @@ try{
   assert.equal(await page.locator('.settings-toc-item button').count(),0,'目录整行按钮不应嵌套其他按钮');
   for(const id of sectionIds){
     await assertCollapsed(id,false);
+    if(await active()!==id){
+      await tocToggle(id).click();await assertCollapsed(id,false);
+      assert.equal(await active(),id,'首次点击未选中目录应只选中并保持展开');
+    }
     await tocToggle(id).click();await assertCollapsed(id,true);
     await headerToggle(id).click();await assertCollapsed(id,false);
   }
   await page.locator('#s_resolution').selectOption('720');
-  await tocToggle('set-output').click();await assertCollapsed('set-output',true);
+  await headerToggle('set-output').click();await assertCollapsed('set-output',true);
   assert.equal(await page.locator('#s_resolution').isVisible(),false);
   assert.equal(await page.evaluate(()=>collectCfg().RESOLUTION),'720','折叠不能清空设置');
   await headerToggle('set-output').click();await assertCollapsed('set-output',false);
@@ -449,7 +485,7 @@ try{
   await clickAndTrack('set-output');await assertCollapsed('set-output',false);
   assert.equal(await page.locator('#s_resolution').inputValue(),'720');
 
-  await tocToggle('set-output').click();await tocToggle('set-cookie').click();
+  await headerToggle('set-output').click();await headerToggle('set-cookie').click();
   assert.ok(await page.evaluate(key=>localStorage.getItem(key)?.includes('set-output')&&localStorage.getItem(key)?.includes('set-cookie'),collapsedKey));
   await page.reload();
   await page.locator('[data-fanbox-option="fan_cards.scope"]').waitFor({state:'attached'});
@@ -477,7 +513,7 @@ try{
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>document.documentElement.dataset.theme='light');
   for(const id of ['set-output','set-live']){
-    if(!await page.locator('#'+id).evaluate(el=>el.classList.contains('is-collapsed')))await tocToggle(id).click();
+    if(!await page.locator('#'+id).evaluate(el=>el.classList.contains('is-collapsed')))await headerToggle(id).click();
   }
   await page.locator('.pad').evaluate(pad=>{
     pad.dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:-1}));
@@ -497,7 +533,7 @@ try{
   for(const id of sectionIds)await assertCollapsed(id,false);
   assert.equal(await page.locator('#presetSaveRow').isVisible(),false);
   assert.deepEqual(errors,[]);
-  console.log('通过：内部单次下载选项鼠标/Enter/Space/连续点击及375/1100/1440px折叠保持所属章节，真实双向滚轮与Tab跨章恢复目录切换；目录稳定滚动；目录文字/数字/空白与标题文字/横线/留白整行切换；10章状态、键盘、值保留、刷新记忆、紧凑目录与375px布局；无 JS 错误');
+  console.log('通过：内部单次下载选项鼠标/Enter/Space/连续点击及375/1100/1440px折叠保持所属章节，真实双向滚轮与Tab跨章恢复目录切换；目录稳定滚动；未选中目录鼠标/键盘首次定位并展开、当前目录文字/数字/空白再次切换、标题文字/横线/留白整行切换；10章状态、键盘、值保留、刷新记忆、紧凑目录与375px布局；无 JS 错误');
 }finally{
   server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await browser.close();
 }

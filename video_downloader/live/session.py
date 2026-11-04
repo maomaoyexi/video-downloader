@@ -154,6 +154,8 @@ def recover_interrupted(root):
     for path in Path(root).glob("*/session.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                continue
             if data.get("state") != "recording" or _process_exists(data.get("owner_pid")):
                 continue
             files = [{"path": str(file), "size": file.stat().st_size, "valid": False,
@@ -209,6 +211,8 @@ class RecordingStore:
         for path in sorted(self.root.glob("*/session.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    continue
                 parts = data.get("parts", [])
                 result.append({"job_id": data["job_id"], "engine": parts[-1]["engine"] if parts else "",
                                "part": len(parts), "report_dir": str(path.parent),
