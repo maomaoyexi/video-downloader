@@ -1,6 +1,6 @@
 ============================================================
          多平台视频下载工具 Cookie 配置指南
-         对应版本：v2.7.0 WebUI（Windows EXE／源码运行版）
+         对应版本：v2.8.1 WebUI（Windows EXE／源码运行版）
 ============================================================
 
 文件存放：cookies.txt 需与主程序放在同一目录
@@ -53,7 +53,7 @@
 
 4. 放置文件
    - 将导出的文件重命名为：cookies.txt
-   - 放到与 video-downloader-v2.8.0-GUI.exe 同一目录（源码版与 视频下载工具v2.8.0-GUI.py 同目录）
+   - 放到与 video-downloader-v2.8.1-GUI.exe 同一目录（源码版与 视频下载工具v2.8.1-GUI.py 同目录）
    - 不要放入子文件夹
 
 5. 完成
@@ -150,7 +150,7 @@
 配置Cookie后无法下载时，按此清单检查：
 
 □ 文件名为 cookies.txt（不是cookies(1).txt、cookies.txt.txt等）
-□ Cookie 文件位于配置指定的位置；默认与 EXE 或 视频下载工具v2.8.0-GUI.py 同目录
+□ Cookie 文件位于配置指定的位置；默认与 EXE 或 视频下载工具v2.8.1-GUI.py 同目录
 □ 导出格式为Netscape格式（不是JSON、CRT等）
 □ 文件首行为 # Netscape HTTP Cookie File
 □ 每条 Cookie 为 7 个字段，以实际 TAB 分隔，不是空格或字面量 \t
@@ -168,7 +168,7 @@ FANBOX：
 - 匿名访问不能绕过登录或赞助权限；受限帖公开封面不等于正文可访问。
 - 当前源码的 --fanbox-scan 与 --fanbox-download 均读取 FANBOX_ANONYMOUS、FANBOX_COOKIE_FILE 和 USE_COOKIES；WebUI 原有设置读取行为保持一致。
 - 显式 --anonymous 或 --cookies PATH 优先于保存设置，只影响本次命令；两者不能同时指定。未指定凭据路径时使用工具目录 cookies.txt，相对路径以工具目录为基准。
-- 独立扫描 CLI 忽略保存设置的问题已在当前源码修复；本轮没有替换已发布的 v2.7.0 EXE，旧附件的规避方式仍是显式 --anonymous。修复记录见 docs/fanbox-six-fixes-validation.md。
+- 独立扫描与归档 CLI 从 v2.7.1 正式版起沿用保存的匿名及 Cookie 设置，v2.8.1 继续保留；原 v2.7.0 附件保持不变，旧版可显式使用 --anonymous，或按本版说明升级。历史修复记录见 docs/fanbox-six-fixes-validation.md。
 
 Rplay：
 - 先在 Firefox 登录，再在设置中选择「Rplay 登录来源 → Firefox」，按需填写「Rplay Firefox 配置」。

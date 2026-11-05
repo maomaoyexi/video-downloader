@@ -57,7 +57,7 @@ dist/
 release-output/
 release-assets/
 *.spec
-!视频下载工具v2.8.0-GUI.spec
+!视频下载工具v2.8.1-GUI.spec
 
 # 下载/安装的依赖仅保留根目录的许可证；源码插件和锁文件在 resource 中维护。
 /dependency/*

@@ -153,7 +153,9 @@ async function verifyAboutReleaseNotes(){
   assert.equal(await page.locator('#aboutReleaseNotes .about-release-summary>li').count(),4);
   assert.equal(await details.evaluate(el=>el.open),false,'详细更新默认收起');
   await details.locator('summary').click();
-  assert.equal(await details.locator('ol>li').count(),6,'本版六类更新应完整显示');
+  assert.equal(await details.locator('ol>li').count(),6,'本版六项修复与维护应完整显示');
+  const releaseText=await details.textContent();
+  for(const text of ['最高百分比','SSL 证书策略文件','默认 TLS 上下文','4294967295','具体原因未确认'])assert.ok(releaseText.includes(text),`本版详情缺少：${text}`);
   assert.equal(await details.locator('.about-release-body').isVisible(),true);
   await details.locator('summary').focus();await page.keyboard.press('Space');
   assert.equal(await details.evaluate(el=>el.open),false);
@@ -286,7 +288,7 @@ async function verifyHelpGuide(){
   assert.equal(await page.locator('#help-cookies .help-topic-body').isVisible(),false);
   await page.locator('#help-errors>summary').click();
   const errorEntries=page.locator('#help-errors .help-error-entry');
-  assert.equal(await errorEntries.count(),18,'常见报错应按来源分组呈现');
+  assert.equal(await errorEntries.count(),21,'常见报错应按来源分组呈现');
   const errorFields=await errorEntries.evaluateAll(items=>items.map(el=>({
     labels:[...el.querySelectorAll('dt')].map(node=>node.textContent),
     values:[...el.querySelectorAll('dd')].map(node=>node.textContent.trim())
@@ -294,6 +296,16 @@ async function verifyHelpGuide(){
   assert.ok(errorFields.every(item=>item.labels.join('|')==='含义|常见原因|处理步骤|重试建议'&&
     item.values.length===4&&item.values.every(Boolean)),'每条错误均须完整提供四项解释');
   assert.equal(await page.locator('#help-errors .help-error-entry[open]').count(),0,'错误细节默认收起');
+  for(const id of ['help-error-exit-minus-one','help-error-pyi-temp','help-error-live-tls-runtime']){
+    const summary=page.locator('#'+id+'>summary');
+    await summary.click();
+    assert.equal(await page.locator('#'+id+' .help-error-details').isVisible(),true);
+    await summary.focus();await page.keyboard.press('Space');
+    assert.equal(await page.locator('#'+id).evaluate(el=>el.open),false);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#'+id).evaluate(el=>el.open),true);
+    await summary.click();
+  }
   assert.equal(await page.locator('#help-error-ffmpeg-exit .help-error-details').isVisible(),false);
   const ffmpegSummary=page.locator('#help-error-ffmpeg-exit>summary');
   await ffmpegSummary.locator('.help-error-name').click();
@@ -360,6 +372,15 @@ async function verifyHelpGuide(){
   await page.setViewportSize({width:375,height:900});
   await page.locator('#help-error-ffmpeg-exit').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
   await page.screenshot({path:path.resolve(artifactDir,'使用帮助-错误速查-窄屏.png'),animations:'disabled'});
+  for(const id of ['help-error-exit-minus-one','help-error-pyi-temp','help-error-live-tls-runtime']){
+    const entry=page.locator('#'+id);
+    await entry.locator('summary').click();
+    assert.equal(await entry.locator('.help-error-details').isVisible(),true);
+    assert.equal(await entry.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'新增错误条目在窄屏中不应横向溢出');
+    await entry.evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
+    await page.screenshot({path:path.resolve(artifactDir,id+'-窄屏.png'),animations:'disabled'});
+    await entry.locator('summary').click();
+  }
   await page.setViewportSize({width:1440,height:1000});
   await page.locator('#help-errors>summary').click();
   await page.locator('#help-troubleshooting').evaluate(el=>el.scrollIntoView({behavior:'instant',block:'start'}));
@@ -372,7 +393,7 @@ async function verifyHelpGuide(){
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>document.documentElement.dataset.theme='light');
   await page.locator('.ni[data-page="download"]').click();
-  console.log('通过：帮助页3组17主题、18条分组错误速查及四项解释、默认折叠/整行与键盘切换、全部展开/收起、分类定位、刷新默认状态、明暗主题和5种尺寸；参数/工具/FANBOX/重下/弹幕/反馈说明完整');
+  console.log('通过：帮助页3组17主题、21条分组错误速查及四项解释，含退出值、启动器临时目录与SSL漏包；默认折叠/整行与键盘切换、全部展开/收起、分类定位、刷新默认状态、明暗主题和5种尺寸；参数/工具/FANBOX/重下/弹幕/反馈说明完整');
 }
 try{
   await page.emulateMedia({reducedMotion:'no-preference'});

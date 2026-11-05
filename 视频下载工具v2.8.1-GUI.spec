@@ -1,4 +1,5 @@
 from pathlib import Path
+import ssl
 import sys
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_all
 
@@ -6,7 +7,7 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 project_root = Path(SPECPATH)
 sys.path.insert(0, str(project_root / "dependency" / "live-python"))
 sys.path.insert(0, str(project_root / "dependency" / "fanbox-python"))
-entry_script = project_root / "视频下载工具v2.8.0-GUI.py"
+entry_script = project_root / "视频下载工具v2.8.1-GUI.py"
 resource_root = project_root / "resource"
 plugin_root = resource_root / "yt-dlp-plugins"
 packaging_deps = project_root / "build" / "packaging-deps"
@@ -28,6 +29,10 @@ live_vendor = project_root / "dependency" / "live-python"
 for metadata in live_vendor.glob("*.dist-info"):
     datas.append((str(metadata), "licenses/" + metadata.name))
 datas += collect_data_files("certifi")
+# 构建解释器的 SSL 模块可能依赖配套证书策略；冻结后仍需保留原校验。
+ssl_policy = Path(ssl.__file__).with_name("codex-rejected-cas.pem")
+if ssl_policy.is_file():
+    datas.append((str(ssl_policy), "."))
 fanbox_datas, fanbox_binaries, fanbox_hidden = collect_all("curl_cffi")
 timezone_datas, _, timezone_hidden = collect_all("tzdata")
 pillow_datas, pillow_binaries, pillow_hidden = collect_all("PIL")
@@ -61,7 +66,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="视频下载工具v2.8.0-GUI",
+    name="视频下载工具v2.8.1-GUI",
     icon=str(resource_root / "icons" / "app-icon.ico"),
     debug=False,
     bootloader_ignore_signals=False,

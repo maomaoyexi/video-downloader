@@ -31943,7 +31943,7 @@
     }
   },
   "full_asset": {
-    "name": "video-downloader-v2.8.0-dependencies.zip",
+    "name": "video-downloader-v2.8.1-dependencies.zip",
     "sha256": null,
     "size": null
   },
@@ -40134,8 +40134,8 @@
       "source_only": true
     }
   ],
-  "release_tag": "v2.8.0",
+  "release_tag": "v2.8.1",
   "revision": "aced93059ff31a0a601105f559e5368e8f4a677147245dac906c0f1134eefcf7",
   "schema_version": 1,
-  "version": "2.8.0"
+  "version": "2.8.1"
 }

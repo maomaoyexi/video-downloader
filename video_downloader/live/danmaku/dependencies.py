@@ -39,7 +39,16 @@ def health():
 def self_check():
     """Source/frozen release smoke: exercise native protocol and serializer APIs."""
     result = health()
-    if not all(result.values()):
+    libraries_available = all(result.values())
+    try:
+        import ssl
+
+        context = ssl.create_default_context()
+        result["tls_context"] = bool(context.check_hostname and context.verify_mode == ssl.CERT_REQUIRED)
+    except (ImportError, OSError, RuntimeError, ValueError):
+        # CA 文件存在仍不代表冻结后的默认 TLS 上下文可以安全初始化。
+        result["tls_context"] = False
+    if not libraries_available:
         return result
     proto = library("ndgr_client.proto.dwango.nicolive.chat.service.edge.payload_pb2")
     message = proto.ChunkedMessage()

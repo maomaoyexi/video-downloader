@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-多平台视频下载工具 v2.8.0 WebUI版
+多平台视频下载工具 v2.8.1 WebUI版
 支持 YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter / Rplay / FANBOX
 提供已接入平台的直播录制、任务队列、FANBOX 内容归档与 Withny 已授权历史存档 HAR 保存功能
 各平台的列表、认证、续传与可访问内容范围不同，下载以账号已有权限为准

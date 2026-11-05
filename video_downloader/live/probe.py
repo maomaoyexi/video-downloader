@@ -103,6 +103,9 @@ def _http_json(url: str, headers: Mapping[str, str] | None = None, timeout: floa
         retryable = exc.code in (408, 425, 429, 500, 502, 503, 504)
         status = LiveStatus.PRIVATE if exc.code in (401, 403) else LiveStatus.ERROR
         raise ProbeError(f"HTTP {exc.code}: {detail}", status=status, retryable=retryable) from None
+    except FileNotFoundError:
+        raise ProbeError("本地运行文件缺失，无法完成直播状态检查；请检查主程序及证书配置",
+                         retryable=False) from None
     except (URLError, TimeoutError, OSError) as exc:
         raise ProbeError(f"网络错误: {exc}", retryable=True) from None
     try:

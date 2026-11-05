@@ -6,9 +6,10 @@ import io
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from video_downloader.core.constants import VERSION
 
 
-MAIN_SCRIPT = PROJECT_ROOT / "视频下载工具v2.8.0-GUI.py"
+MAIN_SCRIPT = PROJECT_ROOT / f"视频下载工具{VERSION.split()[0]}-GUI.py"
 
 
 class MainEntrypointTests(unittest.TestCase):

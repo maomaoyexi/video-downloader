@@ -81,6 +81,7 @@ class WebPageTests(unittest.TestCase):
 
     def test_current_attribution_preserves_v271_history(self):
         from pathlib import Path
+        from video_downloader.core.constants import VERSION
         root = Path(PROJECT_ROOT)
         statement = "v2.7.1 的全部更新由 maomaoyexi 完成。"
         for name in ("CHANGELOG.md", "CREDITS.txt"):
@@ -89,7 +90,11 @@ class WebPageTests(unittest.TestCase):
             public_document = (root / name).read_text(encoding="utf-8")
             self.assertNotIn(statement, public_document, name)
             self.assertNotIn("**v2.7.1 全部更新**", public_document, name)
-            self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| v2\.8\.0 ", name)
+            self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| \S.+ \|", name)
+            if name == "README.md":
+                self.assertRegex(public_document, r"\| \[.*maomaoyexi.*\]\(https://github\.com/maomaoyexi\) \| " + re.escape(VERSION.split()[0]) + " ", name)
+            else:
+                self.assertTrue(public_document.startswith("# " + VERSION + "\n"), name)
         html = (root / "resource/templates/index.html").read_text(encoding="utf-8")
         author = re.search(r'id="aboutReleaseAuthor">(.*?)</p>', html, re.S)
         self.assertIsNotNone(author)

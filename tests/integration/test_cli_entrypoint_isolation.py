@@ -5,9 +5,10 @@ import sys
 import pytest
 
 from tests.helpers import PROJECT_ROOT
+from video_downloader.core.constants import VERSION
 
 
-ENTRY = PROJECT_ROOT / "视频下载工具v2.8.0-GUI.py"
+ENTRY = PROJECT_ROOT / f"视频下载工具{VERSION.split()[0]}-GUI.py"
 CLI_RUNNER = """
 import importlib.abc
 import runpy

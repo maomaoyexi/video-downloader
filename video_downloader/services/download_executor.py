@@ -25,6 +25,23 @@ _PROXY_ENV_NAMES = {
 }
 
 
+class _DownloadProgress:
+    """稳定当前文件、当前音视频阶段的估算百分比；每个子进程独立使用。"""
+
+    def __init__(self):
+        self._scope = None
+        self._percent = 0
+
+    def update(self, percent, output_path, stage):
+        scope = (output_path, stage)
+        if scope != self._scope:
+            self._scope = scope
+            self._percent = percent
+        else:
+            self._percent = max(self._percent, percent)
+        return self._percent
+
+
 def _win_startup_info():
     """获取 Windows 下隐藏子进程窗口的启动信息。
 
@@ -1143,6 +1160,7 @@ class DownloadExecutor:
                 self.kill_process_tree(proc)
                 return
             line_q, read_done = self._start_reader(proc)
+            download_progress = _DownloadProgress()
             ffmpeg_size = ""
             ffmpeg_speed = ""
             password_required = False
@@ -1217,12 +1235,15 @@ class DownloadExecutor:
                     video_title = os.path.basename(raw_path)
                     video_title = re.sub(r"\s*\[[a-zA-Z0-9_-]{6,}\]\.\w+$", "", video_title)
 
-                progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
+                # 文件名、合并路径及诊断文字中的百分号不是下载进度。
+                progress_match = None if title_match or is_error or is_warning else re.search(
+                    r"(\d+(?:\.\d+)?)%", line)
                 if progress_match:
                     current_stage = self._media_stage_from_line(line, current_stage)
                     speed, eta = self._progress_metrics_from_line(line)
                     self._update_progress(
-                        float(progress_match.group(1)) / 100,
+                        download_progress.update(
+                            float(progress_match.group(1)) / 100, output_path, current_stage),
                         speed=speed,
                         eta=eta,
                         stage=current_stage,
@@ -1696,6 +1717,7 @@ class DownloadExecutor:
                             self.kill_process_tree(proc)
                             break
                         line_q, read_done = self._start_reader(proc)
+                        download_progress = _DownloadProgress()
                         # 点播字节量日志按时间节流；直播时限和心跳由 LiveRunner 处理。
                         batch_size = ""
                         batch_speed = ""
@@ -1765,7 +1787,8 @@ class DownloadExecutor:
                             if path_match:
                                 output_path = path_match.group(1).strip().strip('"')
                                 self._log(f"  → {os.path.basename(output_path)}", "info")
-                            progress_match = re.search(r"(\d+(?:\.\d+)?)%", line)
+                            progress_match = None if path_match or is_error or "WARNING" in line else re.search(
+                                r"(\d+(?:\.\d+)?)%", line)
                             ffmpeg_progress = (
                                 use_ffmpeg_for_hls
                                 and any(value in line for value in ["time=", "bitrate=", "speed=", "fps="])
@@ -1774,8 +1797,9 @@ class DownloadExecutor:
                             if progress_match:
                                 # 批量统计由下方计数器单独展示；主进度条只反映
                                 # 当前这一条视频/音频流，切到下一条时从 0 重新开始。
-                                current_progress = float(progress_match.group(1)) / 100
                                 current_stage = self._media_stage_from_line(line, current_stage)
+                                current_progress = download_progress.update(
+                                    float(progress_match.group(1)) / 100, output_path, current_stage)
                                 speed, eta = self._progress_metrics_from_line(line)
                                 self._update_progress(current_progress, f"批量下载 {index}/{len(urls)}",
                                     speed=speed,

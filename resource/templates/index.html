@@ -878,6 +878,33 @@
                   </section>
                   <section class="help-error-group">
                     <h4>下载器与本地文件</h4>
+                    <details class="help-error-entry" id="help-error-exit-minus-one">
+                      <summary><span class="help-error-label"><span class="help-error-code">4294967295</span><span class="help-error-name">进程退出值，需结合前文</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>Windows 可能显示的 32 位无符号退出值，按有符号整数解释为 -1；不是 HTTP 429。</dd></div>
+                        <div><dt>常见原因</dt><dd>需先确认产生该值的下载器、启动器或外部工具；不能仅凭数字认定临时目录故障、限流或登录失效。</dd></div>
+                        <div><dt>处理步骤</dt><dd>保留首次具体错误及前后日志；若同时出现下方 PyInstaller 提示，再按临时目录条目检查。</dd></div>
+                        <div><dt>重试建议</dt><dd>结合具体错误决定是否重试，不按这个数字盲目换 Cookie 或清空配置。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-pyi-temp">
+                      <summary><span class="help-error-label"><span class="help-error-code">Could not create temporary directory</span><span class="help-error-name">启动器无法创建临时目录</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>PyInstaller 无法创建解包运行所需的临时目录，该进程尚未正常启动。</dd></div>
+                        <div><dt>常见原因</dt><dd>目录不存在或不可写、空间不足、实际拦截记录等均需现场核对，不能只凭最终退出值定因。</dd></div>
+                        <div><dt>处理步骤</dt><dd>检查 %TEMP% 和 %TMP% 能否打开及新建测试文件夹，核对相关磁盘空间与安全软件记录；保留配置和下载数据。</dd></div>
+                        <div><dt>重试建议</dt><dd>偶发时可重试一次；重试恢复后具体原因仍未确认，持续失败再保留首次错误和发生时间排查。</dd></div>
+                      </dl>
+                    </details>
+                    <details class="help-error-entry" id="help-error-live-tls-runtime">
+                      <summary><span class="help-error-label"><span class="help-error-code">No such file or directory（直播预检查）</span><span class="help-error-name">v2.8.0 EXE 的 SSL 资源遗漏</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+                      <dl class="help-error-details">
+                        <div><dt>含义</dt><dd>已在 v2.8.0 正式 EXE 确认：直播预检查初始化 HTTPS 时缺少运行库所需的 SSL 证书策略文件。</dd></div>
+                        <div><dt>常见原因</dt><dd>该正式包遗漏内嵌资源，与上方启动器创建临时目录失败属于不同问题，不能据此判断未登录。</dd></div>
+                        <div><dt>处理步骤</dt><dd>v2.8.1 正式 EXE 已补齐 SSL 资源并加强 TLS 自检，请升级主程序和同版依赖；v2.8.0 旧附件保持原样，更新外置依赖或换 Cookie 不能补齐此内嵌文件。</dd></div>
+                        <div><dt>重试建议</dt><dd>关闭证书验证不能作为解决办法；现有正式附件不会自动改变，可先按 README 使用当前源码。</dd></div>
+                      </dl>
+                    </details>
                     <details class="help-error-entry" id="help-error-ytdlp-exit-1">
                       <summary><span class="help-error-label"><span class="help-error-code">yt-dlp 退出码 1</span><span class="help-error-name">下载器通用失败</span></span><svg class="ico s14 help-error-chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
                       <dl class="help-error-details">
@@ -1089,25 +1116,25 @@
             </div>
 
             <section class="sect" id="aboutReleaseNotes" aria-labelledby="aboutReleaseTitle">
-              <div class="sh"><b id="aboutReleaseTitle">v2.8.0 本版更新</b><span class="rule"></span></div>
+              <div class="sh"><b id="aboutReleaseTitle">v2.8.1 本版更新</b><span class="rule"></span></div>
               <p class="notice" id="aboutReleaseAuthor">本版功能与维护：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">maomaoyexi</a>。</p>
               <ul class="about-release-summary">
-                <li>新增依赖缺失检测和完整配套包更新，保留备份、取消、恢复及手动入口。</li>
-                <li>自动更新失败时可重试或前往 GitHub 手动更新。</li>
-                <li>修复任务停止、音频结果、异常数据恢复与设置状态问题。</li>
-                <li>EXE 使用统一图标，清理失效代码并保留旧配置和接口兼容。</li>
+                <li>修复总量估算变化造成的下载进度小幅回退，速度和剩余时间继续刷新。</li>
+                <li>补齐 EXE 内嵌 SSL 资源，修复 B 站直播预检查的本地缺文件错误。</li>
+                <li>加强默认 TLS 初始化自检，保留主机名与证书验证。</li>
+                <li>错误速查补充通用退出值、启动器临时目录失败及 SSL 资源排查。</li>
               </ul>
               <details class="about-release-details" id="aboutReleaseDetails">
-                <summary>查看 v2.8.0 详细更新</summary>
+                <summary>查看 v2.8.1 详细更新</summary>
                 <div class="dsec about-release-body">
-                  <h4>本版六类更新</h4>
+                  <h4>本版修复与维护</h4>
                   <ol>
-                    <li>依赖窗口只检测托管外置文件是否缺失；用户确认后下载同版完整配套包，校验后备份和替换，默认保留自行升级的 yt-dlp。</li>
-                    <li>主程序与依赖更新失败均保留 GitHub 官方手动入口；依赖维护支持取消、失败恢复和未完成事务提示。</li>
-                    <li>修复启动过程中停止、取消或启动失败后的占用清理；停止、命令查询及启动交接期间的归档确认跟随实际活动执行器。</li>
-                    <li>音频提取失败保留视频并按失败记录；损坏的直播会话、历史条目及磁盘或通知异常不再阻断正常清理。</li>
-                    <li>FANBOX 校验续传元数据与文本标注结构，最终文件发布前复核取消和租约所有权，保留既有权限及公开封面规则。</li>
-                    <li>修复设置目录误折叠、Withny 初始和重连按钮状态及依赖窗口初始化；CLI 提前分流，移除无效日志控件与旧直播死分支。</li>
+                    <li>同一文件、同一音视频下载阶段保持已显示的最高百分比；总量重新估算时仍更新速度和剩余时间，不改变实际下载字节。</li>
+                    <li>切换文件、音视频阶段、批量中的下一链接或新进程重试时重置进度；不同任务保持隔离，不把文件名或错误文本中的百分号当作进度。</li>
+                    <li>正式 EXE 收集构建解释器所需的原始 SSL 证书策略文件，解决 v2.8.0 直播预检查初始化 HTTPS 时的本地缺文件错误。</li>
+                    <li>运行自检实际初始化默认 TLS 上下文，确认主机名与证书验证开启；本地运行文件缺失不再按网络故障重试。</li>
+                    <li>帮助页与完整手册分别说明 4294967295 通用退出值、PyInstaller 临时目录失败及 SSL 资源遗漏，并保留原有折叠和键盘操作。</li>
+                    <li>同步安装、升级、FAQ 和 B 站专项说明；临时目录报错后重试恢复仅是已观察现象，具体原因未确认，不列为程序已修复问题。</li>
                   </ol>
                   <h4>兼容与说明</h4>
                   <p>EXE 图标与页面品牌标识一致。旧配置、预设及兼容接口保留；直播依赖 JSON 锁与手动安装清单由维护脚本同步。缺失检测不代表文件内容或平台可用性已验证。</p>
@@ -1126,7 +1153,7 @@
                   <tbody>
                     <tr id="creditV271">
                       <td><a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy（@maomaoyexi）</a></td>
-                      <td>v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、<code>.ytdl</code> 清理、合并适配、测试和文档</td>
+                      <td>v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、<code>.ytdl</code> 清理、合并适配、测试和文档</td>
                     </tr>
                     <tr>
                       <td><a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">DarkKandaoMaster（强壮的砍刀）</a></td>

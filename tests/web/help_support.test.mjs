@@ -93,6 +93,43 @@ test('help attributes the six FANBOX fixes to the published release',()=>{
   assert.ok(!fixes.includes('查看效果请使用当前修复版入口'));
   assert.ok(!fixes.includes('当前修复版源码已处理'));
 });
+
+test('exit 4294967295 is distinct from HTTP 429 and does not invent a cause',()=>{
+  const entry=helpTopic('help-error-exit-minus-one');
+  assert.ok(entry.includes('4294967295'));
+  assert.ok(entry.includes('-1'));
+  assert.match(entry,/不是 HTTP 429/);
+  assert.match(entry,/不能.*数字.*临时目录/);
+});
+
+test('temporary extraction errors explain checks without claiming a fix',()=>{
+  const entry=helpTopic('help-error-pyi-temp');
+  assert.ok(entry.includes('Could not create temporary directory'));
+  assert.ok(entry.includes('%TEMP%')&&entry.includes('%TMP%'));
+  assert.ok(entry.includes('空间'));
+  assert.match(entry,/重试恢复.*原因.*未确认/);
+  assert.ok(!entry.includes('已修复'));
+});
+
+test('live TLS packaging error directs users from affected exe to fixed release',()=>{
+  const entry=helpTopic('help-error-live-tls-runtime');
+  assert.ok(entry.includes('No such file or directory'));
+  assert.ok(entry.includes('v2.8.0'));
+  assert.match(entry,/v2\.8\.1.*正式 EXE.*补齐/);
+  assert.match(entry,/v2\.8\.0.*旧附件.*原样/);
+  assert.match(entry,/关闭证书验证.*不能/);
+});
+
+test('error manual and FAQ cover bootloader failure without equating all exit codes',()=>{
+  const manual=fs.readFileSync('docs/错误码.txt','utf8');
+  const faq=fs.readFileSync('docs/常见问题答疑.txt','utf8');
+  for(const text of [manual,faq]){
+    assert.ok(text.includes('4294967295'));
+    assert.ok(text.includes('Could not create temporary directory'));
+    assert.ok(text.includes('不是 HTTP 429'));
+  }
+  assert.match(manual,/单独.*4294967295.*不能.*临时目录/);
+});
 test('unmatched error guidance does not pretend to classify the error',()=>{
   const missing=template.match(/id="helpMissingTitle"[\s\S]*?<p>([\s\S]*?)<\/p>/);
   assert.ok(missing);
