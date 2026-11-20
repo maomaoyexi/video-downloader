@@ -1,8 +1,11 @@
+import io
+import json
 import tempfile
 import threading
 import unittest
 from queue import Queue
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from video_downloader.services.download_executor import DownloadExecutor
@@ -91,6 +94,39 @@ class DownloadExecutorTests(unittest.TestCase):
             self.assertEqual(result, {"ok": True, "cancelled": True})
             callbacks["pick_withny_archive"].assert_called_once_with()
 
+    def test_withny_archive_preserves_a_file_created_while_downloading(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "ffmpeg.exe").touch()
+            har = root / "capture.har"
+            har.write_text(json.dumps({"log": {"entries": [
+                {"request": {"url": "https://www.withny.fun/user/archives/7ee288a0-ed22-4930-bfd2-3a440517e784"}},
+                {"request": {"url": "https://media.example/media.m3u8"},
+                 "response": {"status": 200, "content": {"text": "#EXTM3U\n#EXTINF:5,\npart.ts"}}},
+            ]}}), encoding="utf-8")
+            output = root / "video.mp4"
+            executor, callbacks = create_executor(root)
+            callbacks["pick_withny_archive"].return_value = {
+                "ok": True, "har_path": str(har), "output_path": str(output),
+            }
+
+            def finish_download(command, **_):
+                Path(command[-1]).write_bytes(b"new download")
+                output.write_bytes(b"another task's file")
+                return CompletedProcess()
+
+            done = threading.Event()
+            done.set()
+            with patch.object(executor, "_start_reader", return_value=(Queue(), done)), \
+                    patch("video_downloader.services.download_executor.subprocess.Popen", side_effect=finish_download), \
+                    patch("video_downloader.services.download_executor.threading.Thread", DirectThread):
+                self.assertTrue(executor.start_withny_archive()["ok"])
+
+            self.assertEqual(output.read_bytes(), b"another task's file")
+            self.assertEqual(list(root.glob("*.mp4")), [output])
+            self.assertEqual(executor._app_state.batch_stats["fail"], 1)
+            self.assertFalse(executor._download_manager.snapshot()["running"])
+
     def test_start_withny_live_returns_cancelled_selection(self):
         with tempfile.TemporaryDirectory() as directory:
             executor, callbacks = create_executor(Path(directory))
@@ -116,30 +152,94 @@ class DownloadExecutorTests(unittest.TestCase):
             config_dir = tool_dir / "config"
             config_dir.mkdir()
             config = config_dir / "live.yaml"
-            config.touch()
+            config.write_text("channels:\n  test-channel: {}\n", encoding="utf-8")
             executor, callbacks = create_executor(tool_dir)
             callbacks["pick_withny_live_config"].return_value = {"ok": True, "config_path": str(config)}
-            captured = {}
+            finished = threading.Event()
+            executor._on_finished = lambda _handle: finished.set()
+            launched = []
+            process = SimpleNamespace(
+                stdout=io.BytesIO(b"ERROR authorization=Bearer capture-test-credential\n"),
+                poll=lambda: 0, wait=lambda **_kwargs: 0, returncode=0,
+            )
 
-            def capture_thread(target, args=(), daemon=None):
-                captured["args"] = args
-                return ImmediateThread(target, args, daemon)
+            def launch(command, *, cwd, env):
+                launch_config = Path(command[command.index("--config") + 1])
+                launched.append((launch_config, launch_config.read_text(encoding="utf-8")))
+                return process
 
-            with patch("video_downloader.services.download_executor.threading.Thread", side_effect=capture_thread):
-                result = executor.start_withny_live()
-            self.assertEqual(result, {"ok": True})
-            args = captured["args"]
-            self.assertEqual(args[1][:3], [str(executable), "watch", "--config"])
-            self.assertEqual(args[1][3], str(config.resolve()))
-            self.assertEqual(args[2], config_dir.resolve())
+            with patch("video_downloader.live.process.spawn", side_effect=launch) as spawn:
+                self.assertEqual(executor.start_withny_live(), {"ok": True})
+                self.assertTrue(finished.wait(5), "Withny 工作线程未结束")
+                spawn.assert_called_once()
+            self.assertEqual(spawn.call_args.args[0][:3], [str(executable), "watch", "--config"])
+            self.assertEqual(Path(spawn.call_args.kwargs["cwd"]), config_dir.resolve())
+            launch_config, config_text = launched[0]
+            self.assertNotEqual(launch_config, config)
+            self.assertIn("test-channel", config_text)
+            self.assertFalse(launch_config.exists())
+            self.assertTrue(config.exists())
+            events = (launch_config.parent / "events.jsonl").read_text(encoding="utf-8")
+            self.assertIn('"engine_error"', events)
+            self.assertNotIn("capture-test-credential", events)
+            self.assertNotIn("capture-test-credential", str(callbacks["log"].call_args_list))
 
-    def test_withny_live_log_sanitizer_hides_credentials(self):
-        line = 'authorization=Bearer abc token=secret "password":"hidden" normal=value'
-        cleaned = DownloadExecutor._sanitize_withny_live_line(line)
-        self.assertNotIn("abc", cleaned)
-        self.assertNotIn("secret", cleaned)
-        self.assertNotIn("hidden", cleaned)
-        self.assertIn("normal=value", cleaned)
+    def test_finishing_withny_job_does_not_release_the_next_job_when_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "withny-dl-windows-amd64.exe").touch()
+            config = root / "live.yaml"
+            config.write_text("channels:\n  test-channel: {}\n", encoding="utf-8")
+            manager = DownloadManager()
+            executor, callbacks = create_executor(root, manager)
+            callbacks["pick_withny_live_config"].return_value = {"ok": True, "config_path": str(config)}
+            next_start = []
+
+            def start_when_slot_released():
+                if not manager.snapshot()["running"] and not next_start:
+                    with patch("video_downloader.services.download_executor.threading.Thread", ImmediateThread):
+                        next_start.append(executor.start_withny_live())
+
+            callbacks["broadcast_download_state"].side_effect = start_when_slot_released
+            with patch("video_downloader.services.download_executor.LiveRunner") as runner, \
+                    patch("video_downloader.services.download_executor.threading.Thread", DirectThread):
+                runner.return_value.run.return_value = {
+                    "status": "fail", "title": "Withny", "output": "", "report": "integrity-report.json",
+                }
+                self.assertEqual(executor.start_withny_live(), {"ok": True})
+
+            self.assertEqual(next_start, [{"ok": True}])
+            self.assertTrue(executor.stop_download()["stopping"])
+            self.assertTrue(manager.snapshot()["running"])
+
+    def test_withny_live_releases_slot_after_finalization(self):
+        for outcome in ("fail", "stopped"):
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "withny-dl-windows-amd64.exe").touch()
+                config = root / "live.yaml"
+                config.write_text("channels: {}\n", encoding="utf-8")
+                manager = DownloadManager()
+                executor, callbacks = create_executor(root, manager)
+                callbacks["pick_withny_live_config"].return_value = {"ok": True, "config_path": str(config)}
+                finished = Mock()
+                executor._on_finished = finished
+
+                def finalize(*_, **kwargs):
+                    if outcome == "stopped":
+                        executor.stop_download()
+                        self.assertTrue(kwargs["cancel"].is_set())
+                    return {"status": outcome, "title": "Withny", "output": "",
+                            "report": "integrity-report.json"}
+
+                with patch("video_downloader.services.download_executor.LiveRunner") as runner, \
+                        patch("video_downloader.services.download_executor.threading.Thread", DirectThread):
+                    runner.return_value.run.side_effect = finalize
+                    self.assertTrue(executor.start_withny_live()["ok"])
+                    self.assertEqual(callbacks["add_history"].call_args.args[3], outcome)
+                    self.assertFalse(manager.snapshot()["running"])
+                    finished.assert_called_once()
+                    self.assertTrue(executor.start_withny_live()["ok"])
 
     def test_fetch_bili_playlist_uses_bounded_communicate(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -876,10 +976,14 @@ class DownloadExecutorTests(unittest.TestCase):
             done.set()
             executor._start_reader = Mock(return_value=(lines, done))
 
-            with patch("video_downloader.services.download_executor.subprocess.Popen", return_value=process), \
-                    patch("video_downloader.services.download_executor.os.path.isfile", side_effect=[False, True]):
+            def finish_export(command, **_):
+                Path(command[-1]).write_bytes(b"exported audio")
+                return process
+
+            with patch("video_downloader.services.download_executor.subprocess.Popen", side_effect=finish_export):
                 self.assertTrue(executor._extract_audio_from_video(video_path, "mp3", handle=handle))
 
+            self.assertEqual((tool_dir / "video.mp3").read_bytes(), b"exported audio")
             self.assertIsNone(manager.snapshot()["process"])
             audio_updates = [
                 call for call in callbacks["update_progress"].call_args_list

@@ -31,6 +31,47 @@ function fallback(w){
   assert.ok(link.rel.split(/\s+/).includes('noopener'));
 }
 
+function updateSnapshotSender(w){
+  let source;
+  w.EventSource=class {constructor(){source=this;}close(){}};
+  w.syncAudioToolState=()=>{};
+  w.api=async()=>({recordings:[],presets:[],history:[]});
+  w.connectSSE();
+  return update=>source.onmessage({data:JSON.stringify({type:'ready',data:{
+    running:false,phase:'idle',logs:[],tasks:[],update,
+  }})});
+}
+
+test('automatic check failure stays silent after page refresh or SSE reconnect',()=>page(w=>{
+  const ready=updateSnapshotSender(w);
+  for(let i=0;i<2;i++){
+    ready({checking:false,update_available:false,downloading:false,update_done:false,
+      error:'GitHub: 请求失败',download_progress:0});
+    assert.equal(w.document.getElementById('updatePanel').classList.contains('show'),false,
+      '后台检查失败不能在刷新或重连时弹出更新窗口');
+    assert.equal(w.document.getElementById('updateBadge').style.display,'none');
+    assert.equal(w.document.getElementById('btnStart').disabled,false);
+  }
+}));
+
+test('refresh still restores a real failed update and manual download fallback',()=>page(w=>{
+  const ready=updateSnapshotSender(w);
+  ready({...available,checking:false,update_available:true,downloading:false,update_done:false,
+    error:'SHA-256 校验失败',download_progress:43});
+  fallback(w);
+  assert.equal(w.document.getElementById('updatePanelTitle').textContent,'更新失败');
+  assert.equal(w.document.getElementById('btnDoUpdate').textContent,'重试');
+  assert.equal(w.document.getElementById('updateNewVer').textContent,available.latest_version);
+}));
+
+test('reconnect does not dismiss a check failure explicitly opened by the user',()=>page(async w=>{
+  w.api=async path=>path==='/api/check-update'?{}:{checking:false,error:'GitHub: 请求失败'};
+  await w.checkUpdateNow();fallback(w);
+  updateSnapshotSender(w)({checking:false,update_available:false,error:'GitHub: 请求失败'});
+  fallback(w);
+  assert.equal(w.document.getElementById('btnDoUpdate').textContent,'重新检查');
+}));
+
 test('download or verification error offers the official manual release link',()=>page(w=>{
   w.handleUpdateAvailable(available);
   w.handleUpdateProgress({error:'SHA-256 校验失败'});
@@ -44,6 +85,7 @@ test('release check failure opens a manual fallback with check retry',()=>page(a
   await w.checkUpdateNow();fallback(w);
   assert.equal(w.document.getElementById('btnDoUpdate').textContent,'重新检查');
   assert.equal(w.document.getElementById('updateVersionRow').style.display,'none');
+  assert.match(w.document.getElementById('updateNotes').textContent,/不表示发现新版本.*仍可继续使用/);
 }));
 
 test('release check timeout also offers manual updating',()=>page(async w=>{

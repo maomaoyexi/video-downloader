@@ -33,6 +33,24 @@ class WithnyArchiveServiceTests(unittest.TestCase):
             self.assertEqual(duration, 5)
             self.assertEqual(cookie_header, "")
 
+    def test_malformed_har_reports_a_readable_error(self):
+        inputs = [
+            [],
+            {"log": []},
+            {"log": {"entries": [None]}},
+            {"log": {"entries": [{"request": [], "response": {}}]}},
+            {"log": {"entries": [{"request": {"url": 123}, "response": {}}]}},
+            {"log": {"entries": [{"request": {"headers": [None]}, "response": {}}]}},
+            {"log": {"entries": [{"request": {}, "response": {"content": None}}]}},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "capture.har"
+            for value in inputs:
+                with self.subTest(value=value):
+                    path.write_text(json.dumps(value), encoding="utf-8")
+                    with self.assertRaisesRegex(WithnyArchiveError, "HAR"):
+                        load_and_select(path)
+
     def test_rejects_non_withny_and_encrypted_hls(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_har(directory, [

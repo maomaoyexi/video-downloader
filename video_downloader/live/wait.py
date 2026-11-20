@@ -307,16 +307,17 @@ class LiveWatchService:
 
     # ---- 生命周期 ----
     def start(self) -> None:
-        if self._thread and self._thread.is_alive():
-            return
-        self._store.recover_interrupted()
-        self._stopping.clear()
-        self._thread = threading.Thread(target=self._loop, name="live-watch", daemon=True)
-        self._thread.start()
+        with self._lock:
+            if self._stopping.is_set() or (self._thread and self._thread.is_alive()):
+                return
+            self._store.recover_interrupted()
+            self._thread = threading.Thread(target=self._loop, name="live-watch", daemon=True)
+            self._thread.start()
 
     def stop(self) -> None:
-        self._stopping.set()
-        self._wake.set()
+        with self._lock:
+            self._stopping.set()
+            self._wake.set()
         if self._thread:
             self._thread.join(timeout=3)
         self._executor.shutdown(wait=False, cancel_futures=True)
@@ -404,36 +405,45 @@ class LiveWatchService:
         jobs = self._store.due(now)
         futures = []
         with self._lock:
+            if self._stopping.is_set():
+                return 0
             available = [job for job in jobs if job.id not in self._in_progress]
             free = max(0, self._max_workers - len(self._in_progress))
-        for job in available[:free]:
-            with self._lock:
-                if job.id in self._in_progress:
+            for job in available[:free]:
+                if not self._store.claim(job.id, now):
                     continue
                 self._in_progress.add(job.id)
-            if not self._store.claim(job.id, now):
-                self._release(job.id)
-                continue
-            futures.append(self._executor.submit(self._probe_job, job.id))
+                try:
+                    futures.append(self._executor.submit(self._probe_job, job.id))
+                except RuntimeError:
+                    self._in_progress.discard(job.id)
+                    job.status = WatchStatus.WAITING
+                    self._store.update(job, expected_status=WatchStatus.PROBING)
+                    raise
         if wait:
             for future in futures:
                 future.result()
         return len(futures)
 
     def _probe_job(self, job_id: str) -> None:
-        job = self._store.get(job_id)
-        if not job or job.status is not WatchStatus.PROBING:
-            self._release(job_id)
-            return
         try:
+            if self._stopping.is_set():
+                return
+            job = self._store.get(job_id)
+            if not job or job.status is not WatchStatus.PROBING:
+                return
             target = classify_target(job.url, job.platform)
             probe = self._probe_service.probe(target, timeout=20.0, force=True)
+            if self._stopping.is_set():
+                return  # 启动时恢复未处理的探测，避免退出过程中派发录制。
             # 探测期间用户可能取消/任务可能被其他路径更新；重新读取后再写。
             current = self._store.get(job.id)
             if not current or current.status is not WatchStatus.PROBING:
                 return
             self._apply_probe(current, probe)
         except Exception as exc:
+            if self._stopping.is_set():
+                return
             job = self._store.get(job_id)
             if not job or job.status is not WatchStatus.PROBING:
                 return
@@ -449,6 +459,8 @@ class LiveWatchService:
             self._release(job_id)
 
     def _apply_probe(self, job: WatchJob, probe: LiveProbe) -> None:
+        if self._stopping.is_set():
+            return
         now = self._clock()
         job.probe = probe.to_dict()
         job.updated_at = now
@@ -468,11 +480,15 @@ class LiveWatchService:
                 return
             self._notify()
             try:
-                result = self._on_live(job, probe) or {}
+                result = {"deferred": True} if self._stopping.is_set() else (self._on_live(job, probe) or {})
             except Exception as exc:
                 result = {"error": f"{type(exc).__name__}: {exc}"}
             job = self._store.get(job.id) or job
-            if result.get("error"):
+            if result.get("deferred") or (self._stopping.is_set() and result.get("error")):
+                job.status = WatchStatus.WAITING
+                job.last_error = ""
+                job.next_probe_at = self._clock()
+            elif result.get("error"):
                 job.status = WatchStatus.ERROR
                 job.last_error = str(result["error"])
                 job.next_probe_at = None

@@ -40,6 +40,8 @@ class UpdaterService:
         self._status_lock = threading.RLock()
         self._status = {
             "checking": False,
+            "check_error": None,
+            "current_version": VERSION,
             "update_available": False,
             "latest_version": None,
             "latest_version_num": 0,
@@ -152,62 +154,61 @@ class UpdaterService:
         }
 
     def check_update(self):
-        if not self._check_lock.acquire(blocking=False):
-            status = self.snapshot()
-            return {"has_update": status["update_available"], "checking": True,
+        if not self._begin_check():
+            return {"has_update": False, "checking": True,
                     "manual_update_url": MANUAL_UPDATE_URL}
-        self._update_status({"checking": True, "error": None})
-        release_info = None
-        error = None
+        return self._run_check()
+
+    def _begin_check(self):
+        if not self._check_lock.acquire(blocking=False):
+            return False
+        self._update_status({"checking": True, "check_error": None})
+        return True
+
+    def _run_check(self):
+        try:
+            release_info, error = self._fetch_latest_release()
+            with self._status_lock:
+                status = self._status
+                if error or status["downloading"] or status["update_done"]:
+                    self._update_status({"checking": False, "check_error": error})
+                else:
+                    release = release_info or {}
+                    self._update_status({
+                        "checking": False,
+                        "check_error": None,
+                        "update_available": bool(release),
+                        "latest_version": release.get("tag"),
+                        "latest_version_num": release.get("ver_num", 0),
+                        "release_notes": release.get("notes", ""),
+                        "download_url": release.get("download_url"),
+                        "download_size": release.get("download_size", 0),
+                        "download_digest": release.get("download_digest"),
+                        "error": status["error"] if release.get("tag") == status["latest_version"] else None,
+                    })
+            return {
+                "has_update": bool(release_info),
+                "current_version": VERSION,
+                "latest_version": release_info["tag"] if release_info else version_num_to_str(VERSION_NUM),
+                "release_notes": release_info["notes"] if release_info else "",
+                "download_url": release_info["download_url"] if release_info else None,
+                "download_size": release_info["download_size"] if release_info else 0,
+                "download_digest": release_info["download_digest"] if release_info else None,
+                "error": error,
+                "manual_update_url": MANUAL_UPDATE_URL,
+            }
+        finally:
+            self._check_lock.release()
+
+    def _fetch_latest_release(self):
         try:
             api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
             text = self._fetch_url(api_url, timeout=8)
-            if text:
-                release_info = self._release_info(json.loads(text))
-            else:
-                error = "GitHub: 请求失败"
+            if not text:
+                return None, "GitHub: 请求失败"
+            return self._release_info(json.loads(text)), None
         except Exception as exc:
-            error = f"GitHub: {exc}"
-        finally:
-            self._update_status({"checking": False})
-            self._check_lock.release()
-        if release_info:
-            self._update_status({
-                "update_available": True,
-                "latest_version": release_info["tag"],
-                "latest_version_num": release_info["ver_num"],
-                "release_notes": release_info["notes"],
-                "download_url": release_info["download_url"],
-                "download_size": release_info["download_size"],
-                "download_digest": release_info["download_digest"],
-            })
-            return {
-                "has_update": True,
-                "current_version": VERSION,
-                "latest_version": release_info["tag"],
-                "release_notes": release_info["notes"],
-                "download_url": release_info["download_url"],
-                "download_size": release_info["download_size"],
-                "download_digest": release_info["download_digest"],
-                "manual_update_url": MANUAL_UPDATE_URL,
-            }
-        self._update_status({
-            "update_available": False,
-            "latest_version": None,
-            "latest_version_num": 0,
-            "release_notes": "",
-            "download_url": None,
-            "download_size": 0,
-            "download_digest": None,
-            "error": error,
-        })
-        return {
-            "has_update": False,
-            "current_version": VERSION,
-            "latest_version": version_num_to_str(VERSION_NUM),
-            "error": error,
-            "manual_update_url": MANUAL_UPDATE_URL,
-        }
+            return None, f"GitHub: {exc}"
 
     def do_update(self):
         with self._download_lock:
@@ -281,7 +282,6 @@ class UpdaterService:
             try:
                 tmp_dir = tempfile.mkdtemp(prefix="video_downloader_update_")
                 os.makedirs(tmp_dir, exist_ok=True)
-                status = self.snapshot()
                 new_exe_name = re.sub(r"v\d+\.\d+\.\d+", status.get("latest_version", "new"), EXE_NAME, count=1)
                 tmp_path = os.path.join(tmp_dir, f"_update_{new_exe_name}")
                 self._log(f"[更新] 开始下载新版本 {status.get('latest_version', '')}...", "info")
@@ -397,12 +397,19 @@ rmdir "{tmp_dir}"
         return {"ok": True, "message": "开始下载更新..."}
 
     def start_check_thread(self, silent=True):
+        if not self._begin_check():
+            return
+
         def worker():
-            result = self.check_update()
+            result = self._run_check()
             if result.get("has_update"):
                 self._log(f"[更新] 发现新版本 {result['latest_version']}！", "warn")
                 self._emit_event("update_available", result)
-            elif not silent:
+            elif not silent and not result["error"]:
                 self._log("[更新] 当前已是最新版本", "info")
 
-        threading.Thread(target=worker, daemon=True).start()
+        try:
+            threading.Thread(target=worker, daemon=True).start()
+        except Exception:
+            self._update_status({"checking": False, "check_error": "无法启动更新检查，请重试"})
+            self._check_lock.release()

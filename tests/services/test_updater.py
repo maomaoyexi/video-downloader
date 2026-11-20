@@ -156,6 +156,33 @@ class UpdaterServiceTests(unittest.TestCase):
         snapshot["checking"] = True
         self.assertFalse(updater.snapshot()["checking"])
 
+    def test_check_result_is_observable_when_checking_becomes_false(self):
+        updater = create_updater()
+        updater._fetch_url = lambda *args, **kwargs: '{"tag_name":"v9.9.9","assets":[]}'
+        snapshots = []
+        publish = updater._update_status
+
+        def observe(values):
+            publish(values)
+            snapshots.append(updater.snapshot())
+
+        with mock.patch.object(updater, "_update_status", side_effect=observe):
+            updater.check_update()
+        completed = [item for item in snapshots if not item["checking"]]
+        self.assertTrue(completed)
+        self.assertTrue(all(item["update_available"] for item in completed))
+
+    def test_check_failure_preserves_previous_update_failure_for_reconnect(self):
+        updater = create_updater()
+        self.prepare_update(updater)
+        updater._update_status({"error": "更新文件 SHA-256 校验失败"})
+        updater._fetch_url = lambda *args, **kwargs: None
+        self.assertTrue(updater.check_update()["error"])
+        state = updater.snapshot()
+        self.assertTrue(state["update_available"])
+        self.assertEqual(state["error"], "更新文件 SHA-256 校验失败")
+        self.assertEqual(state["check_error"], "GitHub: 请求失败")
+
     def test_release_info_prefers_gui_exe(self):
         updater = create_updater()
         release = updater._release_info({

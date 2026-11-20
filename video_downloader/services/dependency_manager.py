@@ -377,7 +377,7 @@ class DependencyManager:
         """只检查文件是否存在；full 参数仅保留旧调用兼容，不再触发哈希检查。"""
         if not isinstance(full, bool):
             return {"error": "完整校验开关必须为布尔值", "code": "invalid_selection"}
-        return self._start("check", group_ids, full=False)
+        return self._start("check", group_ids)
 
     def update(self):
         """明确更新完整托管依赖；保留用户自行更新的 yt-dlp。"""
@@ -385,6 +385,7 @@ class DependencyManager:
         return self._start("install", selected, replace_changed=True, preserve_user_updates=True)
 
     def install(self, group_ids, replace_changed=False):
+        """兼容调用方所选分组的安装入口。WebUI 使用 update()。"""
         if not isinstance(replace_changed, bool):
             return {"error": "替换确认必须为布尔值", "code": "invalid_selection"}
         return self._start("install", group_ids, replace_changed=replace_changed)

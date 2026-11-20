@@ -250,15 +250,18 @@ def create_handler(dependencies):
             dependencies.cancel_idle_timer()
             last_keepalive = time.monotonic()
             try:
-                while not self.server.stop_event.is_set():
+                while True:
                     try:
-                        event = client_queue.get(timeout=1)
+                        event = (client_queue.get_nowait() if self.server.stop_event.is_set()
+                                 else client_queue.get(timeout=1))
                         data = json.dumps(event, ensure_ascii=False)
                         self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
                         self.wfile.flush()
                         if event.get("type") == "exit":
                             break
                     except queue.Empty:
+                        if self.server.stop_event.is_set():
+                            break
                         if time.monotonic() - last_keepalive >= 15:
                             self.wfile.write(b": keepalive\n\n")
                             self.wfile.flush()
@@ -353,6 +356,7 @@ def create_handler(dependencies):
                 path == '/api/fanbox/action' and data.get('action') in ('pause', 'cancel'))
             tool_write = path == '/api/tool' and data.get('action') in ('update-ytdlp', 'clean-temp')
             guarded = module is not None and (path in DEPENDENCY_GUARDED_PATHS or fanbox_write or tool_write)
+            selecting_withny_file = path in ("/api/start-withny-archive", "/api/start-withny-live")
             with maintenance_lock if guarded else nullcontext():
                 if guarded and not path.startswith('/api/dependencies/'):
                     state = module.snapshot()
@@ -361,7 +365,11 @@ def create_handler(dependencies):
                         self._json({"error": "依赖正在安装或等待恢复，请先取消、等待完成或修复依赖后再启动其他操作",
                                     "code": "dependency_maintenance"}, status=409)
                         return
-                self._dispatch_post(path, data)
+                if not selecting_withny_file:
+                    self._dispatch_post(path, data)
+                    return
+            # 原生文件选择可能持续很久，选完后由容器重新检查维护状态再提交。
+            self._dispatch_post(path, data)
 
         def _dependency_post(self, path, data):
             module = dependencies.dependency_manager

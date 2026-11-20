@@ -170,6 +170,39 @@ def test_main_starts_local_check_without_installing(wired):
 
 
 @pytest.mark.parametrize("task_mode", [0, 1])
+def test_withny_file_picker_does_not_block_maintenance_and_rechecks_on_return(wired, monkeypatch, task_mode):
+    app, _, _, _, hold, entered, release, *_ = wired
+    app.app_state.replace_config({"TASK_MODE": task_mode})
+    selecting = threading.Event()
+    selected = threading.Event()
+    replies = {}
+
+    def pick(_self):
+        selecting.set()
+        assert selected.wait(5)
+        return {"ok": True, "config_path": "fixture.yaml"}
+
+    monkeypatch.setattr(container.ToolService, "pick_withny_live_config", pick)
+    request = client(app)
+    chooser = threading.Thread(target=lambda: replies.update(result=request("/api/start-withny-live", {})))
+    try:
+        chooser.start()
+        assert selecting.wait(2)
+        hold.set()
+        assert request("/api/dependencies/update", {})[0] == 200
+        assert entered.wait(2)
+        selected.set()
+        chooser.join(3)
+        assert not chooser.is_alive()
+        assert replies["result"][1]["code"] == "dependency_maintenance"
+        assert request("/api/tasks")[1]["tasks"] == []
+    finally:
+        selected.set()
+        release.set()
+        chooser.join(5)
+
+
+@pytest.mark.parametrize("task_mode", [0, 1])
 @pytest.mark.parametrize("state", [{"recovery_required": True}, {"running": True, "action": "install"}])
 def test_background_fanbox_resume_obeys_dependency_guard(wired, monkeypatch, task_mode, state):
     app, _, _, _, _, _, _, controllers = wired

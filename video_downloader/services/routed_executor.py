@@ -56,11 +56,13 @@ class RoutedDownloadExecutor:
         executor=self.fanbox if is_fanbox(url) else self.video
         return self._start_and_route(executor,executor.start_download,url,**kwargs)
 
-    def start_withny_archive(self):
-        return self._start_and_route(self.video,self.video.start_withny_archive)
+    def start_withny_archive(self, selection=None):
+        args = () if selection is None else (selection,)
+        return self._start_and_route(self.video, self.video.start_withny_archive, *args)
 
-    def start_withny_live(self):
-        return self._start_and_route(self.video,self.video.start_withny_live)
+    def start_withny_live(self, selection=None):
+        args = () if selection is None else (selection,)
+        return self._start_and_route(self.video, self.video.start_withny_live, *args)
 
     def submit_password(self,url,password,request_id=None):
         return self._start_and_route(self.video,self.video.submit_password,

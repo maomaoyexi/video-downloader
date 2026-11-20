@@ -5,6 +5,7 @@ import json
 import hashlib
 import os
 import re
+from dataclasses import replace
 from pathlib import Path
 
 from ..danmaku.dependencies import library
@@ -21,7 +22,7 @@ def managed_binary(dependency_dir):
         if manifest.stat().st_size > 16384:
             return None
         info = json.loads(manifest.read_text(encoding='utf-8'))
-        if info.get('version') == '2.0.0-local-chat-1':
+        if isinstance(info, dict) and info.get('version') == '2.0.0-local-chat-1':
             with executable.open('rb') as source:
                 digest = hashlib.sha256()
                 for chunk in iter(lambda:source.read(1024 * 1024), b''):
@@ -38,8 +39,11 @@ class WithnyEngine:
     features = EngineFeatures(managed_outputs=True, per_file_tracks=True, annotate_report=True,
                               original_working_directory=True, concatenate=False, clock_source=True, native_waiting=True)
 
-    def __init__(self, command, session, config_path, comments):
+    def __init__(self, command, session, config_path, comments, *, managed=True):
         self.original, self.session = list(command), session
+        if not managed:
+            # 旧组件没有等待状态事件，由它自身负责监控和重试。
+            self.features = replace(self.features, native_waiting=False, media_watchdog=False)
         self.config_path = Path(config_path)
         self.cwd = self.config_path.parent
         self.comments = comments

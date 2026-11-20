@@ -72,6 +72,9 @@ def test_managed_withny_binary_requires_matching_manifest(tmp_path):
     assert managed_binary(tmp_path) is None
     manifest.write_text('bad')
     assert managed_binary(tmp_path) is None
+    for content in ('[]', 'null', '"incomplete"'):
+        manifest.write_text(content, encoding='utf-8')
+        assert managed_binary(tmp_path) is None
 
 
 def test_niconico_live_rejects_sequential_separate_files(tmp_path):

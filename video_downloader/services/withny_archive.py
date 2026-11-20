@@ -18,8 +18,7 @@ def sanitized_url(value):
     return f"{parsed.scheme}://{parsed.hostname}{port}{parsed.path}"
 
 
-def response_text(entry):
-    content = entry.get("response", {}).get("content", {})
+def _response_text(content):
     text = content.get("text", "")
     if not isinstance(text, str):
         return ""
@@ -56,15 +55,19 @@ def encryption_tags(text):
     return tags
 
 
-def request_cookies(entry):
+def _request_cookies(request):
     cookies = {}
-    request = entry.get("request", {})
-    for item in request.get("cookies", []):
+    cookie_items = request.get("cookies", [])
+    headers = request.get("headers", [])
+    if not all(isinstance(items, list) and all(isinstance(item, dict) for item in items)
+               for items in (cookie_items, headers)):
+        raise WithnyArchiveError("HAR 中的 Cookie 或请求头格式无效")
+    for item in cookie_items:
         name = str(item.get("name", "")).strip()
         value = str(item.get("value", ""))
         if name and value:
             cookies[name.lower()] = (name, value)
-    for header in request.get("headers", []):
+    for header in headers:
         if str(header.get("name", "")).lower() != "cookie":
             continue
         for part in str(header.get("value", "")).split(";"):
@@ -85,7 +88,8 @@ def load_and_select(har_path, max_size=64 * 1024 * 1024):
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise WithnyArchiveError(f"无法读取 HAR: {exc}") from None
 
-    entries = data.get("log", {}).get("entries")
+    log = data.get("log") if isinstance(data, dict) else None
+    entries = log.get("entries") if isinstance(log, dict) else None
     if not isinstance(entries, list):
         raise WithnyArchiveError("HAR 不包含有效的网络请求列表")
 
@@ -95,21 +99,35 @@ def load_and_select(har_path, max_size=64 * 1024 * 1024):
     cloudfront_names = {"cloudfront-key-pair-id", "cloudfront-policy", "cloudfront-signature"}
     signed_cookies = {}
     for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise WithnyArchiveError("HAR 中的网络请求记录格式无效")
         request = entry.get("request", {})
         response = entry.get("response", {})
+        if not isinstance(request, dict) or not isinstance(response, dict):
+            raise WithnyArchiveError("HAR 中的请求或响应格式无效")
+        content = response.get("content", {})
+        if not isinstance(content, dict):
+            raise WithnyArchiveError("HAR 中的响应内容格式无效")
         raw_url = request.get("url", "")
-        parsed = urlparse(raw_url)
-        signed_cookies.update({name: value for name, value in request_cookies(entry).items() if name in cloudfront_names})
+        if not isinstance(raw_url, str):
+            raise WithnyArchiveError("HAR 中的请求地址格式无效")
+        try:
+            parsed = urlparse(raw_url)
+            port = parsed.port
+        except ValueError:
+            raise WithnyArchiveError("HAR 中的请求地址格式无效") from None
+        cookies = _request_cookies(request)
+        signed_cookies.update({name: value for name, value in cookies.items() if name in cloudfront_names})
         if parsed.hostname and parsed.hostname.lower() in {"withny.fun", "www.withny.fun"} and re.fullmatch(r"/user/archives/[0-9a-f-]+/?", parsed.path, re.IGNORECASE):
             archive_url = sanitized_url(raw_url)
-        text = response_text(entry)
+        text = _response_text(content)
         kind = playlist_type(text)
-        mime = str(response.get("content", {}).get("mimeType", "")).lower()
+        mime = str(content.get("mimeType", "")).lower()
         if any(term in raw_url.lower() for term in ("widevine", "fairplay", "playready", "clearkey", "license", "licence", "drm")):
             drm_signal = True
         if not (parsed.path.lower().endswith(".m3u8") or "mpegurl" in mime or kind):
             continue
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.port not in {None, 443}:
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or port not in {None, 443}:
             raise WithnyArchiveError("播放列表地址不符合安全要求")
         records.append({
             "index": index,
@@ -118,7 +136,7 @@ def load_and_select(har_path, max_size=64 * 1024 * 1024):
             "status": response.get("status", 0),
             "text": text,
             "type": kind or "hls",
-            "cookies": request_cookies(entry),
+            "cookies": cookies,
         })
 
     if not archive_url:

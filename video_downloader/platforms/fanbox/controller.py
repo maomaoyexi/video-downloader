@@ -24,6 +24,9 @@ from .maintenance import clear_resume_cache
 from .verification import VerificationService,report_header
 
 
+SCHEDULED_RETRY_SECONDS = 30
+
+
 class FanboxController:
     def __init__(self,application,*,tool_dir,config_getter,start,cancel,publish=None,is_active=None,
                  operation_lock=None):
@@ -61,7 +64,10 @@ class FanboxController:
                 for state in self.list():
                     if (state.get('resume_after') and state['resume_after']<=time.time()
                             and state['status']=='paused' and int(self.config().get('FANBOX_ENABLED',1))):
-                        self.action({'id':state['id'],'version':state['version'],'action':'continue'})
+                        try:
+                            self.action({'id':state['id'],'version':state['version'],'action':'continue'})
+                        except FanboxError:
+                            continue
             except Exception:
                 pass
 
@@ -131,14 +137,16 @@ class FanboxController:
                 return repository.job(state['id'])
         return state
 
-    def _launch(self,state,preview):
-        try:result=self.start(state['id'],state['source'],preview,state.get('selection',{}))
+    def _launch(self,state,*,retry_scheduled=False):
+        try:result=self.start(state['id'],state['source'],state['preview'],state.get('selection',{}))
         except (FanboxError,OSError,RuntimeError) as error:
             result={'error':str(error) if isinstance(error,FanboxError) else '归档任务启动失败'}
         if result.get('error'):
             self.active.pop(state['id'],None)
             state['status']='paused';state['phase']='paused'
             state['error']={'code':'queue_rejected','message':result['error'],'retry_after':None}
+            if retry_scheduled:
+                state['resume_after']=time.time()+SCHEDULED_RETRY_SECONDS
             self.application.repository.save_job(state)
             raise FanboxError('queue_rejected',result['error'])
         self.active[state['id']]=result.get('task',{}).get('id') or 'exclusive'
@@ -160,11 +168,13 @@ class FanboxController:
         if not int(config.get('FANBOX_ENABLED',1)):
             raise FanboxError('platform_disabled','FANBOX 已关闭')
         options=normalize_options(data.get('options',config.get('FANBOX_OPTIONS','{}')))
+        preview=data.get('preview',not options['workflow']['auto_download'])
         fingerprint=hashlib.sha256(json.dumps({'url':data['url'],'preview':data.get('preview',False),
             'options':data.get('options')},sort_keys=True).encode()).hexdigest()
         with self.lock:
-            state,new=self.application.create(data['url'],options,request_key=key,fingerprint=fingerprint)
-            if new:self._launch(state,data.get('preview',not options['workflow']['auto_download']))
+            state,new=self.application.create(data['url'],options,request_key=key,fingerprint=fingerprint,
+                                              preview=preview)
+            if new:self._launch(state)
             latest=self.application.repository.job(state['id'])
             return {'ok':True,'job':summary(latest),'replayed':not new}
 
@@ -283,7 +293,12 @@ class FanboxController:
                 selection={'asset_ids':failed,'post_ids':list(dict.fromkeys(key.split(':')[0] for key in failed))}
             self._selection(selection,state)
             state['selection']=selection
-            state['retry_only']=action=='retry_failed'
+            retry_scheduled=action=='continue' and bool(state.get('resume_after'))
+            if action=='continue':
+                state.setdefault('preview',state['status']=='preview_ready')
+            else:
+                state['preview']=False
+                state['retry_only']=action=='retry_failed'
             # Runtime policies may be revised while content and names remain
             # frozen; this makes quota/fallback/conflict decisions actionable.
             current=normalize_options(data.get('options',state['options']))
@@ -294,7 +309,7 @@ class FanboxController:
             state['resume_after']=None;state['error']=None
             state['status']='queued';state['phase']='queued'
             self.application.repository.transition(state,data['version'])
-            self._launch(state,False)
+            self._launch(state,retry_scheduled=retry_scheduled)
             return {'ok':True,'job':summary(self.application.repository.job(job_id))}
 
     @staticmethod

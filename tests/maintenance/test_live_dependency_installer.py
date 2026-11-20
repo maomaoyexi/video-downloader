@@ -44,6 +44,15 @@ class LiveDependencyTests(unittest.TestCase):
         self.assertFalse((self.root/'dependency/live-python').exists())
         self.assertEqual(len(list((self.root/'dependency').iterdir())),0)
 
+    def test_upgrade_repairs_missing_files_even_when_the_lock_matches(self):
+        data = self.fixture()
+        with patch('scripts.install_live_dependencies.urlopen', side_effect=lambda *args, **kwargs: io.BytesIO(data)):
+            target = install(self.root)
+            module = target / 'package/__init__.py'
+            module.unlink()
+            self.assertEqual(install(self.root, upgrade=True), target)
+        self.assertEqual(module.read_text(encoding='utf-8'), 'value=1')
+
     def test_zip_traversal_and_unofficial_hosts_are_rejected(self):
         data=self.fixture('../outside.py')
         with patch('scripts.install_live_dependencies.urlopen',return_value=io.BytesIO(data)):

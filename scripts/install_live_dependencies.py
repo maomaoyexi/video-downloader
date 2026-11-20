@@ -34,12 +34,16 @@ def install(root, *, upgrade=False):
     (root / "dependency").mkdir(parents=True, exist_ok=True)
     target = root / "dependency/live-python"
     if target.exists():
-        if (target / "installed.json").read_text(encoding="utf-8") == json.dumps(lock, indent=2):
+        marker = target / "installed.json"
+        if not upgrade and marker.is_file() and marker.read_text(encoding="utf-8") == json.dumps(lock, indent=2):
             return target
         if not upgrade:
             raise RuntimeError("dependency/live-python already exists with different contents; use --upgrade")
-        installed = json.loads((target / "installed.json").read_text(encoding="utf-8"))
-        if not installed.get("packages") or target.is_symlink():
+        try:
+            installed = json.loads(marker.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            installed = None
+        if not isinstance(installed, dict) or not installed.get("packages") or target.is_symlink() or target.is_junction():
             raise RuntimeError("Refusing to replace an unmanaged runtime")
     with tempfile.TemporaryDirectory(prefix="live-install-", dir=root / "dependency") as name:
         stage = Path(name) / "runtime"
@@ -95,5 +99,5 @@ def install(root, *, upgrade=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--upgrade", action="store_true", help="Replace a previously managed runtime atomically")
+    parser.add_argument("--upgrade", action="store_true", help="Reinstall or upgrade a previously managed runtime")
     print(install(Path(__file__).resolve().parents[1], upgrade=parser.parse_args().upgrade))

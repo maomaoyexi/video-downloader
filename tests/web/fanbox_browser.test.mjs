@@ -12,6 +12,7 @@ const artifactDir=path.resolve(process.env.FANBOX_QA_ARTIFACT_DIR||path.join(roo
 fs.mkdirSync(artifactDir,{recursive:true});
 let config=structuredClone(data.config),options=data.options,created=[],jobs=[];
 let downloadState={running:false,phase:'idle',generation:0};
+let updateStatus={checking:false,update_available:false,error:null};
 const eventClients=new Set(),dependencyRequests=[];
 function configuredFanboxOptions(){
   const value=structuredClone(options),saved=JSON.parse(config.FANBOX_OPTIONS||'{}');
@@ -30,9 +31,10 @@ const server=http.createServer(async(req,res)=>{
     if(name==='/api/events'){
       eventClients.add(res);res.on('close',()=>eventClients.delete(res));
       res.writeHead(200,{'Content-Type':'text/event-stream'});
-      res.write('data: '+JSON.stringify({type:'ready',data:{logs:[],tasks:[],fanbox_jobs:jobs,...downloadState}})+'\n\n');return;
+      res.write('data: '+JSON.stringify({type:'ready',data:{logs:[],tasks:[],fanbox_jobs:jobs,update:updateStatus,...downloadState}})+'\n\n');return;
     }
     let result={};
+    if(name==='/api/update-status')result=updateStatus;
     if(name==='/api/config')result={version:data.version,config};
     if(name==='/api/save-config'){config={...config,...JSON.parse(body)};result={ok:true};}
     if(name==='/api/fanbox/options')result={options:configuredFanboxOptions(),defaults:options,
@@ -74,6 +76,16 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.FA
 const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{
+  window.__updaterReadyReceived=0;
+  const OriginalEventSource=window.EventSource;
+  window.EventSource=class extends OriginalEventSource {
+    constructor(...args){
+      super(...args);
+      this.addEventListener('message',event=>{
+        if(JSON.parse(event.data).type==='ready')window.__updaterReadyReceived++;
+      });
+    }
+  };
   window.__helpClipboardWrites=[];
   Object.defineProperty(navigator,'clipboard',{configurable:true,value:{
     writeText:async text=>{
@@ -155,7 +167,7 @@ async function verifyAboutReleaseNotes(){
   await details.locator('summary').click();
   assert.equal(await details.locator('ol>li').count(),6,'本版六项修复与维护应完整显示');
   const releaseText=await details.textContent();
-  for(const text of ['最高百分比','SSL 证书策略文件','默认 TLS 上下文','4294967295','具体原因未确认'])assert.ok(releaseText.includes(text),`本版详情缺少：${text}`);
+  for(const text of ['设置加载失败','GitHub 手动更新','Ctrl+C','同名文件','次日续跑','异常 HAR'])assert.ok(releaseText.includes(text),`本版详情缺少：${text}`);
   assert.equal(await details.locator('.about-release-body').isVisible(),true);
   await details.locator('summary').focus();await page.keyboard.press('Space');
   assert.equal(await details.evaluate(el=>el.open),false);
@@ -176,6 +188,33 @@ async function verifyAboutReleaseNotes(){
   await page.locator('.ni[data-page="download"]').click();
   await page.locator('.pad').evaluate(el=>el.scrollTo({top:0,behavior:'instant'}));
   console.log('通过：关于页当前版本更新摘要、六项修复详情、默认折叠/键盘操作、明暗主题和窄屏均正确');
+}
+async function verifySilentUpdateRefresh(){
+  updateStatus={checking:false,update_available:false,downloading:false,update_done:false,
+    error:'GitHub: 请求失败',download_progress:0};
+  for(let i=0;i<2;i++){
+    await page.reload();
+    await page.waitForFunction(()=>window.__updaterReadyReceived>0);
+    assert.equal(await page.locator('#updatePanel').isVisible(),false,'刷新后的静默检查失败不能弹窗');
+    assert.equal(await page.locator('#updateBadge').isVisible(),false);
+    assert.equal(await page.locator('#btnStart').isEnabled(),true);
+  }
+  await page.screenshot({path:path.resolve(artifactDir,'静默更新检查失败-刷新不弹窗.png')});
+  await page.locator('.ni[data-page="about"]').click();
+  await page.getByRole('button',{name:'检查更新',exact:true}).click();
+  await page.locator('#updatePanel.show').waitFor({state:'visible'});
+  assert.equal(await page.locator('#updatePanelTitle').textContent(),'检查更新失败');
+  assert.ok((await page.locator('#updateNotes').textContent()).includes('不表示发现新版本'));
+  assert.equal(await page.locator('#btnDoUpdate').textContent(),'重新检查');
+  assert.equal(await page.locator('#updateManualLink').getAttribute('href'),'https://github.com/maomaoyexi/video-downloader/releases/latest');
+  await page.locator('#updatePanel').getByRole('button',{name:'稍后',exact:true}).click();
+  updateStatus={checking:false,update_available:false,error:null};
+  await page.getByRole('button',{name:'检查更新',exact:true}).click();
+  await page.locator('.toast').filter({hasText:'已是最新版本'}).waitFor({state:'visible'});
+  assert.equal(await page.locator('#updatePanel').isVisible(),false);
+  await page.reload();await page.waitForFunction(()=>window.__updaterReadyReceived>0);
+  await page.locator('[data-fanbox-option="fan_cards.scope"]').waitFor({state:'attached'});
+  console.log('通过：GitHub检查失败后连续刷新不误弹窗，手动失败/官方链接保留，重试同版本提示最新；未触发更新下载');
 }
 async function verifyHelpSupport(){
   const requests=[],capture=request=>requests.push({method:request.method(),url:request.url()});
@@ -399,6 +438,7 @@ try{
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('http://127.0.0.1:'+server.address().port);await page.locator('[data-fanbox-option="fan_cards.scope"]').waitFor({state:'attached'});
   await verifySharedDownloadState();
+  await verifySilentUpdateRefresh();
   await verifyDependencySummaryEntry();
   await verifyAboutReleaseNotes();
   await verifyHelpGuide();

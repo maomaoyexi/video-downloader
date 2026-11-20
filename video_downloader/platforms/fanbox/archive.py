@@ -57,14 +57,14 @@ class ArchiveApplication:
                 self._repository=Repository(confined(self.root,'.fanbox/library.sqlite',create=True))
             return self._repository
 
-    def create(self,url,options=None,*,request_key=None,fingerprint=None):
+    def create(self,url,options=None,*,request_key=None,fingerprint=None,preview=False):
         options=normalize_options(options)
         source=source_for_options(url,options)
         state={'id':uuid.uuid4().hex,'source':source.url,'options':options,
                'created_at':time.time(),'task_date':datetime.now(timezone.utc).isoformat(),
                'status':'queued','phase':'queued','counts':{},'files':{},'archives':[],
                'checkpoint':None,'scan':None,'auth_scope':None,'selection':{},'error':None,
-               'scope':{},'output':'','outcome':'','resume_after':None}
+               'scope':{},'output':'','outcome':'','resume_after':None,'preview':preview}
         if request_key is not None:
             return self.repository.create_requested(state,request_key,fingerprint)
         self.repository.save_job(state)
@@ -148,6 +148,7 @@ class ArchiveApplication:
             state['auth_scope']=scope
             state['error']=None
             state['resume_after']=None
+            state['preview']=preview
             state['status']='running'
             state['phase']='scanning'
             log('开始抓取 · '+state['source'])
@@ -159,7 +160,7 @@ class ArchiveApplication:
                 if options['fan_cards']['only'] and state['scan'] is None:
                     state['scan']={'posts':[],'status':'completed','errors':[]}
                     state['scope']={'scope':'fan_cards','list_complete':False}
-                if state['scan'] is None or (state['scan']['status']!='completed' and not preview):
+                if state['scan'] is None or state['scan']['status']!='completed':
                     def checkpoint(value):
                         state['checkpoint']=value
                         save()

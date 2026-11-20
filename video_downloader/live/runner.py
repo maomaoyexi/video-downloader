@@ -43,7 +43,8 @@ class LiveRunner:
     def _engine(self, command, platform, url, config):
         if platform == "Withny":
             return WithnyEngine(command, self.session, config["_withny_config_path"],
-                                bool(config.get("LIVE_DANMAKU_ENABLED", 0)))
+                                bool(config.get("LIVE_DANMAKU_ENABLED", 0)),
+                                managed=config.get("_withny_managed", True))
         if platform == 'Rplay':
             return RplayEngine(command, url)
         if platform != "Bilibili" or config.get("LIVE_STREAM_METHOD", "auto") == "yt-dlp":
@@ -264,15 +265,16 @@ class LiveRunner:
                         last_size, last_check = size, now
                         if shutil.disk_usage(session.media).free < minimum:
                             stop_requested = "disk_full"
-                        stall = int(config.get("LIVE_WATCHDOG_SECONDS", 60))
-                        if features.native_waiting and engine.waiting:
-                            last_activity = now
-                        if now - last_activity >= stall and not warned:
-                            warned = True
-                            session.event("watchdog_warning", idle_seconds=now - last_activity)
-                            self.log("[直播] 输出与媒体文件均未增长，正在监测断流", "warn")
-                        if now - last_activity >= stall * 2:
-                            stop_requested = stop_requested or "watchdog"
+                        if features.media_watchdog:
+                            stall = int(config.get("LIVE_WATCHDOG_SECONDS", 60))
+                            if features.native_waiting and engine.waiting:
+                                last_activity = now
+                            if now - last_activity >= stall and not warned:
+                                warned = True
+                                session.event("watchdog_warning", idle_seconds=now - last_activity)
+                                self.log("[直播] 输出与媒体文件均未增长，正在监测断流", "warn")
+                            if now - last_activity >= stall * 2:
+                                stop_requested = stop_requested or "watchdog"
                         elapsed = int(now - started)
                         self.progress(-1, f"直播录制中 · {engine.name} · {elapsed // 60}:{elapsed % 60:02d} · {size // 1024**2} MiB")
                     if stop_requested and proc.poll() is None:

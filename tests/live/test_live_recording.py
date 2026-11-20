@@ -402,6 +402,41 @@ class RecordingTests(unittest.TestCase):
                                  events_file.read_text(encoding='utf-8') if events_file.exists() else runner.log.call_args_list)
                 self.assertTrue(Path(result["report"]).exists())
 
+    def test_legacy_withny_idle_monitor_waits_for_user_stop_without_native_events(self):
+        runner = self.runner()
+        ticks = iter((0, 0, 0, 1, 121, 122))
+        runner.clock = lambda: next(ticks, 123)
+        config_path = self.root / "watch.yaml"
+        config_path.write_text("channels:\n  room: {}\n", encoding="utf-8")
+        cancel = threading.Event()
+        proc = SimpleNamespace(stdout=io.BytesIO(), returncode=None)
+        proc.poll = lambda: proc.returncode
+        proc.wait = lambda **kwargs: proc.returncode
+        done = threading.Event()
+        done.set()
+
+        def read_after_long_idle(timeout):
+            if proc.poll() is None and runner.clock() >= 122:
+                cancel.set()
+            raise queue.Empty
+
+        lines = SimpleNamespace(get=read_after_long_idle, empty=lambda: True)
+
+        def stop(child, _):
+            child.returncode = 0
+            return True
+
+        with patch.object(process, "spawn", return_value=proc), patch.object(process, "stop", side_effect=stop), \
+             patch.object(runner, "_reader", return_value=(lines, done, Mock())):
+            result = runner.run(
+                ["legacy-withny", "watch", "--config", str(config_path)],
+                url="withny://configured-channels", platform="Withny", mode="live_edge",
+                config={"_withny_config_path": str(config_path), "_withny_managed": False,
+                        "LIVE_WATCHDOG_SECONDS": 60}, cancel=cancel,
+            )
+        self.assertEqual(result["stop_reason"], "user")
+        self.assertFalse(any("正在监测断流" in call.args[0] for call in runner.log.call_args_list))
+
     def test_brec_startup_fallback_and_crash_after_media(self):
         for has_media in (False, True):
             runner = self.runner()

@@ -99,7 +99,11 @@ def run_cli(argv):
     # --batch [file]
     if arg1 in ("--batch", "-b"):
         file_path = argv[1] if len(argv) > 1 else "urls.txt"
-        return _cmd_batch(file_path)
+        try:
+            return _cmd_batch(file_path)
+        except KeyboardInterrupt:
+            print("\n批量下载已取消。")
+            return 130
 
     # URL → download
     if arg1.startswith(("http://", "https://")):
@@ -216,11 +220,18 @@ def _cmd_batch(file_path):
         return 1
 
     urls = []
-    with open(urls_file, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                urls.append(line)
+    try:
+        with urls_file.open("r", encoding="utf-8-sig") as file:
+            for line in file:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    urls.append(line)
+    except UnicodeError:
+        print(f"错误: 无法读取 {urls_file}，请将链接文件保存为 UTF-8 编码")
+        return 1
+    except OSError as exc:
+        print(f"错误: 无法读取 {urls_file}（{exc}）")
+        return 1
 
     if not urls:
         print(f"错误: {urls_file} 中没有找到任何有效链接")
@@ -234,6 +245,9 @@ def _cmd_batch(file_path):
     for i, url in enumerate(urls, 1):
         print(f"=== [{i}/{len(urls)}] ===")
         rc = _cmd_download(url)
+        if rc == 130:
+            print(f"=== 批量下载已取消: 成功 {ok}, 失败 {fail}, 总计 {len(urls)} ===")
+            return 130
         if rc == 0:
             ok += 1
         else:

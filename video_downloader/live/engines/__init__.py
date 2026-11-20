@@ -11,3 +11,4 @@ class EngineFeatures:
     concatenate: bool = True
     clock_source: bool = False
     native_waiting: bool = False
+    media_watchdog: bool = True

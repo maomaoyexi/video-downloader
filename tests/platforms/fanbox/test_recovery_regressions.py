@@ -1,6 +1,10 @@
+import threading
+from types import SimpleNamespace
+
 import pytest
 
 from video_downloader.platforms.fanbox.archive import ArchiveApplication
+from video_downloader.platforms.fanbox import controller as controller_module
 from video_downloader.platforms.fanbox.controller import FanboxController
 from video_downloader.platforms.fanbox.errors import FanboxError
 
@@ -45,6 +49,66 @@ def test_pause_before_execution_is_durable_and_can_continue(queued_controller):
     continued = controller.action({'id': job['id'], 'action': 'continue',
         'version': state['version']})
     assert continued['ok'] and pending[controller.active[job['id']]]
+
+
+def test_paused_preview_still_requires_a_download_selection_after_restart(tmp_path):
+    app = ArchiveApplication(tmp_path / 'files')
+    launches = []
+
+    def start(*args):
+        launches.append(args)
+        return {'ok': True, 'task': {'id': f'task-{len(launches)}'}}
+
+    def make_controller():
+        controller = FanboxController(app, tool_dir=tmp_path, config_getter=lambda: {},
+                                      start=start, cancel=lambda *_: {'ok': True})
+        controller.stop()
+        return controller
+
+    controller = make_controller()
+    job = controller.create({'url': 'https://sample.fanbox.cc', 'preview': True,
+                             'request_id': 'preview-before-pause'})['job']
+    paused = controller.action({'id': job['id'], 'action': 'pause'})['job']
+    controller = make_controller()
+    assert controller.action({'id': job['id'], 'version': paused['version'], 'action': 'continue'})['ok']
+    assert [launch[2] for launch in launches] == [True, True]
+
+
+def test_next_day_resume_retries_after_a_busy_queue(tmp_path, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(controller_module, 'time', SimpleNamespace(time=lambda: now[0]))
+    app = ArchiveApplication(tmp_path / 'files')
+    job = app.create('https://sample.fanbox.cc', {'quota': {'on_limit': 'next_day'}})
+    job.update(status='paused', phase='paused', resume_after=now[0])
+    app.repository.save_job(job)
+    attempts = []
+    resumed = threading.Event()
+
+    def start(*args):
+        attempts.append(args)
+        if len(attempts) == 1:
+            return {'error': '已有下载任务在运行'}
+        resumed.set()
+        return {'ok': True, 'task': {'id': 'scheduled-task'}}
+
+    def published_summary():
+        snapshot = controller.snapshot()
+        return snapshot[0] if snapshot else {}
+
+    controller = FanboxController(app, tool_dir=tmp_path, config_getter=lambda: {},
+                                  start=start, cancel=lambda *_: {'ok': True})
+    try:
+        from tests.helpers.tasks import wait_until
+
+        assert wait_until(lambda: published_summary().get('error', {}).get('code') == 'queue_rejected'
+                          if published_summary().get('error') else False)
+        assert len(attempts) == 1
+        next_attempt = published_summary()['resume_after']
+        assert next_attempt > now[0]
+        now[0] = next_attempt
+        assert resumed.wait(3)
+    finally:
+        controller.stop()
 
 
 @pytest.mark.parametrize('list_first', [False, True])

@@ -111,6 +111,7 @@ class AppContainer:
         dependency_manager = None
         maintenance_lock = threading.RLock()
         shutting_down = threading.Event()
+        shutdown_lock = threading.Lock()
         watch_paused_for_recovery = threading.Event()
 
         def cancel_idle_timer() -> None:
@@ -435,6 +436,8 @@ class AppContainer:
         live_inspector = LiveInspector(probe_service)
 
         def on_live_watch(job, probe) -> dict:
+            if shutting_down.is_set():
+                return {"deferred": True}
             add_log(
                 f"[蹲开播] 检测到开播: {probe.platform} {job.url}，开始录制",
                 "success",
@@ -513,21 +516,26 @@ class AppContainer:
         def submit_password(url: str, password: str) -> dict:
             return task_manager.start_exclusive(download_executor.submit_password, url, password)
 
+        def submit_withny(selection: dict, *, operation: str, path_key: str, start, kind=None) -> dict:
+            if selection.get("error") or selection.get("cancelled"):
+                return selection
+            with maintenance_lock:
+                state = dependency_manager.snapshot()
+                if shutting_down.is_set():
+                    return {"error": "程序正在关闭，暂不能添加任务"}
+                if state.get("recovery_required") or (state.get("running") and state.get("action") == "install"):
+                    return {"error": "依赖正在安装或等待恢复，请稍后重试", "code": "dependency_maintenance"}
+                if task_mode_enabled():
+                    return task_manager.submit([selection[path_key]], kind=kind, operation=operation, selection=selection)
+                return task_manager.start_exclusive(start, selection=selection)
+
         def start_withny_archive() -> dict:
-            if task_mode_enabled():
-                selection = tool_service.pick_withny_archive()
-                if selection.get("error") or selection.get("cancelled"):
-                    return selection
-                return task_manager.submit([selection["output_path"]], operation="withny_archive", selection=selection)
-            return task_manager.start_exclusive(download_executor.start_withny_archive)
+            return submit_withny(tool_service.pick_withny_archive(), operation="withny_archive",
+                                path_key="output_path", start=download_executor.start_withny_archive)
 
         def start_withny_live() -> dict:
-            if task_mode_enabled():
-                selection = tool_service.pick_withny_live_config()
-                if selection.get("error") or selection.get("cancelled"):
-                    return selection
-                return task_manager.submit([selection["config_path"]], kind="live", operation="withny_live", selection=selection)
-            return task_manager.start_exclusive(download_executor.start_withny_live)
+            return submit_withny(tool_service.pick_withny_live_config(), operation="withny_live",
+                                path_key="config_path", start=download_executor.start_withny_live, kind="live")
 
         def stop_download() -> dict:
             tasks_result = task_manager.cancel_all()
@@ -639,13 +647,16 @@ class AppContainer:
             return live_watch_service.cancel(job_id)
 
         def request_exit() -> None:
-            shutting_down.set()
+            with shutdown_lock:
+                if shutting_down.is_set():
+                    return
+                shutting_down.set()
+            live_watch_service.stop()
             if not dependency_manager.close(timeout=35):
                 add_log("[依赖] 已请求取消维护；未完成事务将保留备份，供下次启动后修复", "warn")
             fanbox_controller.stop()
             download_executor.stop_download()
             network_diagnostics.stop()
-            live_watch_service.stop()
             task_manager.stop()
             download_executor.wait_for_live_finalization()
             po_token_provider.stop()

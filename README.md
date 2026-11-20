@@ -1,14 +1,14 @@
-# 多平台视频下载工具 v2.8.1 WebUI
+# 多平台视频下载工具 v2.8.2 WebUI
 
-![Version](https://img.shields.io/badge/source-v2.8.1%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/source-v2.8.2%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 面向 Windows 的多平台视频下载与直播录制工具，使用浏览器 WebUI 操作，提供任务队列、批量下载、字幕与音频工具，并支持 FANBOX 内容归档及 Withny 授权存档。
 
 **[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
 
-> 本页对应 v2.8.1 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
+> 本页对应 v2.8.2 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
 
-[下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [已知问题](#已知问题) · [源码运行](#源码运行) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
+[下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [源码运行](#源码运行) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
 
 ## 下载安装
 
@@ -18,8 +18,8 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `video-downloader-v2.8.1-GUI.exe` | 主程序，无需安装 Python |
-| `video-downloader-v2.8.1-dependencies.zip` | 下载工具、平台插件及配套运行依赖 |
+| `video-downloader-v2.8.2-GUI.exe` | 主程序，无需安装 Python |
+| `video-downloader-v2.8.2-dependencies.zip` | 下载工具、平台插件及配套运行依赖 |
 
 1. 新建一个工具文件夹，将 EXE 放入其中。
 2. 解压依赖包，将完整的 `dependency/` 文件夹放在 EXE 旁边，不要拆散或额外套一层目录。
@@ -28,7 +28,7 @@
 
 ```text
 工具文件夹/
-├── video-downloader-v2.8.1-GUI.exe
+├── video-downloader-v2.8.2-GUI.exe
 └── dependency/
 ```
 
@@ -43,7 +43,7 @@ v2.8.0 新增「关于软件 → 依赖状态 → 更新依赖」。启动或打
 - 依赖更新与下载、音频工具、监控任务互斥；取消或失败会尝试恢复已备份文件，未完成的恢复须按界面提示处理。
 - 失败时可使用界面的项目 GitHub 手动更新入口，完整步骤与状态说明见[使用教程](docs/使用教程.txt)。
 
-v2.8.1 继续提供这项功能；更新主程序后，请重新检查对应版本的依赖。
+更新主程序后，请重新检查对应版本的依赖。
 
 ### 老用户升级
 
@@ -93,11 +93,11 @@ v2.8.1 继续提供这项功能；更新主程序后，请重新检查对应版�
 
 ### FANBOX 内容归档
 
-在「设置 → 平台专项 → FANBOX」选择凭据和访问方式，再输入创作者或单帖链接。可先预览帖子列表，设置筛选和命名规则，再下载所选内容。
+在「设置 → 平台专项 → FANBOX」选择凭据和访问方式，再输入创作者或单帖链接。可先预览帖子列表，设置筛选和命名规则，再下载所选内容。暂停预览后，点击「继续」会恢复预览。
 
 支持正文、原始 JSON、图片、附件、封面、外链清单、可选评论和粉丝卡，并提供文件复用、归档校验、流量额度与记录。外链只收集，不自动下载其他网站的内容；公开封面不代表正文或附件也有访问权限。
 
-独立扫描 CLI 仅生成清单。当前源码中的扫描与归档 CLI 均读取已保存的匿名及 Cookie 设置；`--anonymous` 或 `--cookies PATH` 可覆盖本次访问方式，两者不能同时指定。修复与发布状态见[已知问题](#已知问题)。
+独立扫描 CLI 仅生成清单。当前源码中的扫描与归档 CLI 均读取已保存的匿名及 Cookie 设置；`--anonymous` 或 `--cookies PATH` 可覆盖本次访问方式，两者不能同时指定。
 
 ### 设置与使用帮助
 
@@ -112,46 +112,28 @@ v2.8.1 继续提供这项功能；更新主程序后，请重新检查对应版�
 - 提供音视频合并/分离、MP3 保存、WAV 转 MP3、响度与音量处理，以及受支持的硬件编码选项。
 - 可更新 yt-dlp、清理临时文件、生成链接/Cookie 模板、打开下载和日志目录。
 - YouTube 可选使用本地 BgUtils PO Token Provider；它可能缓解部分请求失败，但不保证绕过风控。
-- 支持自动更新 EXE，并校验下载来源、文件大小、Windows EXE 格式和 SHA-256；配套依赖按对应版本说明更新，可按上文点击「更新依赖」。
-
-## 已知问题
-
-v2.7.0 中记录的以下六项 FANBOX 问题已在 v2.7.1 修复，本版继续保留这些行为。v2.8.1 的修复见 [本版发布说明](RELEASE_NOTES.md)，历史更新见 [版本更新记录](CHANGELOG.md)，各平台的访问权限与续传差异仍以使用说明及实际结果为准。
-
-| 场景 | 当前源码行为 |
-| --- | --- |
-| FANBOX 排队任务暂停或启动失败 | 清理失效活动记录并恢复为可继续状态，修正配置后无需重启即可继续 |
-| FANBOX 与其他平台混合批量 | 入口拒绝混合输入；请分别创建独立任务，不同任务可以并行，归档确认发给所属执行器 |
-| FANBOX 缩略图与封面格式 | 按实际资源 URL 确定扩展名，旧失败资源续跑时可修复路径与格式不一致 |
-| FANBOX 预览后下载 | 可选择受限帖的公开封面；正文和附件仍按权限处理，显式 `accessible_only` 筛选继续生效 |
-| FANBOX 较长请求间隔 | 等待期间每 20 秒续租，异常结束原子保存终态，不再因 180 秒间隔本身残留 `running` |
-| FANBOX 独立扫描 CLI 设置 | 扫描与归档 CLI 均沿用保存的匿名及 Cookie 设置，并支持显式参数覆盖；WebUI 原有行为保持一致 |
-| 代理开关范围 | 常规 yt-dlp 下载和 FANBOX 关闭后默认直连；更新及部分辅助请求仍可能沿用系统／环境代理，自定义 `--proxy` 可覆盖，TUN／VPN 由系统网络层控制 |
-| 依赖缺失检测 | 仅检查托管外置文件是否存在，不代表文件内容或平台兼容性已经验证；完整更新前会核验配套包 |
-| 同一文件、同一阶段的下载百分比小幅回退 | v2.8.1 保留最高已显示进度，速度和剩余时间继续更新；切换文件、音视频阶段、链接或重新启动下载进程时正常重置 |
-| v2.8.0 EXE 直播预检查报 `网络错误: [Errno 2] No such file or directory` | 原正式 EXE 漏包构建运行库依赖的 SSL 证书策略文件；v2.8.1 主程序已补齐原策略资源并加强默认 TLS 初始化自检。请升级主程序，重新登录或更新外置依赖不能补齐旧 EXE 内嵌资源 |
-| 启动器报 `Could not create temporary directory` 或退出值 `4294967295` | 需按完整错误区分产生进程和失败阶段；退出值不是 HTTP 429，重试恢复也不能确认具体原因。本版补充排查说明，未将未定原因的偶发启动失败列为已修复 |
+- 支持自动更新 EXE，并校验下载来源、文件大小、Windows EXE 格式和 SHA-256。手动检查或更新失败时，可通过界面打开 GitHub 发布页。配套依赖可按上文点击「更新依赖」。
 
 ## 源码运行
 
-保留 `视频下载工具v2.8.1-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 64 位 Python 3.12 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
+保留 `视频下载工具v2.8.2-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 64 位 Python 3.12 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
 
 ```powershell
 python scripts/install_live_dependencies.py
 python -m video_downloader.platforms.fanbox.runtime --install
-python ".\视频下载工具v2.8.1-GUI.py"
+python ".\视频下载工具v2.8.2-GUI.py"
 ```
 
-前两条命令按锁定版本准备直播和 FANBOX 的 Python 运行库；yt-dlp、FFmpeg 及平台录制组件仍需在 `dependency/` 中准备。完整安装与依赖说明见[使用教程](docs/使用教程.txt)。
+前两条命令按锁定版本准备直播和 FANBOX 的 Python 运行库；yt-dlp、FFmpeg 及平台录制组件仍需在 `dependency/` 中准备。源码直播运行库有文件缺失时，可运行 `python scripts/install_live_dependencies.py --upgrade` 按锁定版本重新安装。完整安装与依赖说明见[使用教程](docs/使用教程.txt)。
 
 维护直播依赖时，以 `resource/dependencies/live-python.lock.json` 为准；修改锁文件后运行 `python scripts/sync_live_requirements.py` 同步手动安装清单。可使用 `python scripts/sync_live_requirements.py --check` 只检查一致性，不改动文件。
 
 命令行选项可通过以下方式查看：
 
 ```powershell
-python ".\视频下载工具v2.8.1-GUI.py" --help
-python ".\视频下载工具v2.8.1-GUI.py" --fanbox-scan --help
-python ".\视频下载工具v2.8.1-GUI.py" --fanbox-download --help
+python ".\视频下载工具v2.8.2-GUI.py" --help
+python ".\视频下载工具v2.8.2-GUI.py" --fanbox-scan --help
+python ".\视频下载工具v2.8.2-GUI.py" --fanbox-download --help
 ```
 
 源码版不会被自动更新下载的 EXE 覆盖。升级源码时请更新主脚本、`video_downloader/`、`resource/` 和对应依赖，保留自己的配置与下载数据。
@@ -159,7 +141,7 @@ python ".\视频下载工具v2.8.1-GUI.py" --fanbox-download --help
 ## 使用注意
 
 - **下载限速推荐 5–10 MB/s。** 高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担。
-- 不要关闭后端控制台。有任务时关闭网页，确认提示后任务继续在后台运行；无任务时关闭网页，程序会在 30 秒后退出。彻底退出请使用左侧底部「退出工具」。
+- 请使用左侧底部「退出工具」结束程序，并等待页面显示「工具已关闭」。关闭所有页面后，有下载、排队任务、蹲开播或维护操作时程序会继续运行，持续空闲 30 秒后才会自动退出。
 - Cookie 应使用 Netscape 格式的 `cookies.txt`。Fantia 仅支持文件模式；Rplay 使用独立 Firefox 授权，NicoChannel 直播也需要 Firefox 登录态。
 - TwitCasting「记住密码」和「保存到 XLSX」默认关闭。`twitcasting_passwords.xlsx` **以明文保存密码，除非获得明确授权，请勿发送给其他人**。
 - HAR、Cookie、凭据配置、密码表及原始评论文件可能包含登录或账号信息，请勿作为公开反馈附件。
@@ -175,7 +157,7 @@ python ".\视频下载工具v2.8.1-GUI.py" --fanbox-download --help
 | [常见问题](docs/常见问题答疑.txt) | 常见故障与排查方法 |
 | [Cookie 配置指南](docs/cookies问题答疑.txt) | 登录状态与 Cookie 导出 |
 | [Bilibili Cookie 指南](docs/bilibili_cookies_guide.txt) | Bilibili 登录配置 |
-| [Withny HAR 指南](docs/withny_har_guide.txt) | 已授权历史存档保存 |
+| [Withny HAR 指南](docs/withny_har_guide.txt) | 已授权历史存档保存与直播监控 |
 | [错误码说明](docs/错误码.txt) | 错误含义与处理建议 |
 | [版本更新记录](CHANGELOG.md) | 按版本整理的功能变化、修复和交互改进 |
 | [本版发布说明](RELEASE_NOTES.md) | 本版更新、问题修复、依赖与升级说明 |
@@ -184,7 +166,7 @@ python ".\视频下载工具v2.8.1-GUI.py" --fanbox-download --help
 
 | 贡献者 | 主要贡献 |
 | --- | --- |
-| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
+| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | v2.8.2 下载、更新与任务稳定性修复、平台兼容、文档及版本维护；v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
 | [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) | WebUI 重构，以及 v2.4.0 / v2.5.0 的视觉与交互体系重构 |
 | [ErgouTree（@ergou10086）](https://github.com/ergou10086) | Bilibili 视频与多 P、NicoChannel、Twitter/X、TwitCasting；单条/批量 CLI、音频输出与工具；下载进度、命令查看、yt-dlp 自定义参数、代理、Provider 和目录整理；归档选择与独立封面；PR #17 的直播框架重构、追播校验、弹幕及多任务；PR #18 的 Rplay、FANBOX 及相关界面与 CLI |
 | [ZheYi101](https://github.com/ZheYi101) | PR #12 的随视频下载字幕设置与独立字幕下载工具（v2.4.0） |

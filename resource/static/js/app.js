@@ -10,6 +10,9 @@ let currentPlatform = "YouTube";
 let lastUrlPlatform = "YouTube";
 let download_running = false;
 let downloadGeneration = null;
+let configReady = false;
+let configRequest = null;
+let exitRequested = false;
 let activeTaskYtdlpArgs = "";
 let liveWatchJobs = [];
 const liveRecordings = new Map();
@@ -187,11 +190,10 @@ function init() {
   });
   urlInput.addEventListener('input', autoGrowUrlInput);
 
-  loadConfig();
+  loadConfig().catch(() => showToast('设置加载失败，可再次点击相关操作重试', 'error'));
   loadDeps();
   connectSSE();
   loadLiveWatch();
-  api('/api/live/recordings').then(data => (data.recordings || []).reverse().forEach(renderLiveRecording)).catch(() => {});
   loadTasks();
   loadNetworkStatus();
   initSettingsToc();
@@ -301,11 +303,29 @@ async function toolAction(name) {
   }
 }
 
-async function loadConfig() {
-  const cfg = await api('/api/config');
-  $('ver').textContent = cfg.version;
-  $('aboutVer').textContent = cfg.version;
-  applyConfig(cfg.config);
+function loadConfig() {
+  if(!configRequest) {
+    configRequest = api('/api/config').then(cfg => {
+      if(!cfg.config || typeof cfg.config !== 'object' || Array.isArray(cfg.config)) {
+        throw new Error('设置响应无效');
+      }
+      $('ver').textContent = cfg.version;
+      $('aboutVer').textContent = cfg.version;
+      applyConfig(cfg.config);
+    }).finally(() => { configRequest = null; });
+  }
+  return configRequest;
+}
+
+async function requireLoadedConfig() {
+  if(configReady) return;
+  if(configRequest) throw new Error('设置正在加载，请稍后重试');
+  try {
+    await loadConfig();
+  } catch(e) {
+    throw new Error('设置加载失败，请重试');
+  }
+  throw new Error('设置已重新加载，请确认后再次操作');
 }
 
 function applyConfig(s) {
@@ -383,6 +403,7 @@ function applyConfig(s) {
   toggleCookieMode();
   paintRange($('s_threads'));
   paintRange($('s_speed'));
+  configReady = true;
 }
 
 /** 根据值设置开关的开关状态。 */
@@ -618,15 +639,11 @@ function initSettingsToc() {
   const pane = document.querySelector('.pad');
   const settings = $('page-settings');
   let activeTarget = items.find(item => item.classList.contains('on'))?.dataset.target;
-  let pendingTarget = null, interactionTarget = null, frame = 0, scrollTimer = 0;
+  let pendingTarget = null, interactionTarget = null, frame = 0;
   const setActive = target => {
     if(activeTarget === target) return;
     activeTarget = target;
     items.forEach(item => item.classList.toggle('on', item.dataset.target === target));
-  };
-  const clearPending = () => {
-    pendingTarget = null;
-    clearTimeout(scrollTimer);
   };
   const updateActive = () => {
     frame = 0;
@@ -647,13 +664,9 @@ function initSettingsToc() {
   const scheduleActive = () => {
     if(!frame) frame = requestAnimationFrame(updateActive);
   };
-  const waitForScrollEnd = () => {
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => { pendingTarget = null; }, 160);
-  };
   const interruptScroll = () => {
     const jumping = pendingTarget !== null;
-    clearPending();
+    pendingTarget = null;
     interactionTarget = null;
     if(jumping && pane) pane.scrollTo({top:pane.scrollTop, behavior:'instant'});
     scheduleActive();
@@ -675,7 +688,6 @@ function initSettingsToc() {
     pendingTarget = target.id;
     setActive(target.id);
     target.scrollIntoView({behavior:'smooth', block:'start'});
-    waitForScrollEnd();
   };
   const sectionControls = initSettingsSectionToggles(items, jumpToSection);
   settings?.addEventListener('click', event => {
@@ -702,10 +714,7 @@ function initSettingsToc() {
   }
   // 每帧统一按所有章节标题的位置定位，避免局部可见性回调使高亮倒跳。
   if(pane) {
-    pane.addEventListener('scroll', () => {
-      scheduleActive();
-      if(pendingTarget) waitForScrollEnd();
-    }, {passive:true});
+    pane.addEventListener('scroll', scheduleActive, {passive:true});
     pane.addEventListener('wheel', interruptScroll, {passive:true});
     pane.addEventListener('touchmove', interruptScroll, {passive:true});
     for(const type of ['touchstart','pointerdown']) {
@@ -791,7 +800,7 @@ function collectCfg() {
 /** 保存当前设置并在成功后提示。 */
 async function saveSettings() {
   try {
-    await api('/api/save-config', {method:'POST', body:JSON.stringify(collectCfg())});
+    await saveSettingsNoAlert();
     showToast('设置已保存', 'success');
   } catch(e) {
     showToast('设置保存失败: ' + e.message, 'error');
@@ -800,7 +809,10 @@ async function saveSettings() {
 
 /** 静默保存设置，不弹窗提示。 */
 async function saveSettingsNoAlert() {
-  return api('/api/save-config', {method:'POST', body:JSON.stringify(collectCfg())});
+  await requireLoadedConfig();
+  const result = await api('/api/save-config', {method:'POST', body:JSON.stringify(collectCfg())});
+  if(result.error) throw new Error(result.error);
+  return result;
 }
 
 async function resetSettings() {
@@ -940,6 +952,8 @@ function autoGrowUrlInput() {
 }
 
 async function startDl() {
+  try { await requireLoadedConfig(); }
+  catch(e) { showToast(e.message, 'error'); return; }
   if(currentPlatform === 'Withny') {
     await startWithnyArchive();
     return;
@@ -1405,6 +1419,7 @@ async function startSubtitleDownload() {
       subtitle_type: $('tool_subtitle_type').value,
       subtitle_langs: langs
     })});
+    if(result.error) throw new Error(result.error);
     submitted = true;
     showToolStatus(`已提交字幕下载（${result.total || urls.length} 个链接）`, 'success');
   } catch(e) {
@@ -1441,6 +1456,7 @@ async function startCoverDownload() {
   try {
     await saveSettingsNoAlert();
     const result = await api('/api/download-covers', {method:'POST', body:JSON.stringify({urls: urls})});
+    if(result.error) throw new Error(result.error);
     submitted = true;
     showToolStatus(`已提交封面下载（${result.total || urls.length} 个链接）`, 'success');
   } catch(e) {
@@ -2016,7 +2032,9 @@ function connectSSE() {
       else closeArchiveChoice();
       if(readyData.update) {
         if(readyData.update.update_available) handleUpdateAvailable(readyData.update);
-        if(readyData.update.downloading || readyData.update.update_done || readyData.update.error) {
+        // 静默检查失败不属于更新下载；刷新或重连时只恢复实际更新状态。
+        if(readyData.update.downloading || readyData.update.update_done ||
+            (readyData.update.error && readyData.update.update_available)) {
           handleUpdateProgress({
             percent: readyData.update.download_progress,
             speed: readyData.update.download_speed,
@@ -2050,13 +2068,17 @@ function showExitScreen(msg) {
 }
 
 async function exitApp() {
+  if(exitRequested) return;
   if(!confirm('确定要彻底关闭工具吗？正在进行的下载将被终止。')) return;
-  try { await api('/api/exit', {method:'POST'}); } catch(e) {}
-  showExitScreen('正在关闭…');
-  setTimeout(() => {
-    try { window.close(); } catch(e) {}
-    showExitScreen('工具已关闭，可安全关闭此页面');
-  }, 1000);
+  exitRequested = true;
+  try {
+    const result = await api('/api/exit', {method:'POST'});
+    if(!result.ok) throw new Error(result.error || '退出请求未确认');
+    showToast('正在关闭，请等待任务收尾…', 'working');
+  } catch(e) {
+    exitRequested = false;
+    showToast('退出失败：' + e.message, 'error');
+  }
 }
 
 init();
@@ -2087,7 +2109,8 @@ function hideSavePreset() {
 async function savePresetFromInput() {
   const name = $('presetNameInput').value.trim();
   if(!name) { showToast('请输入预设名称', 'error'); return; }
-  await saveSettingsNoAlert();
+  try { await saveSettingsNoAlert(); }
+  catch(e) { showToast('设置保存失败：' + e.message, 'error'); return; }
   const r = await api('/api/save-preset', {method:'POST', body:JSON.stringify({name})});
   if(r && r.ok) {
     hideSavePreset();
@@ -2101,6 +2124,8 @@ async function savePresetFromInput() {
 async function loadPresetFromSelect() {
   const name = $('presetSelect').value;
   if(!name) return;
+  try { await requireLoadedConfig(); }
+  catch(e) { showToast(e.message, 'error'); return; }
   const r = await api('/api/load-preset', {method:'POST', body:JSON.stringify({name})});
   if(r && r.ok) {
     applyConfig(r.config);
@@ -2266,7 +2291,7 @@ function showUpdateFailure(message, checkOnly = false) {
   updateCheckFailed = checkOnly || !updateInfo?.download_url;
   if(updateCheckFailed) {
     updateInfo = null;
-    $('updateNotes').textContent = '未能获取可用的更新信息，可重新检查或前往发布页手动更新。';
+    $('updateNotes').textContent = '检查未完成，不表示发现新版本；当前版本仍可继续使用。可重新检查或前往发布页手动更新。';
   }
   $('updatePanelTitle').textContent = updateCheckFailed ? '检查更新失败' : '更新失败';
   $('updateVersionRow').style.display = updateInfo ? '' : 'none';
@@ -2344,7 +2369,8 @@ async function checkUpdateNow() {
       await new Promise(r => setTimeout(r, 500));
       const s = await api('/api/update-status');
       if(s.checking) continue;
-      if(s.error) { showUpdateFailure(s.error, true); return; }
+      const checkError = Object.hasOwn(s, 'check_error') ? s.check_error : s.error;
+      if(checkError) { showUpdateFailure(checkError, true); return; }
       if(s.update_available) handleUpdateAvailable(s);
       else {
         if(updateCheckFailed) hideUpdatePanel();
@@ -2564,6 +2590,3 @@ function syncToolTiles() {
     t.classList.toggle('on', Boolean(panel && panel.classList.contains('show')));
   });
 }
-
-// 页面加载3秒后主动检查更新（后端也会静默检查，双保险）
-setTimeout(() => { api('/api/check-update').catch(()=>{}); }, 3000);

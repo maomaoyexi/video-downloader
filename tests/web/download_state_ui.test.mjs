@@ -83,3 +83,76 @@ test('settings save without the retired log control keeps working switches',()=>
   assert.equal(Object.hasOwn(saved,'ENABLE_LOG'),false);
   assert.equal(notices.at(-1).level,'success');
 }));
+
+test('an early download click cannot overwrite configuration still loading',()=>page(async w=>{
+  const calls=[];
+  let deliverConfig;
+  const saved={...structuredClone(defaults),PROXY_ENABLED:1,YTDLP_DEFAULT_ARGS:'--no-playlist'};
+  w.api=async (path,options)=>{
+    calls.push([path,options]);
+    if(path==='/api/config')return new Promise(resolve=>{deliverConfig=resolve;});
+    return {ok:true};
+  };
+  const pending=w.loadConfig();
+  w.document.getElementById('urlInput').value='https://www.youtube.com/watch?v=fixture';
+  await w.startDl();
+  assert.deepEqual(calls.map(([path])=>path),['/api/config']);
+  assert.match(w.document.querySelector('.toast:last-child').textContent,/设置正在加载/);
+  deliverConfig({version:'fixture',config:saved});
+  await pending;
+  await w.saveSettings();
+  const payload=JSON.parse(calls.at(-1)[1].body);
+  assert.equal(payload.PROXY_ENABLED,1);
+  assert.equal(payload.YTDLP_DEFAULT_ARGS,'--no-playlist');
+}));
+
+test('a failed config read can be retried without saving default form values',()=>page(async w=>{
+  let reads=0;
+  let writes=0;
+  w.api=async path=>{
+    if(path==='/api/config'){
+      if(++reads===1)throw new Error('connection interrupted');
+      return {version:'fixture',config:structuredClone(defaults)};
+    }
+    writes++;
+    return {ok:true};
+  };
+  await assert.rejects(w.loadConfig(),/connection interrupted/);
+  await w.saveSettings();
+  assert.equal(reads,2);
+  assert.equal(writes,0);
+  await w.saveSettings();
+  assert.equal(writes,1);
+}));
+
+for(const [start,input,button,endpoint] of [
+  ['startSubtitleDownload','subtitleUrlInput','btnSubtitleDownload','/api/download-subtitles'],
+  ['startCoverDownload','coverUrlInput','btnCoverDownload','/api/download-covers'],
+]){
+  test(`${endpoint} reports a rejected submission and lets the user retry`,()=>page(async w=>{
+    w.applyConfig(structuredClone(defaults));
+    w.document.getElementById(input).value='https://www.youtube.com/watch?v=fixture';
+    w.api=async path=>path===endpoint?{error:'未找到 yt-dlp.exe'}:{ok:true};
+    await w[start]();
+    assert.match(w.document.getElementById('toolStatus').textContent,/未找到 yt-dlp.exe/);
+    assert.equal(w.document.getElementById(button).disabled,false);
+  }));
+}
+
+test('exit rejection keeps the page open and successful exit waits for the server event',()=>page(async (w,send)=>{
+  w.confirm=()=>true;
+  let attempts=0;
+  w.api=async path=>{
+    assert.equal(path,'/api/exit');
+    if(++attempts===1)throw new Error('依赖正在安装');
+    return {ok:true};
+  };
+  await w.exitApp();
+  assert.ok(w.document.getElementById('urlInput'));
+  assert.match(w.document.querySelector('.toast:last-child').textContent,/依赖正在安装/);
+  await w.exitApp();
+  assert.ok(w.document.getElementById('urlInput'));
+  assert.equal(w.document.querySelector('.exit-screen'),null);
+  send('exit');
+  assert.match(w.document.querySelector('.exit-screen').textContent,/工具已关闭/);
+}));

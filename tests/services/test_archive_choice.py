@@ -12,6 +12,7 @@ from video_downloader.state.app_state import AppState
 
 
 from tests.helpers.archive import ArchiveFixture
+from tests.helpers.download import DirectThread
 
 
 class ArchiveChoiceTests(ArchiveFixture, unittest.TestCase):
@@ -126,17 +127,47 @@ class ArchiveChoiceTests(ArchiveFixture, unittest.TestCase):
         self.assertTrue(all("--download-archive" in command for command in commands))
         self.assertEqual(self.state.batch_stats["ok"], 2)
 
-    def test_explicit_audio_replacement_does_not_create_numbered_copy(self):
+    def run_audio_redownload(self, *, batch=False, returncode=0):
+        self.choice = True
+        self.state.update_config({"AUDIO_MODE": "2", "AUDIO_FORMAT": "mp3"})
         video = self.root / "video.mp4"
         video.write_bytes(b"video")
         audio = self.root / "video.mp3"
         audio.write_bytes(b"old audio")
-        process = Mock(returncode=0)
-        process.poll.return_value = 0
-        done = threading.Event()
-        done.set()
-        self.executor._start_reader = Mock(return_value=(Queue(), done))
-        with patch("video_downloader.services.download_executor.subprocess.Popen", return_value=process) as popen:
-            self.assertTrue(self.executor._extract_audio_from_video(str(video), "mp3", overwrite=True))
-        self.assertEqual(popen.call_args.args[0][-1], str(audio))
-        self.assertFalse((self.root / "video_1.mp3").exists())
+        self.outputs([
+            ["[download] abc: has already been recorded in the archive"],
+            [f"[Merger] Merging formats into \"{video}\""],
+            [],
+        ])
+
+        def finish_export(command, **_):
+            Path(command[-1]).write_bytes(b"new audio" if returncode == 0 else b"partial audio")
+            process = Mock(returncode=returncode)
+            process.poll.return_value = returncode
+            return process
+
+        url = self.command[-1]
+        with patch("video_downloader.services.download_executor.subprocess.Popen", side_effect=finish_export), \
+                patch("video_downloader.services.download_executor.threading.Thread", DirectThread):
+            result = self.executor.batch_download([url]) if batch else self.executor.start_download(url)
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(self.prompt_calls()), 1)
+        self.assertFalse(self.manager.snapshot()["running"])
+        return audio
+
+    def test_successful_audio_redownload_updates_the_same_filename(self):
+        audio = self.run_audio_redownload()
+        self.assertEqual(audio.read_bytes(), b"new audio")
+        self.assertEqual(list(self.root.glob("*.mp3")), [audio])
+
+    def test_failed_audio_redownload_preserves_existing_audio(self):
+        audio = self.run_audio_redownload(returncode=1)
+        self.assertEqual(audio.read_bytes(), b"old audio")
+        self.assertEqual(list(self.root.glob("*.mp3")), [audio])
+        self.assertEqual(self.state.batch_stats["fail"], 1)
+
+    def test_failed_audio_redownload_in_batch_preserves_existing_audio(self):
+        audio = self.run_audio_redownload(batch=True, returncode=1)
+        self.assertEqual(audio.read_bytes(), b"old audio")
+        self.assertEqual(list(self.root.glob("*.mp3")), [audio])
+        self.assertEqual(self.state.batch_stats["fail"], 1)

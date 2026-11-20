@@ -1,6 +1,8 @@
 import json
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -301,6 +303,42 @@ class WaitServiceTests(unittest.TestCase):
             recovered = store.list_recent()[0]
             self.assertEqual(recovered.status, WatchStatus.WAITING)
             service.stop()
+
+    def test_probe_returning_live_after_stop_does_not_dispatch_and_can_resume(self):
+        entered, release = threading.Event(), threading.Event()
+        dispatched = []
+
+        class SlowProbe:
+            def probe(self, target, **kwargs):
+                entered.set()
+                if not release.wait(5):
+                    raise RuntimeError("test did not release the probe")
+                return LiveProbe(target.platform, target.kind, target.stable_id, LiveStatus.LIVE)
+
+        with tempfile.TemporaryDirectory() as directory, ThreadPoolExecutor(max_workers=1) as scheduler:
+            store = WatchJobStore(Path(directory) / "jobs.sqlite")
+            service = LiveWatchService(
+                store=store, probe_service=SlowProbe(), on_live=lambda job, probe: dispatched.append(job.id),
+                start_thread=False,
+            )
+            job = service.add("https://live.bilibili.com/1")["job"]
+            tick = scheduler.submit(service.tick, wait=True)
+            try:
+                self.assertTrue(entered.wait(3))
+                service.stop()
+            finally:
+                release.set()
+            self.assertEqual(tick.result(timeout=3), 1)
+            self.assertEqual(dispatched, [])
+            reopened = LiveWatchService(
+                store=store, probe_service=SlowProbe(), on_live=lambda job, probe: dispatched.append(job.id),
+                start_thread=False,
+            )
+            try:
+                self.assertTrue(reopened.add(job["url"])["duplicate"])
+                self.assertEqual(reopened.list_jobs()[0]["id"], job["id"])
+            finally:
+                reopened.stop()
 
 
 if __name__ == "__main__":

@@ -421,7 +421,10 @@
     $('fanboxRecordConfirm').onclick=confirmRecords;
     $('fanboxRecordExport').onclick=async()=>{try{downloadJson((await api('/api/fanbox/records?export=1')).records,'fanbox-url-records.json');}catch(e){showToast(e.message,'error');}};
     $('fanboxRecordClear').onclick=async()=>{if(recordBusy||!confirm('清空所有 FANBOX URL 记录？'))return;try{recordEpoch++;recordBatches=null;$('fanboxRecordConfirm').hidden=true;$('fanboxRecordReport').textContent='';await api('/api/fanbox/records',{method:'POST',body:JSON.stringify({action:'clear'})});await recordCounts();}catch(e){showToast(e.message,'error');}};
-    $('fanboxAuthCheck').onclick=async()=>{await saveSettingsNoAlert();auth();};
+    $('fanboxAuthCheck').onclick=async()=>{
+      try { await saveSettingsNoAlert(); auth(); }
+      catch(e) { showToast(e.message,'error'); }
+    };
     $('fanboxSelectAll').onchange=()=>{draft().all=$('fanboxSelectAll').checked;draft().excluded.clear();draft().included.clear();loadDetail();};
     $('fanboxPrevious').onclick=()=>{offset=Math.max(0,offset-25);loadDetail();};$('fanboxNext').onclick=()=>{offset+=25;loadDetail();};
     $('fanboxSearch').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{offset=0;loadDetail();},200);};

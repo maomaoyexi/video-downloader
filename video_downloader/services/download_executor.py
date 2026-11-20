@@ -25,6 +25,14 @@ _PROXY_ENV_NAMES = {
 }
 
 
+def _publish_new_output(temporary, destination):
+    """Atomically refuse to replace a file that already exists."""
+    if os.name == "nt":
+        temporary.rename(destination)  # Windows rename rejects existing destinations, including on exFAT.
+    else:
+        os.link(temporary, destination)
+
+
 class _DownloadProgress:
     """稳定当前文件、当前音视频阶段的估算百分比；每个子进程独立使用。"""
 
@@ -608,10 +616,11 @@ class DownloadExecutor:
             config_snapshot.get("AUDIO_FORMAT", "mp3"), verbose, subtitle_cmd,
         )
 
-    def start_withny_archive(self):
-        if self._pick_withny_archive is None:
-            return {"error": "Withny 存档文件选择器不可用"}
-        selection = self._pick_withny_archive()
+    def start_withny_archive(self, selection=None):
+        if selection is None:
+            if self._pick_withny_archive is None:
+                return {"error": "Withny 存档文件选择器不可用"}
+            selection = self._pick_withny_archive()
         if selection.get("error"):
             return {"error": selection["error"]}
         if selection.get("cancelled"):
@@ -696,7 +705,7 @@ class DownloadExecutor:
                 self._log("[Withny] 下载已取消", "warn")
                 self._update_progress(0, "已停止", "", "")
             elif rc == 0 and temp.is_file() and temp.stat().st_size > 0:
-                os.replace(temp, output)
+                _publish_new_output(temp, output)
                 stats["ok"] = 1
                 self._app_state.publish({"type": "stats", "data": dict(stats)})
                 self._log(f"[Withny] 保存完成: {output.name}", "success")
@@ -708,6 +717,12 @@ class DownloadExecutor:
                 self._log(f"[Withny] 下载失败，退出码: {rc}", "error")
                 self._update_progress(0, f"失败 (退出码 {rc})", "", "")
                 self._add_history(archive_url, output.name, "Withny", "fail")
+        except FileExistsError:
+            stats["fail"] = 1
+            self._app_state.publish({"type": "stats", "data": dict(stats)})
+            self._log("[Withny] 输出文件已存在，请选择其他文件名", "error")
+            self._update_progress(0, "失败（输出文件已存在）", "", "")
+            self._add_history(archive_url, output.name, "Withny", "fail")
         except Exception as exc:
             stats["fail"] = 1
             self._app_state.publish({"type": "stats", "data": dict(stats)})
@@ -722,10 +737,11 @@ class DownloadExecutor:
                     pass
             self._finish(handle, proc)
 
-    def start_withny_live(self):
-        if self._pick_withny_live_config is None:
-            return {"error": "Withny 直播配置选择器不可用"}
-        selection = self._pick_withny_live_config()
+    def start_withny_live(self, selection=None):
+        if selection is None:
+            if self._pick_withny_live_config is None:
+                return {"error": "Withny 直播配置选择器不可用"}
+            selection = self._pick_withny_live_config()
         if selection.get("error"):
             return {"error": selection["error"]}
         if selection.get("cancelled"):
@@ -733,7 +749,8 @@ class DownloadExecutor:
 
         executable = self._paths.executable("withny-dl-windows-amd64", self._exe_suffix)
         from ..live.engines.withnydl import managed_binary
-        executable = managed_binary(self._paths.dependency_dir) or executable
+        managed_executable = managed_binary(self._paths.dependency_dir)
+        executable = managed_executable or executable
         if not executable.is_file():
             return {"error": f"缺少依赖: {executable.name}"}
         try:
@@ -759,7 +776,7 @@ class DownloadExecutor:
         try:
             threading.Thread(
                 target=self._run_withny_live,
-                args=(handle, command, config_path.parent),
+                args=(handle, command, config_path, managed_executable is not None),
                 daemon=True,
             ).start()
         except Exception as exc:
@@ -770,21 +787,21 @@ class DownloadExecutor:
             return {"error": f"直播录制线程启动失败: {exc}"}
         return {"ok": True}
 
-    def _run_withny_live(self, handle, command, working_dir):
-        self._withny_live_active = True
-        self._live_config = dict(self._app_state.config_snapshot(), _withny_config_path=command[command.index("--config") + 1])
-        self._effective_live_mode = "live_edge"
+    def _run_withny_live(self, handle, command, config_path, managed):
         try:
+            self._live_config = dict(self._app_state.config_snapshot(),
+                                     _withny_config_path=str(config_path), _withny_managed=managed)
+            self._effective_live_mode = "live_edge"
             self._run_live(handle, command, "withny://configured-channels", "Withny")
+        except Exception as exc:
+            self._log(f"[Withny 直播] 收尾失败: {type(exc).__name__}", "error")
+            self._update_progress(0, "直播录制异常终止", "", "")
+            stats = self._app_state.batch_stats
+            stats["fail"] = 1
+            self._app_state.publish({"type": "stats", "data": dict(stats)})
         finally:
             self._withny_live_active = False
-
-    @staticmethod
-    def _sanitize_withny_live_line(line):
-        cleaned = str(line)
-        cleaned = re.sub(r"(?i)((?:authorization[=:]\s*)?bearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[已隐藏]", cleaned)
-        cleaned = re.sub(r'(?i)(["\']?(?:authorization|token|password|passcode|secret|encryptionkey)["\']?\s*[=:]\s*["\']?)[^\s,;"\']+', r"\1[已隐藏]", cleaned)
-        return cleaned
+            self._finish(handle, None)
 
     def submit_password(self, url: str, password: str, request_id=None) -> dict:
         """处理密码提交：批量下载等待中则唤醒线程，否则启动新的单链接下载（密码重试）。"""
@@ -886,15 +903,10 @@ class DownloadExecutor:
             video_path: 视频文件的完整路径。
             audio_fmt: 目标音频格式（mp3/m4a/wav）。
         """
-        base, _ = os.path.splitext(video_path)
+        video = self._tool_dir / video_path
         audio_ext = {"mp3": "mp3", "m4a": "m4a", "wav": "wav"}.get(audio_fmt, "mp3")
-        audio_path = base + "." + audio_ext
-        if not overwrite and os.path.isfile(audio_path):
-            # 避免覆盖已有文件
-            counter = 1
-            while os.path.isfile(f"{base}_{counter}.{audio_ext}"):
-                counter += 1
-            audio_path = f"{base}_{counter}.{audio_ext}"
+        audio_path = video.with_suffix("." + audio_ext)
+        temporary = audio_path.with_name(f".audio-{uuid.uuid4().hex}.{audio_ext}")
         ffmpeg = str(self._paths.executable("ffmpeg", self._exe_suffix))
         codec_map = {
             "mp3": "libmp3lame",
@@ -903,14 +915,13 @@ class DownloadExecutor:
         }
         codec = codec_map.get(audio_fmt, "libmp3lame")
         extract_cmd = [
-            ffmpeg, "-y", "-i", video_path, "-vn", "-c:a", codec,
+            ffmpeg, "-nostdin", "-n", "-i", str(video), "-vn", "-c:a", codec,
             "-progress", "pipe:1", "-nostats",
         ]
         if audio_fmt == "mp3":
             extract_cmd += ["-q:a", "2"]
-        extract_cmd.append(audio_path)
+        extract_cmd.append(str(temporary))
         proc = None
-        succeeded = False
         duration = 0.0
         try:
             self._update_progress(0, status, "", "", stage="audio")
@@ -951,23 +962,36 @@ class DownloadExecutor:
             if handle is not None and handle.cancel_event.is_set():
                 self._log("[音频提取] 已取消", "warn")
                 return False
-            succeeded = proc.returncode == 0 and os.path.isfile(audio_path)
-            if succeeded:
-                self._log(f"[音频提取] 已生成: {os.path.basename(audio_path)}", "success")
-            else:
+            if proc.returncode != 0:
                 self._log(f"[音频提取] 失败，退出码: {proc.returncode}", "warn")
+                return False
+            if not temporary.is_file() or not temporary.stat().st_size:
+                self._log("[音频提取] 失败，未生成有效音频文件", "warn")
+                return False
+            if overwrite:
+                temporary.replace(audio_path)
+            else:
+                index = 0
+                while True:
+                    try:
+                        _publish_new_output(temporary, audio_path)
+                        break
+                    except FileExistsError:
+                        index += 1
+                        audio_path = video.with_name(f"{video.stem}_{index}.{audio_ext}")
+            self._log(f"[音频提取] 已生成: {audio_path.name}", "success")
+            return True
         except Exception as exc:
             self._log(f"[音频提取] 异常: {exc}", "warn")
             self.kill_process_tree(proc)
+            return False
         finally:
             if handle is not None and proc is not None:
                 self._download_manager.clear_process(handle, proc)
-            if not succeeded and os.path.isfile(audio_path):
-                try:
-                    os.unlink(audio_path)
-                except OSError:
-                    pass
-        return succeeded
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError as exc:
+                self._log(f"[音频提取] 临时文件清理失败: {exc}", "warn")
 
     def fetch_bili_playlist(self, url):
         """获取 Bilibili 视频的分P列表。
