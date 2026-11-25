@@ -29,7 +29,10 @@ https://github.com/ZheYi101
 - ErgouTree（@ergou10086）：v2.7.0 PR #18 的全部新增功能，包括 Rplay 点播、直播、Twitch 转播、Firefox 授权，以及 FANBOX 扫描、预览、内容归档、筛选、命名、粉丝卡、流量记录和相关 WebUI／命令行功能
 - 猫猫葉汐A_spy（@maomaoyexi）：v2.7.0 单任务执行器停止路由修复与回归测试、版本整合、打包及文档整理
 
-v2.8.2 本版贡献
+v2.8.3 本版贡献
+maomaoyexi（@maomaoyexi）：YouTube 直播回放与预检修复、代理设置提示、回归测试、文档与版本维护。
+
+v2.8.2 版本贡献
 maomaoyexi（@maomaoyexi）：设置、下载及任务稳定性修复，更新检查与依赖维护，FANBOX 和 Withny 兼容修复，回归测试、文档及版本维护。
 
 v2.8.1 版本贡献

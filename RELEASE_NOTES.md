@@ -1,8 +1,8 @@
-# v2.8.2 WebUI
+# v2.8.3 WebUI
 
-发布日期：2026-11-21 · [下载本版](https://github.com/maomaoyexi/video-downloader/releases/tag/v2.8.2) · [使用说明](https://github.com/maomaoyexi/video-downloader/blob/v2.8.2/README.md)
+发布日期：2026-11-25 · [下载本版](https://github.com/maomaoyexi/video-downloader/releases/tag/v2.8.3) · [使用说明](https://github.com/maomaoyexi/video-downloader/blob/v2.8.3/README.md)
 
-本次修复刷新页面时误弹更新提示、设置尚未加载便操作导致的配置问题，以及批量取消、配套音频保存、FANBOX 续跑和 Withny 存档与监控中的问题。同步整理使用教程、错误手册和平台指南。
+本次修复单条 YouTube 直播回放链接被当成直播录制的问题，并补充直播预检和网络代理设置的提示。
 
 ## 新增功能
 
@@ -10,23 +10,17 @@
 
 ## 问题修复
 
-- **更新检查**。后台检查失败后刷新页面时不再弹出更新提示。手动检查失败可重新检查，下载或校验失败可重试。两种情况都可前往 GitHub 手动更新。
-- **FANBOX 续跑**。暂停的预览任务可继续预览，确认选择后才会下载。选择「次日继续」的任务若定时启动被拒，会保留计划并自动重试。
-- **Withny 存档**。HAR 结构无效时显示具体提示，下载期间新增的同名文件会保留。文件选择窗口可与依赖维护独立操作，提交前会重新确认维护状态。
-- **直播监控与退出**。旧版 Withny 组件可自行等待开播和重试，程序不会因长时间无媒体增长提前结束监控。修复停止和收尾交错时的任务占用状态问题。退出期间才返回的开播探测不会启动新录制。
-- **配套音频**。先从视频提取音频，再保存到目标文件。重新下载时，提取失败或取消会保留已有音频。
-- **命令行批量下载**。支持普通 UTF-8 和带 BOM 的 UTF-8 链接文件，文件不可读或编码无效时会显示具体提示。按 Ctrl+C 取消整个批次，剩余链接不再启动，退出码为 `130`。
+- **YouTube 直播回放**。WebUI 确认单条 `/live/` 链接已有可用回放时，按普通视频下载。保留原视频 ID 的大小写及本次 yt-dlp 参数。
+- **YouTube 直播预检**。遇到格式错误会补查直播状态。确认直播尚未开播时可继续蹲开播。直播缺少可录制格式或回放未就绪时，会显示对应的中文提示。
 
 ## 界面与交互
 
-- 设置加载完成后才允许执行依赖设置的操作，保存失败会显示原因并停止相关操作。
-- 设置目录在展开和收起时稳定显示当前配置项。独立字幕、批量封面和 FANBOX 登录检测会显示启动或保存失败的提示。
-- 点击「退出工具」后会先显示正在关闭，服务端收尾后会显示「工具已关闭」。退出请求失败时仍可操作当前页面。
+- 「下载设置 → 网络与代理」补充代理类型、地址和端口的填写说明。实际值以代理客户端为准，`7890` 是默认值。使用 Windows 手动代理时可在系统设置中查看当前地址和端口。
 
 ## 依赖说明
 
-- 本版沿用直播与 FANBOX Python 运行库的锁定版本。源码直播运行库有文件缺失时，可以使用 `python scripts/install_live_dependencies.py --upgrade` 按锁文件重新安装。
-- 主程序内嵌本版前端、完整错误手册、更新日志和对应依赖清单。依赖包含下载工具、平台插件、受管录制组件及配套运行库。请使用同版本的 EXE 和依赖 ZIP。
+- 沿用 v2.8.2 的下载核心和锁定运行库。本版依赖清单与 v2.8.3 完整依赖包配套。
+- 同步使用教程、常见问题、错误手册与专项指南中的版本、回放用法和排查说明。
 
 ## 下载与升级
 
@@ -34,43 +28,40 @@ Windows 绿色版由以下两份文件配套交付，无需安装 Python。
 
 | 文件 | 用途 |
 | --- | --- |
-| `video-downloader-v2.8.2-GUI.exe` | 主程序 |
-| `video-downloader-v2.8.2-dependencies.zip` | 下载工具、插件及运行依赖 |
+| `video-downloader-v2.8.3-GUI.exe` | 主程序 |
+| `video-downloader-v2.8.3-dependencies.zip` | 下载工具、插件及运行依赖 |
 
 1. 先完成或取消现有任务，通过左侧底部「退出工具」关闭旧程序。
 2. 替换 EXE，并完整解压同版本依赖包，使 `dependency/` 与 EXE 位于同一目录。
 3. 保留 `settings.ini`、`presets.json`、`cookies.txt`、密码表和 `download/`，升级前备份重要数据。
-4. 启动 v2.8.2 后，可在「关于软件 → 依赖状态 → 更新依赖」检查配套依赖。
-5. 升级源码时，同步 `视频下载工具v2.8.2-GUI.py`、`video_downloader/`、`resource/` 与配套依赖，并重启后端。
+4. 启动 v2.8.3 后，可在「关于软件 → 依赖状态 → 更新依赖」检查配套依赖。
+5. 升级源码时，同步 `视频下载工具v2.8.3-GUI.py`、`video_downloader/`、`resource/` 与配套依赖，并重启后端。
 
-完整安装步骤见 [README](README.md#下载安装)。历史附件及校验值可查阅 [v2.8.1 发布说明](https://github.com/maomaoyexi/video-downloader/blob/v2.8.1/RELEASE_NOTES.md)。
+完整安装步骤见 [README](README.md#下载安装)。上版附件及校验值可查阅 [v2.8.2 发布说明](https://github.com/maomaoyexi/video-downloader/blob/v2.8.2/RELEASE_NOTES.md)。
 
 ### SHA-256
 
 ```text
-bc09bab450564a3ce1fa13655b9887d6416d42f53829493bd70116c3ef5ce507  video-downloader-v2.8.2-GUI.exe
-3a9ea65feef4e6634c880465a3052962f4c05fd11599c35b420cbf4538e7300a  video-downloader-v2.8.2-dependencies.zip
+985c1fac1c0ca55751134fbccd6f4b0e37b76ddcd1548859b0570a687cd29287  video-downloader-v2.8.3-GUI.exe
+3a9ea65feef4e6634c880465a3052962f4c05fd11599c35b420cbf4538e7300a  video-downloader-v2.8.3-dependencies.zip
 ```
 
 ## 已知限制
 
-- 旧版已经暂停的 FANBOX 记录可能缺少预览标记。若需要先筛选内容，请重新创建预览。
-- 已用合成数据验证 FANBOX 续跑、Withny HAR 和旧组件的等待路径。真实账号归档及旧版 Withny 组件的长时间在线监控尚未验证。
-- 账号权限、平台响应和直播源会影响下载、续传、追开播与评论采集。请结合任务日志、归档清单及完整性报告检查输出。
-- 普通任务队列只在本次运行中保留。FANBOX 外链仅记录，公开封面的可见性与正文访问权限分别判断。
-- 更新及部分辅助探测可能沿用系统或环境代理。依赖缺失检测只确认文件是否存在，完成下载和录制仍取决于实际运行情况。
-- 如果出现 `Could not create temporary directory`，请按 [错误码说明](docs/错误码.txt) 检查对应进程、临时目录和拦截记录。此前偶发失败后重试恢复的原因仍未确认。
+- 回放分流适用于 WebUI 单条 YouTube 直播链接。普通观看链接可直接按点播下载。
+- YouTube 仍由平台决定回放处理进度、访问权限和可用格式。若浏览器可播放回放，也可使用同一视频的普通观看链接重试。
+- 普通任务队列只在本次运行中保留。FANBOX 和 Withny 等平台功能的具体适用范围见使用教程。
 
 ## 使用注意
 
 - 通过「退出工具」关闭应用。依赖正在安装或回滚时，请按界面提示等待完成。
-- HAR、Cookie、凭据配置、密码表及原始评论可能包含隐私，反馈前请脱敏。`twitcasting_passwords.xlsx` 以明文保存密码。
+- HAR、Cookie、凭据配置、密码表及原始评论可能包含隐私，反馈前请脱敏。
 - 使用帮助提供常见报错速查，其他报错可查 [完整手册](docs/错误码.txt)。
 
 ## 本次贡献者
 
 | 贡献者 | 本版贡献 |
 | --- | --- |
-| [maomaoyexi（@maomaoyexi）](https://github.com/maomaoyexi) | 下载、更新与任务稳定性修复，平台兼容，回归测试、文档及版本维护 |
+| [maomaoyexi（@maomaoyexi）](https://github.com/maomaoyexi) | YouTube 回放和预检修复、代理提示、回归测试、文档及版本维护 |
 
 历史作者与上游贡献见 [CREDITS.txt](CREDITS.txt) 和 [版本更新记录](CHANGELOG.md)。

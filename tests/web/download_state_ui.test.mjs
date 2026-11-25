@@ -125,6 +125,37 @@ test('a failed config read can be retried without saving default form values',()
   assert.equal(writes,1);
 }));
 
+test('a confirmed YouTube replay is submitted as a watch URL with the task arguments',()=>page(async w=>{
+  const url='https://www.youtube.com/live/UpYrR2rLdRg';
+  const replayUrl='https://www.youtube.com/watch?v=UpYrR2rLdRg';
+  const requests=[];
+  w.applyConfig({...structuredClone(defaults),LIVE_MODE:'wait'});
+  w.api=async(path,options)=>{
+    requests.push([path,JSON.parse(options.body)]);
+    if(path==='/api/live/inspect')return {is_live_target:true,status:'ended',platform:'YouTube',replay_url:replayUrl};
+    return {ok:true};
+  };
+  await w.doStartDl(url,undefined,undefined,'-f 18');
+  assert.deepEqual(requests,[
+    ['/api/live/inspect',{url,live_mode:'wait'}],
+    ['/api/start',{url:replayUrl,live_mode:'auto',custom_args:'-f 18'}],
+  ]);
+}));
+
+test('an ended live stream with an unavailable replay shows its error',()=>page(async w=>{
+  const url='https://www.youtube.com/live/UpYrR2rLdRg';
+  const error='YouTube 直播已结束，暂未取得可下载的回放格式。';
+  w.api=async path=>{
+    assert.equal(path,'/api/live/inspect');
+    return {is_live_target:true,status:'ended',platform:'YouTube',error,probe_error:error};
+  };
+  const pending=w.prepareLiveTask(url);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.getElementById('liveNoticeSummary').textContent,error);
+  w.confirmLiveNotice();
+  assert.equal(await pending,null);
+}));
+
 for(const [start,input,button,endpoint] of [
   ['startSubtitleDownload','subtitleUrlInput','btnSubtitleDownload','/api/download-subtitles'],
   ['startCoverDownload','coverUrlInput','btnCoverDownload','/api/download-covers'],

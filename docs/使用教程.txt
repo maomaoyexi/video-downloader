@@ -1,19 +1,19 @@
 YT-DLP 多平台视频下载工具 完整使用教程
-适配版本：v2.8.2 WebUI（正式 Windows EXE／源码运行版）。
+适配版本：v2.8.3 WebUI（正式 Windows EXE／源码运行版）。
 支持平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter / Rplay / FANBOX
 特殊功能：Withny 已授权历史存档 HAR 保存与直播监控；FANBOX 扫描、预览和内容归档
 界面方式：浏览器WebUI（运行 Windows EXE 或 Python 主程序后自动打开浏览器）
 =====================================
 一、安装与依赖说明
 =====================================
-v2.8.2 Windows 绿色版使用以下两个配套文件；可下载版本以 GitHub Releases 实际发布内容为准：
-  1. video-downloader-v2.8.2-GUI.exe
-  2. video-downloader-v2.8.2-dependencies.zip
+v2.8.3 Windows 绿色版使用以下两个配套文件；可下载版本以 GitHub Releases 实际发布内容为准：
+  1. video-downloader-v2.8.3-GUI.exe
+  2. video-downloader-v2.8.3-dependencies.zip
 
 安装步骤（Windows EXE 绿色版）：
   1. 新建单独文件夹，将 EXE 放入其中，无需安装 Python
   2. 将依赖包中的 dependency 文件夹完整解压到 EXE 同一目录
-  3. 双击 video-downloader-v2.8.2-GUI.exe，浏览器自动打开 WebUI
+  3. 双击 video-downloader-v2.8.3-GUI.exe，浏览器自动打开 WebUI
   4. 按需要配置 Cookie、代理；Rplay 登录使用独立 Firefox 设置
   排错提示：启动器若报 Could not create temporary directory，先看《错误码》第四节；4294967295 不是 HTTP 429，仅凭退出值不能判断登录、限流或临时目录原因。
 
@@ -25,12 +25,12 @@ v2.8.2 Windows 绿色版使用以下两个配套文件；可下载版本以 GitH
 
 源码运行方式（仓库源码，不另发源码附件）：
   1. 安装 64 位 Python 3.12，并确保 python 命令指向该解释器
-  2. 保持 视频下载工具v2.8.2-GUI.py、video_downloader/、resource/ 和 dependency/ 位于同一目录
+  2. 保持 视频下载工具v2.8.3-GUI.py、video_downloader/、resource/ 和 dependency/ 位于同一目录
   3. 在项目根目录准备锁定版本的直播与 FANBOX Python 运行库：
      python scripts/install_live_dependencies.py
      python -m video_downloader.platforms.fanbox.runtime --install
      直播运行库需要升级或文件缺失时，使用 python scripts/install_live_dependencies.py --upgrade 按锁文件重新安装。
-  4. 运行：python ".\视频下载工具v2.8.2-GUI.py"
+  4. 运行：python ".\视频下载工具v2.8.3-GUI.py"
   5. 升级源码时同时更新主脚本、video_downloader/、resource/ 和对应依赖，保留个人配置与下载目录
 
 依赖说明：
@@ -55,7 +55,7 @@ v2.8.2 Windows 绿色版使用以下两个配套文件；可下载版本以 GitH
 =====================================
 本工具仅用于个人学习研究，禁止商用、侵权传播下载内容。
 
-双击 video-downloader-v2.8.2-GUI.exe 启动；源码版运行「python 视频下载工具v2.8.2-GUI.py」。
+双击 video-downloader-v2.8.3-GUI.exe 启动；源码版运行「python 视频下载工具v2.8.3-GUI.py」。
 程序会自动启动内置HTTP服务器，并调用系统默认浏览器打开WebUI界面。
 首次运行自动生成各平台保存目录、配置文件settings.ini、历史记录文件。
 所有下载自动按【平台 / UP主 / 主播 / 创作者文件夹】分类整理。
@@ -137,6 +137,8 @@ v2.8.2 Windows 绿色版使用以下两个配套文件；可下载版本以 GitH
   输出格式：MP4 / MKV / WebM
   分离音频格式：m4a(原生) / MP3 / WAV
   网络代理配置（HTTP / SOCKS5）
+  类型、地址和端口请按代理客户端的实际设置填写。7890 是默认值。
+  使用 Windows 手动代理时，可在「设置 → 网络和 Internet → 代理」核对地址和端口。
   代理开关控制常规 yt-dlp 下载和 FANBOX 等主要下载路径；更新及部分辅助探测仍可能沿用系统／环境代理。
   默认或本次自定义参数中的 --proxy 可以覆盖开关设置；TUN／VPN 由系统网络层控制。
   FFmpeg硬件加速：CPU软编码 / N卡NVENC / Intel QSV / AMD AMF
@@ -213,7 +215,7 @@ PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效C
   [2] 生成链接模板
       生成带注释的urls.txt模板文件，放在程序同目录
 
-源码命令行批量下载：python ".\视频下载工具v2.8.2-GUI.py" --batch ".\urls.txt"
+源码命令行批量下载：python ".\视频下载工具v2.8.3-GUI.py" --batch ".\urls.txt"
   省略文件名时读取主程序所在目录的 urls.txt，相对路径也以该目录为基准。支持普通 UTF-8 和带 BOM 的 UTF-8；按 Ctrl+C 会取消整个批次，停止启动后续链接并返回退出码 130。
 
 维护工具：
@@ -248,7 +250,7 @@ PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效C
 2. 打开对应平台官网，登录你的账号；多平台使用可依次登录所有平台
 3. 在目标平台页面打开扩展 → 导出 Netscape 格式 cookies
 4. 导出文件命名为：cookies.txt
-5. 放到程序同级目录（与 视频下载工具v2.8.2-GUI.py 同目录）
+5. 放到程序同级目录（与 视频下载工具v2.8.3-GUI.py 同目录）
 
 支持浏览器提取的平台也可在设置页面选择浏览器 Cookie 来源（Chrome/Edge/Firefox 等）。Fantia 仅支持 cookies.txt 文件；FANBOX 使用专项设置指定的 Netscape Cookie 文件（未指定时默认 cookies.txt），匿名访问不使用 Cookie；Rplay 使用独立 Firefox 登录来源。
 
@@ -267,7 +269,8 @@ PO Token只能缓解部分YouTube 403或机器人校验，仍可能需要有效C
 需要单独覆盖平台时，展开「各平台录制方式」或「各平台弹幕默认值」；长机制说明在对应「说明」内展开查看。
 
 YouTube直播录制：
-  1. 粘贴YouTube的/live或/live/形式直播链接
+  1. 单条录制可粘贴 YouTube 的 /live/ 链接
+     检查确认已有可用回放时，程序会使用同一视频的普通观看链接下载。
   2. 在「设置 → 直播设置」选择全局/平台默认直播模式
   3. 开始前会检查直播状态；已开播会显示开播时间与已开播时长
   4. 未开播时可按提示选择蹲开播，开播后自动开始录制
@@ -354,7 +357,7 @@ Cookie模式：大多数平台使用 cookies.txt；Rplay 使用独立 Firefox �
 编码：兼容优先（H.264，所有设备可直接播放）
 代理：根据网络环境配置
 下载限速：推荐 5–10 MB/s。高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担
-运行方式：完整保留 dependency 目录及其子目录；源码版先按第一节准备运行库，再运行「python 视频下载工具v2.8.2-GUI.py」
+运行方式：完整保留 dependency 目录及其子目录；源码版先按第一节准备运行库，再运行「python 视频下载工具v2.8.3-GUI.py」
 关闭方式：使用「✕ 退出」按钮彻底关闭，不要直接关控制台窗口
 
 =====================================
@@ -415,10 +418,10 @@ TwitCasting 密码记忆（v2.6.0 起）：
 14. 每日额度用尽且选择「次日继续」时，归档任务会在下个计量日继续。若定时启动被拒，保持程序运行且 FANBOX 已启用时会自动重试。
 
 独立扫描（只输出清单，不下载附件）：
-  python ".\视频下载工具v2.8.2-GUI.py" --fanbox-scan "https://www.fanbox.cc/@creator" --output ".\fanbox-manifest.json" --anonymous
+  python ".\视频下载工具v2.8.3-GUI.py" --fanbox-scan "https://www.fanbox.cc/@creator" --output ".\fanbox-manifest.json" --anonymous
 
 归档预览：
-  python ".\视频下载工具v2.8.2-GUI.py" --fanbox-download "https://www.fanbox.cc/@creator" --preview --anonymous
+  python ".\视频下载工具v2.8.3-GUI.py" --fanbox-download "https://www.fanbox.cc/@creator" --preview --anonymous
 
 --anonymous 只允许访问公开内容。当前源码的扫描与归档 CLI 均读取 FANBOX_ANONYMOUS、FANBOX_COOKIE_FILE 和 USE_COOKIES；显式 --anonymous 或 --cookies PATH 优先于保存设置，只影响本次命令，且不能同时指定。凭据相对路径以工具目录为基准；WebUI 原有设置读取行为保持一致。
 

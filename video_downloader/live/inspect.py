@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Callable
 
@@ -134,6 +135,11 @@ class LiveInspector:
                              + (f"：{base['wait_reason']}" if base["wait_reason"] else ""),
                 })
             return base
+
+        if (platform == "YouTube" and target.kind is TargetKind.EVENT and probe.status is LiveStatus.ENDED
+                and not probe.error and target.stable_id == probe.stable_id
+                and re.fullmatch(r"[A-Za-z0-9_-]{11}", probe.stable_id)):
+            base["replay_url"] = f"https://www.youtube.com/watch?v={probe.stable_id}"
 
         message = probe.error or {
             LiveStatus.ENDED: "直播已结束",

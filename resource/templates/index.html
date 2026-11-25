@@ -397,8 +397,14 @@
               <div class="row"><span class="lb">并发线程数</span><input type="range" id="s_threads" min="1" max="32" value="4"><span class="rval" id="thr_val">4</span></div>
               <div class="row"><span class="lb">下载限速</span><input type="range" id="s_speed" min="0" max="50" value="0"><span class="rval" id="spd_val">不限</span></div>
               <div class="row"><span class="lb">启用代理</span><span class="sw" id="sw_proxy" onclick="toggleSwitch(this)"><i></i></span></div>
-              <div class="row"><span class="lb">代理类型</span><span class="sel" style="max-width:150px"><select class="ctl" id="s_proxytype"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
-              <div class="row"><span class="lb">代理地址</span><input type="text" class="ctl mono" id="s_proxyaddr" value="127.0.0.1" style="flex:1"><span class="dim">:</span><input type="text" class="ctl mono" id="s_proxyport" value="7890" style="width:88px;flex:none"></div>
+              <div class="row"><label class="lb" for="s_proxytype">代理类型</label><span class="sel" style="max-width:150px"><select class="ctl" id="s_proxytype" aria-describedby="proxySettingsHint"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select><svg class="ico s14 cv"><use href="#i-chevron"></use></svg></span></div>
+              <div class="row">
+                <label class="lb" for="s_proxyaddr">代理地址</label>
+                <input type="text" class="ctl mono" id="s_proxyaddr" aria-describedby="proxySettingsHint" value="127.0.0.1" style="flex:1">
+                <span class="dim">:</span>
+                <input type="text" class="ctl mono" id="s_proxyport" aria-label="代理端口" aria-describedby="proxySettingsHint" value="7890" style="width:88px;flex:none">
+              </div>
+              <p class="compact-action-note" id="proxySettingsHint">类型、地址和端口请按代理客户端的实际设置填写。<code>7890</code> 是默认值。使用 Windows 手动代理时，可在「设置 → 网络和 Internet → 代理」核对地址和端口。</p>
               <div class="network-check">
                 <div class="row"><span class="lb">自动调整并发</span><button class="btn" id="btnNetworkTest" onclick="startNetworkTest()">快速检测网络</button><button class="btn gh" id="btnNetworkCancel" onclick="cancelNetworkTest()" disabled>取消检测</button></div>
                 <p class="compact-action-note">约 20 秒，最多使用 32 MiB 测试数据；请在任务空闲时检测。</p>
@@ -1116,29 +1122,24 @@
             </div>
 
             <section class="sect" id="aboutReleaseNotes" aria-labelledby="aboutReleaseTitle">
-              <div class="sh"><b id="aboutReleaseTitle">v2.8.2 本版更新</b><span class="rule"></span></div>
+              <div class="sh"><b id="aboutReleaseTitle">v2.8.3 本版更新</b><span class="rule"></span></div>
               <p class="notice" id="aboutReleaseAuthor">本版功能与维护：<a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">maomaoyexi</a>。</p>
               <ul class="about-release-summary">
-                <li>设置加载成功后才允许保存和提交任务，明确提示字幕、封面提交失败。</li>
-                <li>后台检查更新失败时，刷新页面保持静默，手动检查仍可重试。</li>
-                <li>修复批量取消、直播收尾以及音频与 Withny 同名文件保护。</li>
-                <li>恢复 FANBOX 暂停的预览和次日归档计划，改善旧 Withny 组件等待行为。</li>
+                <li>修复单条 YouTube 直播回放链接被误提交为录制任务的问题。</li>
+                <li>直播预检缺少格式时补查状态，并给出对应提示。</li>
+                <li>网络与代理设置补充地址和端口的填写说明。</li>
               </ul>
               <details class="about-release-details" id="aboutReleaseDetails">
-                <summary>查看 v2.8.2 详细更新</summary>
+                <summary>查看 v2.8.3 详细更新</summary>
                 <div class="dsec about-release-body">
                   <h4>本版修复与维护</h4>
                   <ol>
-                    <li>设置加载失败可重试。字幕、封面提交失败会显示实际错误并恢复按钮，展开或收起设置时目录保持当前章节高亮。</li>
-                    <li>区分后台检查与下载更新失败，保留手动检查、重试和 GitHub 手动更新入口。源码版可指定 --upgrade 按锁文件重装直播运行库。</li>
-                    <li>命令行批量下载支持带 BOM 的 UTF-8，按 Ctrl+C 会取消整个批次。退出前等待任务收尾，关闭过程中暂停派发新的蹲开播任务。</li>
-                    <li>音频提取成功后才替换目标文件。Withny 历史存档会保留下载过程中新增的同名文件。</li>
-                    <li>FANBOX 预览暂停后继续时保留预览模式，已预约的次日续跑暂时入队失败时会自动重试。</li>
-                    <li>Withny 文件选择期间可操作依赖维护，异常 HAR 提供明确提示，旧录制组件等待开播时由组件自行管理等待与重试。</li>
+                    <li>单条 YouTube 直播链接确认有可用回放后，按普通视频提交，保留本次 yt-dlp 参数。</li>
+                    <li>直播预检缺少格式时，确认尚未开播可继续蹲开播；当前无法录制或回放未就绪时显示对应中文提示。</li>
+                    <li>代理类型、地址和端口以代理客户端实际设置为准，Windows 手动代理可在系统设置中查看。</li>
                   </ol>
                   <h4>兼容与说明</h4>
-                  <p>EXE 图标与页面品牌标识一致。旧配置、预设及兼容接口保留；直播依赖 JSON 锁与手动安装清单由维护脚本同步。缺失检测不代表文件内容或平台可用性已验证。</p>
-                  <p>代理开关不是全部请求的总开关；更新及部分探测可能沿用系统或环境代理，自定义参数与 TUN／VPN 也会影响出口。各平台访问权限和续传条件仍以实际响应为准。</p>
+                  <p>回放分流适用于 WebUI 单条 YouTube 直播链接。可用格式取决于平台、网络和观看权限。</p>
                   <h4>升级提示</h4>
                   <p>EXE 和完整依赖 ZIP 使用同一版本。源码升级同步主入口、程序模块、前端资源和依赖并重启后端；保留配置、凭据、密码表与 download/。普通任务队列不跨进程恢复。</p>
                 </div>
@@ -1153,7 +1154,7 @@
                   <tbody>
                     <tr id="creditV271">
                       <td><a href="https://github.com/maomaoyexi" target="_blank" rel="noopener noreferrer">猫猫葉汐A_spy（@maomaoyexi）</a></td>
-                      <td>v2.8.2 下载、更新与任务稳定性修复、平台兼容、文档及版本维护；v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、<code>.ytdl</code> 清理、合并适配、测试和文档</td>
+                      <td>v2.8.3 YouTube 直播回放和预检修复、代理提示、文档及版本维护；v2.8.2 下载、更新与任务稳定性修复、平台兼容、文档及版本维护；v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、<code>.ytdl</code> 清理、合并适配、测试和文档</td>
                     </tr>
                     <tr>
                       <td><a href="https://github.com/DarkKandaoMaster" target="_blank" rel="noopener noreferrer">DarkKandaoMaster（强壮的砍刀）</a></td>

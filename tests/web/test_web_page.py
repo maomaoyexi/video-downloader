@@ -66,6 +66,17 @@ class WebPageTests(unittest.TestCase):
         self.assertIn(f'window.SESSION_TOKEN = "{token}";', text)
         self.assertNotIn(SESSION_TOKEN_PLACEHOLDER, text)
 
+    def test_proxy_settings_explain_which_port_to_use(self):
+        page = render_html_page("test-session-token").decode("utf-8")
+        network = re.search(r'<section[^>]+id="set-network"[^>]*>(.*?)</section>', page, re.S)
+        self.assertIsNotNone(network)
+        section = network.group(1)
+        hint = re.search(r'<p[^>]+id="proxySettingsHint"[^>]*>(.*?)</p>', section, re.S)
+        self.assertIsNotNone(hint, "代理设置应显示端口填写说明")
+        self.assertIn("代理客户端的实际设置", hint.group(1))
+        self.assertIn("<code>7890</code> 是默认值", hint.group(1))
+        self.assertRegex(section, r'<input[^>]+id="s_proxyport"[^>]+aria-describedby="proxySettingsHint"')
+
     def test_current_version_changelog_matches_about_and_bundle(self):
         from pathlib import Path
         from video_downloader.core.constants import VERSION

@@ -1,6 +1,6 @@
 YT-DLP 多平台视频下载工具 常见问题答疑合集
-适配版本：v2.8.2 WebUI（正式版，Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
-界面方式：浏览器WebUI（双击 video-downloader-v2.8.2-GUI.exe；源码版运行 视频下载工具v2.8.2-GUI.py）
+适配版本：v2.8.3 WebUI（正式版，Windows EXE／源码运行版） | 覆盖平台：YouTube / Bilibili / Twitch / Niconico / NicoChannel / Fantia / TwitCasting / Twitter/X / Rplay / FANBOX
+界面方式：浏览器WebUI（双击 video-downloader-v2.8.3-GUI.exe；源码版运行 视频下载工具v2.8.3-GUI.py）
 直播录制模式：在「设置 → 直播设置」选择自动、追开播、从当前时刻或蹲开播；默认自动，按平台能力核验后执行。
 =====================================
 一、启动与运行类
@@ -25,7 +25,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 1、确认dependency/yt-dlp.exe、dependency/ffmpeg.exe、dependency/ffprobe.exe存在
 2、检查杀毒软件是否隔离了程序文件，添加信任即可
 3、确认video_downloader文件夹与Python主程序同目录
-4、在命令行中运行「python 视频下载工具v2.8.2-GUI.py」查看具体报错信息
+4、在命令行中运行「python 视频下载工具v2.8.3-GUI.py」查看具体报错信息
 5、源码版同时需要 resource/ 和对应依赖；在项目根目录运行以下命令准备锁定版本的 Python 运行库：
    python scripts/install_live_dependencies.py
    python -m video_downloader.platforms.fanbox.runtime --install
@@ -136,6 +136,7 @@ YT-DLP 多平台视频下载工具 常见问题答疑合集
 1、在工具箱中点击「更新yt-dlp核心」
 2、切换为「通用兼容」预设，降低分辨率上限
 3、检查代理是否正常连接
+如果错误出现在 YouTube 的「无法开始直播任务」弹窗，先在浏览器查看同一链接是否已开播、能否播放。已预约的直播可以蹲开播。若回放已能播放，可使用同一视频的普通观看链接 `https://www.youtube.com/watch?v=视频ID` 提交下载。回放还在处理时，等 YouTube 上的回放可播放后再试。
 
 问题18：视频下载一半失败、自动重试
 原因：网络波动、分片超时
@@ -287,13 +288,13 @@ Cookie模式：大多数平台使用 cookies.txt；Rplay 使用独立 Firefox �
 代理：根据网络环境正确配置
 下载限速：推荐 5–10 MB/s。高速或大批量下载可能导致 IP 或账号被限制或封禁，相关后果由使用者自行承担
 WAV转MP3：320kbps，保留源文件（确认质量后再手动删除）
-运行方式：完整保留 dependency 目录及其子目录；源码版先按问题3准备运行库，再运行「python 视频下载工具v2.8.2-GUI.py」
+运行方式：完整保留 dependency 目录及其子目录；源码版先按问题3准备运行库，再运行「python 视频下载工具v2.8.3-GUI.py」
 关闭方式：使用左侧底部「退出工具」按钮彻底关闭
 =====================================
 九、平台使用与版本升级
 =====================================
 问题41：正式版需要下载哪些文件？
-答：只需 video-downloader-v2.8.2-GUI.exe 和 video-downloader-v2.8.2-dependencies.zip。EXE 无需安装 Python，把完整 dependency 文件夹解压到 EXE 同目录即可。依赖包已含 NicoChannel 插件，不需另下 nicochannel.zip。升级前退出旧程序，保留设置、Cookie、密码表和 download/。
+答：只需 video-downloader-v2.8.3-GUI.exe 和 video-downloader-v2.8.3-dependencies.zip。EXE 无需安装 Python，把完整 dependency 文件夹解压到 EXE 同目录即可。依赖包已含 NicoChannel 插件，不需另下 nicochannel.zip。升级前退出旧程序，保留设置、Cookie、密码表和 download/。
 
 问题42：Rplay 已经有 cookies.txt，为什么仍提示登录？
 答：Rplay 使用独立 Firefox 登录来源，不能以普通 cookies.txt 替代。请先在 Firefox 登录，再在设置中选择 Rplay 登录来源与配置。账号仍须拥有目标内容权限；DRM、未知加密和未接入授权协议不在支持范围内。

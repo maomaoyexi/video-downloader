@@ -91,12 +91,13 @@ def classify_target(url: str, platform: str | None = None) -> LiveTarget:
 
     if platform_name == "YouTube":
         if host in {"youtu.be", "www.youtu.be"}:
-            video_id = _segments(lowered)[0] if _segments(lowered) else ""
+            segments = _segments(path)
+            video_id = segments[0] if segments else ""
             return LiveTarget(raw_url, platform_name, TargetKind.EVENT, video_id)
         if host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
             segments = _segments(lowered)
             if len(segments) >= 2 and segments[0] == "live":
-                return LiveTarget(raw_url, platform_name, TargetKind.EVENT, segments[1])
+                return LiveTarget(raw_url, platform_name, TargetKind.EVENT, _segments(path)[1])
             if segments and segments[0] == "watch":
                 video_id = (query.get("v") or [""])[0]
                 if video_id:

@@ -5,7 +5,7 @@
 适用内容：已购买并获得保存许可的 Withny 历史存档
 支持浏览器：Chrome / Edge
 使用入口：下载任务 → Withny → 选择 HAR 并下载
-适配版本：v2.8.2 WebUI（Windows EXE／源码运行版）
+适配版本：v2.8.3 WebUI（Windows EXE／源码运行版）
 
 一、重要说明
 

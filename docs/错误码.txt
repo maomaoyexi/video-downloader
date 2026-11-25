@@ -1,6 +1,6 @@
 ============================================================
          多平台视频下载工具 错误与排查手册
-         对应版本：v2.8.2 WebUI（Windows EXE／源码运行版）
+         对应版本：v2.8.3 WebUI（Windows EXE／源码运行版）
 ============================================================
 
 本手册按报错来源说明退出码、HTTP 状态、FANBOX 错误标识和任务状态。
@@ -32,6 +32,7 @@
 
 常见提示与处理：
 - Requested format is not available / 无可用格式：先用自动画质与兼容输出组合复查，放宽格式筛选；这是运行失败，不能仅据此认定为退出码 2。
+  若出现在 YouTube 直播预检，先在浏览器确认直播或回放能否播放。能播放的回放也可用普通观看链接重试。
 - Sign in / login required / private / members-only：先在浏览器确认同一账号有观看权限，再更新对应登录态。
 - This video is protected by a password：TwitCasting 内容需要密码；通过 WebUI 对应任务输入正确密码，不能把密码直接当 Cookie 使用。
 - has already been recorded / 已记录在下载归档：表示命中记录，不证明磁盘文件仍存在；按任务提示选择重新下载或跳过。

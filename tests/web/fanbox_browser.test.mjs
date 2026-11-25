@@ -162,12 +162,12 @@ async function verifyAboutReleaseNotes(){
   assert.equal(await title.textContent(),data.version.split(' ')[0]+' 本版更新');
   assert.equal(await page.locator('#aboutReleaseAuthor').textContent(),'本版功能与维护：maomaoyexi。');
   assert.ok((await page.locator('#creditV271').textContent()).includes('@maomaoyexi'));
-  assert.equal(await page.locator('#aboutReleaseNotes .about-release-summary>li').count(),4);
+  assert.equal(await page.locator('#aboutReleaseNotes .about-release-summary>li').count(),3);
   assert.equal(await details.evaluate(el=>el.open),false,'详细更新默认收起');
   await details.locator('summary').click();
-  assert.equal(await details.locator('ol>li').count(),6,'本版六项修复与维护应完整显示');
+  assert.equal(await details.locator('ol>li').count(),3,'本版三项修复与维护应完整显示');
   const releaseText=await details.textContent();
-  for(const text of ['设置加载失败','GitHub 手动更新','Ctrl+C','同名文件','次日续跑','异常 HAR'])assert.ok(releaseText.includes(text),`本版详情缺少：${text}`);
+  for(const text of ['普通视频提交','继续蹲开播','代理客户端实际设置'])assert.ok(releaseText.includes(text),`本版详情缺少：${text}`);
   assert.equal(await details.locator('.about-release-body').isVisible(),true);
   await details.locator('summary').focus();await page.keyboard.press('Space');
   assert.equal(await details.evaluate(el=>el.open),false);

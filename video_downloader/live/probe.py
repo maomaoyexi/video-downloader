@@ -264,8 +264,10 @@ class YtDlpProbe:
     def probe(self, target: LiveTarget, timeout: float = 25.0) -> LiveProbe:
         if not self._ytdlp_path:
             raise ProbeError("未找到 yt-dlp", retryable=False)
+        deadline = time.monotonic() + timeout
         try:
-            result = self._runner(self._command(target), timeout)
+            command = self._command(target)
+            result = self._runner(command, timeout)
         except subprocess.TimeoutExpired:
             raise ProbeError("yt-dlp 探测超时", retryable=True) from None
         except OSError as exc:
@@ -274,17 +276,32 @@ class YtDlpProbe:
         stdout = getattr(result, "stdout", "") or ""
         stderr = getattr(result, "stderr", "") or ""
         returncode = getattr(result, "returncode", 1)
+        info = None
         if returncode != 0:
             message = stderr or stdout
             if target.platform == 'Rplay':
                 from video_downloader.platforms.rplay import sanitize_output
                 message = sanitize_output(message)
-            raise _probe_error_from_stderr(message)
-
-        try:
-            info = json.loads(stdout)
-        except (ValueError, UnicodeError):
-            raise ProbeError("yt-dlp 输出无法解析", retryable=True) from None
+            error = _probe_error_from_stderr(message)
+            if target.platform != "YouTube" or error.status is not LiveStatus.ERROR or not any(
+                text in message.lower() for text in ("requested format is not available", "no video formats found")
+            ):
+                raise error
+            # 格式选择失败后只补查状态，避免把无音视频流的结果当成可录制。
+            info = self._youtube_metadata_without_formats(command, deadline - time.monotonic())
+            if info is None:
+                raise ProbeError("YouTube 直播预检未取得可录制的音视频格式，暂时无法确认直播状态。请在浏览器确认能否播放，并检查 yt-dlp 依赖。") from error
+            status = _ytdlp_status(info)
+            if status is LiveStatus.ENDED:
+                raise ProbeError("YouTube 直播已结束，暂未取得可下载的回放格式。请在 YouTube 确认回放可播放后重试。",
+                                 status=LiveStatus.ENDED, retryable=False)
+            if status is not LiveStatus.UPCOMING:
+                raise ProbeError("YouTube 直播预检未取得可录制的音视频格式。请确认直播在浏览器中可播放，并检查 yt-dlp 依赖及 Cookie 设置。")
+        else:
+            try:
+                info = json.loads(stdout)
+            except (ValueError, UnicodeError):
+                raise ProbeError("yt-dlp 输出无法解析", retryable=True) from None
         if not isinstance(info, dict):
             raise ProbeError("yt-dlp 输出不是对象", retryable=True)
 
@@ -322,7 +339,7 @@ class YtDlpProbe:
         stream_key = f"{target.platform or ''}:{stable}:{timestamp or ''}" if status is LiveStatus.LIVE else ""
         evidence = None
         if status is LiveStatus.LIVE and target.platform in {"YouTube", "Twitch"}:
-            evidence = CatchUpPlanner(self._runner).probe(self._command(target), target.url, target.platform,
+            evidence = CatchUpPlanner(self._runner).probe(command, target.url, target.platform,
                                                         edge_info=info)
         return LiveProbe(
             platform=target.platform or "",
@@ -341,6 +358,18 @@ class YtDlpProbe:
             catch_up_available=bool(evidence and evidence.available),
             catch_up_reason=evidence.reason if evidence else "该平台尚未验证追播，使用从当前时刻录制",
         )
+
+    def _youtube_metadata_without_formats(self, command, timeout) -> dict | None:
+        if timeout <= 0:
+            return None
+        try:
+            result = self._runner([*command[:-1], "--ignore-no-formats-error", command[-1]], timeout)
+            if result.returncode != 0:
+                return None
+            info = json.loads(result.stdout)
+        except (OSError, subprocess.TimeoutExpired, ValueError, TypeError):
+            return None
+        return info if isinstance(info, dict) else None
 
 
 def _ytdlp_status(info: dict) -> LiveStatus:

@@ -1,12 +1,12 @@
-# 多平台视频下载工具 v2.8.2 WebUI
+# 多平台视频下载工具 v2.8.3 WebUI
 
-![Version](https://img.shields.io/badge/source-v2.8.2%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/source-v2.8.3%20WebUI-purple) ![Platform](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 面向 Windows 的多平台视频下载与直播录制工具，使用浏览器 WebUI 操作，提供任务队列、批量下载、字幕与音频工具，并支持 FANBOX 内容归档及 Withny 授权存档。
 
 **[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
 
-> 本页对应 v2.8.2 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
+> 本页对应 v2.8.3 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
 
 [下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [源码运行](#源码运行) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
 
@@ -18,8 +18,8 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `video-downloader-v2.8.2-GUI.exe` | 主程序，无需安装 Python |
-| `video-downloader-v2.8.2-dependencies.zip` | 下载工具、平台插件及配套运行依赖 |
+| `video-downloader-v2.8.3-GUI.exe` | 主程序，无需安装 Python |
+| `video-downloader-v2.8.3-dependencies.zip` | 下载工具、平台插件及配套运行依赖 |
 
 1. 新建一个工具文件夹，将 EXE 放入其中。
 2. 解压依赖包，将完整的 `dependency/` 文件夹放在 EXE 旁边，不要拆散或额外套一层目录。
@@ -28,7 +28,7 @@
 
 ```text
 工具文件夹/
-├── video-downloader-v2.8.2-GUI.exe
+├── video-downloader-v2.8.3-GUI.exe
 └── dependency/
 ```
 
@@ -85,7 +85,7 @@ v2.8.0 新增「关于软件 → 依赖状态 → 更新依赖」。启动或打
 
 ### 直播录制与弹幕
 
-通过「直播录制设置」选择自动、追开播、从当前时刻录制或蹲开播。程序会检查平台状态；能否追播取决于平台与当前流，无法取得的历史分片不保证能够补齐。
+通过「直播录制设置」选择自动、追开播、从当前时刻录制或蹲开播。程序会检查平台状态；能否追播取决于平台与当前流，无法取得的历史分片不保证能够补齐。单条 YouTube `/live/` 链接确认是可用回放时，按普通视频下载。预约直播可按提示蹲开播。
 
 支持已接入评论源的采集、SRT/ASS 导出和录制报告。不同平台的权限、时间精度与实测范围不同，请结合 `comments-report.json` 及完整性报告检查结果。
 
@@ -116,12 +116,12 @@ v2.8.0 新增「关于软件 → 依赖状态 → 更新依赖」。启动或打
 
 ## 源码运行
 
-保留 `视频下载工具v2.8.2-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 64 位 Python 3.12 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
+保留 `视频下载工具v2.8.3-GUI.py`、`video_downloader/`、`resource/` 和 `dependency/` 的目录结构，使用 64 位 Python 3.12 运行。若相应 Python 运行库尚未准备，可在项目根目录执行：
 
 ```powershell
 python scripts/install_live_dependencies.py
 python -m video_downloader.platforms.fanbox.runtime --install
-python ".\视频下载工具v2.8.2-GUI.py"
+python ".\视频下载工具v2.8.3-GUI.py"
 ```
 
 前两条命令按锁定版本准备直播和 FANBOX 的 Python 运行库；yt-dlp、FFmpeg 及平台录制组件仍需在 `dependency/` 中准备。源码直播运行库有文件缺失时，可运行 `python scripts/install_live_dependencies.py --upgrade` 按锁定版本重新安装。完整安装与依赖说明见[使用教程](docs/使用教程.txt)。
@@ -131,9 +131,9 @@ python ".\视频下载工具v2.8.2-GUI.py"
 命令行选项可通过以下方式查看：
 
 ```powershell
-python ".\视频下载工具v2.8.2-GUI.py" --help
-python ".\视频下载工具v2.8.2-GUI.py" --fanbox-scan --help
-python ".\视频下载工具v2.8.2-GUI.py" --fanbox-download --help
+python ".\视频下载工具v2.8.3-GUI.py" --help
+python ".\视频下载工具v2.8.3-GUI.py" --fanbox-scan --help
+python ".\视频下载工具v2.8.3-GUI.py" --fanbox-download --help
 ```
 
 源码版不会被自动更新下载的 EXE 覆盖。升级源码时请更新主脚本、`video_downloader/`、`resource/` 和对应依赖，保留自己的配置与下载数据。
@@ -166,7 +166,7 @@ python ".\视频下载工具v2.8.2-GUI.py" --fanbox-download --help
 
 | 贡献者 | 主要贡献 |
 | --- | --- |
-| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | v2.8.2 下载、更新与任务稳定性修复、平台兼容、文档及版本维护；v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
+| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | v2.8.3 YouTube 直播回放和预检修复、代理提示、文档及版本维护；v2.8.2 下载、更新与任务稳定性修复、平台兼容、文档及版本维护；v2.8.1 下载进度稳定、SSL 打包与自检修复、错误说明和版本维护；v2.8.0 依赖检测与更新、可靠性修复及版本维护；v2.7.1 全部更新；项目原版与维护；Withny 历史存档和直播监控；多平台直播入口、策略、断流与状态展示；任务页「本次 yt-dlp 参数」「直播录制设置」按钮及后续交互整合；Cookie 模板、TwitCasting 密码表、HLS 回退与恢复、`.ytdl` 清理、合并适配、测试和文档 |
 | [DarkKandaoMaster（强壮的砍刀）](https://github.com/DarkKandaoMaster) | WebUI 重构，以及 v2.4.0 / v2.5.0 的视觉与交互体系重构 |
 | [ErgouTree（@ergou10086）](https://github.com/ergou10086) | Bilibili 视频与多 P、NicoChannel、Twitter/X、TwitCasting；单条/批量 CLI、音频输出与工具；下载进度、命令查看、yt-dlp 自定义参数、代理、Provider 和目录整理；归档选择与独立封面；PR #17 的直播框架重构、追播校验、弹幕及多任务；PR #18 的 Rplay、FANBOX 及相关界面与 CLI |
 | [ZheYi101](https://github.com/ZheYi101) | PR #12 的随视频下载字幕设置与独立字幕下载工具（v2.4.0） |

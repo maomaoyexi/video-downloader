@@ -1118,10 +1118,8 @@ function clearStartedTaskArgs(value) {
 
 async function doStartDl(url, biliParts, tcPassword, customArgs) {
   if(window.FanboxUI?.matches(url))return window.FanboxUI.start(url);
-  const liveMode = await prepareLiveTask(url);
-  if(liveMode === false) return;
-  const body = {url};
-  if(liveMode) body.live_mode = liveMode;
+  const body = await prepareLiveTask(url);
+  if(!body) return;
   if(biliParts) body.bili_parts = biliParts;
   if(tcPassword) body.tc_password = tcPassword;
   const taskArgs = customArgs === undefined ? activeTaskYtdlpArgs : customArgs;
@@ -1858,43 +1856,43 @@ function showLiveNotice(opts) {
   });
 }
 
-/** 任务开始前检查；返回 null=普通下载，false=取消，字符串=要使用的直播模式。 */
+/** 任务开始前检查，返回提交参数或 null（取消）。 */
 async function prepareLiveTask(url) {
   const selectedMode = ($('s_live_mode') && $('s_live_mode').value) || 'auto';
-  if(!isLiveCandidateUrl(url) && selectedMode !== 'wait') return null;
+  if(!isLiveCandidateUrl(url) && selectedMode !== 'wait') return {url};
   let data;
   try {
     data = await api('/api/live/inspect', {method:'POST', body:JSON.stringify({url, live_mode:selectedMode})});
   } catch(e) {
     showToast('直播状态检查失败: ' + e.message, 'error');
-    return false;
-  }
-  if(!data.is_live_target) return null;
-  if(data.status === 'ended') {
-    showToast('直播已结束，将按普通视频下载', 'warn');
     return null;
   }
+  if(!data.is_live_target) return {url};
+  if(data.status === 'ended' && !data.probe_error) {
+    showToast('直播已结束，将按普通视频下载', 'warn');
+    return data.replay_url ? {url:data.replay_url, live_mode:'auto'} : {url};
+  }
   if(data.error) {
-    if(isLiveNoticeMuted('live_error')) { showToast(data.error, 'error'); return false; }
+    if(isLiveNoticeMuted('live_error')) { showToast(data.error, 'error'); return null; }
     await showLiveNotice({
       kind: 'live_error', title: '无法开始直播任务',
       summary: data.error, meta: data.platform ? `平台：${data.platform}` : '',
       confirmLabel: '知道了'
     });
-    return false;
+    return null;
   }
   const title = `${data.platform || ''} · ${data.title || url}`;
   if(data.status === 'offline' || data.status === 'upcoming') {
     if(!data.can_wait) {
       const message = `直播尚未开始，且该平台不支持蹲开播${data.wait_reason ? '：' + data.wait_reason : ''}`;
-      if(isLiveNoticeMuted('live_error')) { showToast(message, 'error'); return false; }
+      if(isLiveNoticeMuted('live_error')) { showToast(message, 'error'); return null; }
       await showLiveNotice({
         kind: 'live_error', title: '暂不能开始录制',
         summary: message, meta: title, confirmLabel: '知道了'
       });
-      return false;
+      return null;
     }
-    if(isLiveNoticeMuted('wait_offer')) return 'wait';
+    if(isLiveNoticeMuted('wait_offer')) return {url, live_mode:'wait'};
     const scheduled = data.scheduled_start ? `预约开始：${formatLiveDateTime(data.scheduled_start)}` : '';
     const choice = await showLiveNotice({
       kind: 'wait_offer', title: '直播尚未开始',
@@ -1902,11 +1900,11 @@ async function prepareLiveTask(url) {
       meta: [title, scheduled].filter(Boolean).join(' · '),
       confirmLabel: '蹲开播'
     });
-    return choice === 'wait' ? 'wait' : false;
+    return choice === 'wait' ? {url, live_mode:'wait'} : null;
   }
   if(data.status === 'live') {
     if(isLiveNoticeMuted('live_started')) {
-      return data.recommended_mode || data.effective_mode || 'auto';
+      return {url, live_mode:data.recommended_mode || data.effective_mode || 'auto'};
     }
     const started = data.started_at ? `开播于 ${formatLiveDateTime(data.started_at)}` : '已开播';
     const elapsed = data.live_duration_seconds != null ? ` · 已开播 ${formatLiveElapsed(data.live_duration_seconds)}` : '';
@@ -1919,15 +1917,15 @@ async function prepareLiveTask(url) {
       warning: data.warning || '',
       confirmLabel: '开始录制'
     });
-    return choice || false;
+    return choice ? {url, live_mode:choice} : null;
   }
   const message = data.error || `无法确认直播状态（${data.status || 'unknown'}）`;
-  if(isLiveNoticeMuted('live_error')) { showToast(message, 'error'); return false; }
+  if(isLiveNoticeMuted('live_error')) { showToast(message, 'error'); return null; }
   await showLiveNotice({
     kind: 'live_error', title: '无法开始直播任务',
     summary: message, meta: title, confirmLabel: '知道了'
   });
-  return false;
+  return null;
 }
 
 // ========== SSE ==========
