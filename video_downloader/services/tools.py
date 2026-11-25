@@ -1,10 +1,12 @@
 import base64
 import json
 import os
+import re
 import subprocess
 import threading
 from pathlib import Path
 from typing import Callable
+from urllib.request import Request, urlopen
 
 from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS, LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS, SUBTITLE_TYPE_OPTIONS
 from video_downloader.core.paths import AppPaths
@@ -13,6 +15,20 @@ from video_downloader.core.subtitles import classify_subtitle_result
 from video_downloader.core.thumbnails import classify_thumbnail_result, thumbnail_written_path
 from video_downloader.services.audio_tools import AudioToolService, resolve_directory
 from video_downloader.services.download_manager import DownloadManager
+
+
+_YTDLP_STABLE_RELEASES = "https://github.com/yt-dlp/yt-dlp/releases"
+_YTDLP_STABLE_LATEST = f"{_YTDLP_STABLE_RELEASES}/latest"
+_YTDLP_STABLE_VERSION = r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?"
+
+
+def _latest_ytdlp_stable_tag():
+    with urlopen(Request(_YTDLP_STABLE_LATEST, method="HEAD"), timeout=10) as response:
+        release_url = response.geturl()
+    match = re.fullmatch(rf"{re.escape(_YTDLP_STABLE_RELEASES)}/tag/({_YTDLP_STABLE_VERSION})", release_url)
+    if not match:
+        raise ValueError("官方发布页未返回有效的稳定版标签")
+    return match[1]
 
 
 class ToolService:
@@ -219,9 +235,30 @@ $dialog.Dispose()
             try:
                 env = self._paths.subprocess_env()
                 env["PYTHONUTF8"] = "1"
-                proc = subprocess.run([str(ytdlp), "-U"], cwd=self._tool_dir, env=env,
-                                      capture_output=True, text=True, encoding='utf-8',
-                                      errors='replace', timeout=120)
+
+                def run_ytdlp(*args):
+                    return subprocess.run([str(ytdlp), *args], cwd=self._tool_dir, env=env,
+                                          capture_output=True, text=True, encoding="utf-8",
+                                          errors="replace", timeout=120)
+
+                proc = run_ytdlp("-U")
+                if (proc.returncode and _YTDLP_STABLE_LATEST in proc.stderr
+                        and re.search(r"obtain version info \(HTTP Error (?:403|429):", proc.stderr)):
+                    self._log("[yt-dlp] GitHub API 无法查询版本，正在检查官方稳定版发布页", "info")
+                    try:
+                        tag = _latest_ytdlp_stable_tag()
+                        current = run_ytdlp("--ignore-config", "--version")
+                        version = current.stdout.strip()
+                        if current.returncode or not re.fullmatch(_YTDLP_STABLE_VERSION, version):
+                            raise ValueError("无法确认当前 yt-dlp 的稳定版版本号")
+                        # An exact update target can downgrade, unlike the original -U.
+                        if tuple(map(int, version.split("."))) >= tuple(map(int, tag.split("."))):
+                            self._log(f"[yt-dlp] 当前版本 {version} 已达到官方稳定版 {tag}", "success")
+                            return
+                        proc = run_ytdlp("--ignore-config", "--update-to", f"stable@{tag}")
+                    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                        self._log(f"[yt-dlp] 查询或更新官方稳定版失败: {exc}", "warn")
+
                 for line in (proc.stdout or "").split("\n"):
                     if line.strip():
                         self._log(f"[yt-dlp] {line.strip()}", "info")
