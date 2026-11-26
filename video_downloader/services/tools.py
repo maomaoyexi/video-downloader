@@ -6,7 +6,6 @@ import subprocess
 import threading
 from pathlib import Path
 from typing import Callable
-from urllib.request import Request, urlopen
 
 from video_downloader.core.constants import DEFAULT_SUBTITLE_LANGS, LEGACY_ALL_SUBTITLE_LANGS, RECOMMENDED_SUBTITLE_LANGS, SUBTITLE_TYPE_OPTIONS
 from video_downloader.core.paths import AppPaths
@@ -22,13 +21,21 @@ _YTDLP_STABLE_LATEST = f"{_YTDLP_STABLE_RELEASES}/latest"
 _YTDLP_STABLE_VERSION = r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?"
 
 
-def _latest_ytdlp_stable_tag():
-    with urlopen(Request(_YTDLP_STABLE_LATEST, method="HEAD"), timeout=10) as response:
-        release_url = response.geturl()
-    match = re.fullmatch(rf"{re.escape(_YTDLP_STABLE_RELEASES)}/tag/({_YTDLP_STABLE_VERSION})", release_url)
-    if not match:
-        raise ValueError("官方发布页未返回有效的稳定版标签")
-    return match[1]
+def _latest_ytdlp_stable_tag(run_ytdlp):
+    # Use yt-dlp's own transport so the lookup honours its configured proxy.
+    # Generic extraction can report "Unsupported URL" after printing the redirect.
+    probe = run_ytdlp(
+        "--no-update", "--simulate", "--no-quiet", "--color", "no_color",
+        "--no-batch-file", "--no-cache-dir", "--no-cookies", "--no-cookies-from-browser",
+        "--no-plugin-dirs", "--no-exec", "--no-exec-before-download",
+        "--socket-timeout", "10", "--retries", "0", "--extractor-retries", "0",
+        "--use-extractors", "generic", "--", _YTDLP_STABLE_LATEST,
+    )
+    redirect = rf"\[redirect\] Following redirect to {re.escape(_YTDLP_STABLE_RELEASES)}/tag/({_YTDLP_STABLE_VERSION})"
+    for line in (probe.stdout or "").splitlines():
+        if match := re.fullmatch(redirect, line):
+            return match[1]
+    raise ValueError("官方发布页未返回有效的稳定版标签")
 
 
 class ToolService:
@@ -246,7 +253,7 @@ $dialog.Dispose()
                         and re.search(r"obtain version info \(HTTP Error (?:403|429):", proc.stderr)):
                     self._log("[yt-dlp] GitHub API 无法查询版本，正在检查官方稳定版发布页", "info")
                     try:
-                        tag = _latest_ytdlp_stable_tag()
+                        tag = _latest_ytdlp_stable_tag(run_ytdlp)
                         current = run_ytdlp("--ignore-config", "--version")
                         version = current.stdout.strip()
                         if current.returncode or not re.fullmatch(_YTDLP_STABLE_VERSION, version):
@@ -255,7 +262,7 @@ $dialog.Dispose()
                         if tuple(map(int, version.split("."))) >= tuple(map(int, tag.split("."))):
                             self._log(f"[yt-dlp] 当前版本 {version} 已达到官方稳定版 {tag}", "success")
                             return
-                        proc = run_ytdlp("--ignore-config", "--update-to", f"stable@{tag}")
+                        proc = run_ytdlp("--update-to", f"stable@{tag}")
                     except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
                         self._log(f"[yt-dlp] 查询或更新官方稳定版失败: {exc}", "warn")
 
