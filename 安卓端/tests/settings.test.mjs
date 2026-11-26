@@ -108,12 +108,12 @@ test("设置目录定位并展开分类，再次选择同一项可折叠", { tim
     const panels = {
         proxyDisclosure: "networkPanel",
         cookieDisclosure: "cookieList",
-        outputDisclosure: "outputPanel",
         fanboxDisclosure: "fanboxPanel",
     };
     const entry = id => directory.querySelector(`[data-settings-target="${id}"]`);
     const currentEntry = () => [...directory.querySelectorAll('[aria-current="location"]')];
     assert.equal(entry("defaultsDisclosure"), null);
+    assert.equal(entry("outputDisclosure"), null);
     for (const [id, panel] of Object.entries(panels)) {
         assert.ok(entry(id), `目录缺少 ${id}`);
         assert.equal(entry(id).closest("[hidden], [inert]"), null);
@@ -167,22 +167,22 @@ test("浏览器预览的设置目录只显示可用章节", context => {
     assert.equal(visibleEntry("proxyDisclosure"), true);
     assert.equal(visibleEntry("cookieDisclosure"), show("cookieSection"));
     assert.equal(show("transferFields"), false);
-    assert.equal(show("outputSection"), false);
+    assert.equal(element("outputSection"), null);
+    assert.equal(show("downloadDestinationSection"), false);
     assert.equal(show("toolboxSection"), false);
     assert.equal(show("fanboxSection"), false);
     assert.equal(visibleEntry("outputDisclosure"), false);
+    assert.equal(visibleEntry("destinationDisclosure"), false);
     assert.equal(visibleEntry("toolboxDisclosure"), false);
     assert.equal(visibleEntry("fanboxDisclosure"), false);
 });
 
 test("从设置打开帮助和关于页，返回时保留设置和下载链接", { timeout: 4000 }, async context => {
     let projectOpens = 0;
-    let creditsOpens = 0;
     const { window, element, show, click } = openPage(context, {
         snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy: false }),
         engineInfo: () => JSON.stringify({ appVersion: "1.2.3-test", engineVersion: "2026.11.23" }),
         openProjectPage: () => { projectOpens += 1; },
-        openProjectCredits: () => { creditsOpens += 1; },
     });
     async function back(action) {
         const navigated = new Promise(resolve => window.addEventListener("popstate", resolve, { once: true }));
@@ -208,6 +208,9 @@ test("从设置打开帮助和关于页，返回时保留设置和下载链接",
     assert.ok(topic, "帮助页包含可展开的主题");
     topic.querySelector("summary").click();
     assert.equal(topic.open, true);
+    const fileHelp = Array.from(element("helpView").querySelectorAll("details"))
+        .find(section => section.querySelector("summary").textContent === "找不到下载的文件");
+    assert.match(fileHelp.textContent, /按平台和作者.*平台目录下再按作者分文件夹/);
     await back(() => click("openSettings"));
     assert.equal(show("settingsView"), true);
     assert.equal(show("helpView"), false);
@@ -222,9 +225,11 @@ test("从设置打开帮助和关于页，返回时保留设置和下载链接",
     assert.equal(element("aboutProjectLink").href, "https://github.com/maomaoyexi/video-downloader");
     click("aboutProjectLink");
     assert.equal(projectOpens, 1);
-    assert.equal(element("aboutCreditsLink").href, "https://github.com/maomaoyexi/video-downloader/blob/main/CREDITS.txt");
-    click("aboutCreditsLink");
-    assert.equal(creditsOpens, 1);
+    assert.equal(element("aboutCredits").textContent, "安卓端作者与贡献者");
+    const credits = element("aboutView").querySelector(".about-credits");
+    assert.deepEqual(Array.from(credits.querySelectorAll("dt"), author => author.textContent),
+        ["猫猫葉汐A_spy（@maomaoyexi）"]);
+    assert.equal(credits.querySelector("dd").textContent, "安卓端移植、开发与维护");
     assert.equal(show("aboutView"), true);
     await back(() => window.history.back());
     assert.equal(show("settingsView"), true);
@@ -368,6 +373,7 @@ test("从设置配置代理并返回下载，原有任务参数保留", { timeou
     assert.equal(element("proxyEnabled").checked, false);
     element("url").value = url;
     click("resolutionSummary");
+    click("qualitySummary");
     window.document.querySelector('[data-height="720"]').click();
     click("openSettings");
     assert.equal(show("downloadForm"), false);
@@ -406,7 +412,7 @@ test("从设置配置代理并返回下载，原有任务参数保留", { timeou
     assert.equal(element("url").value, url);
     assert.equal(element("resolutionValue").textContent, "720p");
     click("start");
-    assert.deepEqual(started, [[url, 720, true, "127.0.0.1", "3128", false, 512, "mp4", "auto", "socks5", 4]]);
+    assert.deepEqual(started, [[url, 720, true, "127.0.0.1", "3128", false, 512, "mp4", "auto", "socks5", 4, "video", "m4a", false]]);
 
     click("openSettings");
     assert.equal(element("proxyEnabled").disabled, true);
@@ -424,10 +430,10 @@ test("从设置配置代理并返回下载，原有任务参数保留", { timeou
     element("proxyPort").value = "";
     await returnToDownload();
     click("start");
-    assert.deepEqual(started[1], [url, 720, false, "127.0.0.1", "", false, 512, "mp4", "auto", "socks5", 4]);
+    assert.deepEqual(started[1], [url, 720, false, "127.0.0.1", "", false, 512, "mp4", "auto", "socks5", 4, "video", "m4a", false]);
 });
 
-test("加载默认视频输出和分片设置，校验参数后提交", { timeout: 4000 }, async context => {
+test("加载默认画质和分片设置，使用 MP4 并保留编码偏好", { timeout: 4000 }, async context => {
     const defaults = { height: 720, subtitles: true, rateLimitKiB: 3500, videoContainer: "mkv", videoCodec: "h264", fragments: 8 };
     const starts = [];
     const bridge = {
@@ -438,28 +444,27 @@ test("加载默认视频输出和分片设置，校验参数后提交", { timeou
     };
     const { window, element, show, click } = openPage(context, bridge);
     const rate = element("rateLimit");
-    const container = element("videoContainer");
-    const codec = element("videoCodec");
+    const codec = element("videoCodecPicker");
     const fragmentsInput = element("fragments");
     const transferNote = element("transferNote");
     assert.ok(element("networkPanel").contains(fragmentsInput));
     assert.ok(element("networkPanel").contains(rate));
     element("url").value = url;
-    assert.equal(element("resolutionValue").textContent, "720p · 字幕");
+    assert.equal(element("resolutionValue").textContent, "720p");
+    assert.equal(element("moreOptionsValue").textContent, "H.264 · 字幕");
     assert.equal(rate.value, "3500");
-    assert.equal(container.value, "mkv");
-    assert.equal(codec.value, "h264");
-    assert.equal(element("videoContainerPicker").textContent.trim(), "MKV");
-    assert.equal(element("videoCodecPicker").textContent.trim(), "H.264");
+    assert.equal(element("videoContainer"), null);
+    assert.equal(element("outputSection"), null);
+    assert.ok(element("downloadForm").contains(codec));
+    assert.equal(element("videoCodecValue").textContent, "H.264");
     assert.equal(fragmentsInput.value, "8");
     click("start");
-    assert.deepEqual(starts, [[url, 720, false, "", "", true, 3500, "mkv", "h264", "http", 8]]);
+    assert.deepEqual(starts, [[url, 720, false, "", "", true, 3500, "mp4", "h264", "http", 8, "video", "m4a", false]]);
 
     fragmentsInput.value = "17";
     click("start");
     assert.equal(starts.length, 1);
     assert.equal(show("networkPanel"), true);
-    assert.equal(show("outputPanel"), false);
     assert.match(transferNote.textContent, /1–16/);
     assert.equal(element("settingsDirectory").querySelector('[aria-current="location"]').dataset.settingsTarget,
         "proxyDisclosure");
@@ -476,27 +481,115 @@ test("加载默认视频输出和分片设置，校验参数后提交", { timeou
     assert.equal(show("networkPanel"), true);
     assert.match(transferNote.textContent, /102400/);
     rate.value = "2048";
-    click("outputDisclosure");
-    click("videoCodecPicker");
-    assert.equal(show("videoCodecOptions"), true);
-    click("videoContainerPicker");
-    assert.equal(show("videoCodecOptions"), false);
-    assert.equal(show("videoContainerOptions"), true);
-    element("videoContainerOptions").querySelector('[value="webm"]').click();
-    assert.equal(show("videoContainerOptions"), false);
-    assert.equal(codec.value, "auto");
-    assert.equal(element("videoCodecPicker").textContent.trim(), "自动");
-    click("videoCodecPicker");
-    assert.equal(element("videoCodecOptions").querySelector('[value="h264"]').disabled, true);
-    element("videoCodecOptions").querySelector('[value="vp9"]').click();
-    assert.equal(element("videoCodecPicker").textContent.trim(), "VP9");
     navigated = new Promise(resolve => window.addEventListener("popstate", resolve, { once: true }));
     click("openSettings");
     await navigated;
     click("resolutionSummary");
-    click("audioOnlyChoice");
+    assert.equal(codec.open, false);
+    click("moreOptionsSummary");
+    click("videoCodecSummary");
+    assert.equal(codec.open, true);
+    assert.equal(codec.querySelector('[data-video-codec="h264"]').disabled, false);
+    codec.querySelector('[data-video-codec="vp9"]').click();
+    assert.equal(codec.open, false);
+    assert.equal(element("videoCodecValue").textContent, "VP9");
+    assert.equal(window.document.activeElement, element("videoCodecSummary"));
+    click("outputModeSummary");
+    element("outputModePicker").querySelector('[data-output-mode="audio"]').click();
+    assert.equal(codec.hidden, true);
     click("start");
-    assert.deepEqual(starts[1], [url, -3, false, "", "", false, 2048, "webm", "vp9", "http", 6]);
+    assert.deepEqual(starts[1], [url, 720, false, "", "", false, 2048, "mp4", "vp9", "http", 6, "audio", "m4a", false]);
+});
+
+test("设置可异步读取所选下载目录、保存分类方式并恢复默认位置", context => {
+    const defaultLabel = "下载 / 多平台下载";
+    let destination = { custom: false, label: defaultLabel, classification: "none", message: "" };
+    let choosing = 0;
+    let busy = false;
+    const classifications = [];
+    const { element, show, click, refresh } = openPage(context, {
+        snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy }),
+        downloadDestination: () => JSON.stringify(destination),
+        chooseDownloadDestination() { choosing++; },
+        resetDownloadDestination() {
+            destination = { ...destination, custom: false, label: defaultLabel, message: "已恢复默认下载目录。" };
+            return "";
+        },
+        setDownloadClassification(value) {
+            classifications.push(value);
+            if (value === "output" && classifications.length === 2) return "无法保存分类方式。";
+            destination = { ...destination, classification: value, message: "" };
+            return "";
+        },
+    });
+    const picker = element("downloadClassificationPicker");
+    const options = element("downloadClassificationOptions");
+    const status = element("downloadDestinationNote");
+    const choose = element("chooseDownloadDestination");
+    const reset = element("resetDownloadDestination");
+    const setClassification = value => {
+        picker.click();
+        assert.equal(show("downloadClassificationOptions"), true);
+        options.querySelector(`[value="${value}"]`).click();
+        assert.equal(show("downloadClassificationOptions"), false);
+    };
+
+    click("openSettings");
+    const entry = element("settingsDirectory").querySelector('[data-settings-target="destinationDisclosure"]');
+    assert.equal(entry.hidden, false);
+    assert.equal(show("downloadDestinationPanel"), false);
+    entry.click();
+    assert.equal(show("downloadDestinationPanel"), true);
+    assert.equal(entry.getAttribute("aria-expanded"), "true");
+    assert.equal(element("downloadDestinationLabel").textContent, "默认位置 · " + defaultLabel);
+    assert.equal(element("downloadDestinationSummary").textContent, "保存到「" + defaultLabel + "」");
+    assert.equal(reset.disabled, true);
+    assert.equal(picker.textContent.trim(), "不分类");
+    assert.deepEqual(Array.from(options.querySelectorAll("button"), button => [button.value, button.textContent]), [
+        ["none", "不分类"], ["platform", "按平台"], ["platform-author", "按平台和作者"], ["output", "按输出模式"],
+    ]);
+    choose.click();
+    assert.equal(choosing, 1);
+    const customLabel = "媒体 / 安卓";
+    destination = { ...destination, custom: true, label: customLabel, message: "已更改下载目录。" };
+    refresh();
+    assert.equal(element("downloadDestinationLabel").textContent, "自选位置 · " + customLabel);
+    assert.equal(element("downloadDestinationSummary").textContent, "保存到「" + customLabel + "」");
+    assert.equal(status.textContent, "已更改下载目录。");
+    assert.equal(reset.disabled, false);
+
+    setClassification("platform");
+    assert.equal(picker.textContent.trim(), "按平台");
+    setClassification("output");
+    assert.equal(picker.textContent.trim(), "按平台");
+    assert.equal(status.textContent, "无法保存分类方式。");
+    assert.equal(status.dataset.error, "true");
+    refresh();
+    assert.equal(status.textContent, "无法保存分类方式。");
+    setClassification("output");
+    assert.equal(picker.textContent.trim(), "按输出模式");
+    assert.equal(status.textContent, "");
+    setClassification("platform-author");
+    refresh();
+    assert.equal(picker.textContent.trim(), "按平台和作者");
+    assert.equal(options.querySelector('[value="platform-author"]').getAttribute("aria-pressed"), "true");
+    assert.deepEqual(classifications, ["platform", "output", "output", "platform-author"]);
+
+    picker.click();
+    busy = true;
+    refresh();
+    assert.equal(choose.disabled, true);
+    assert.equal(reset.disabled, true);
+    assert.equal(picker.disabled, true);
+    assert.equal(show("downloadClassificationOptions"), false);
+    busy = false;
+    refresh();
+    reset.click();
+    assert.equal(reset.disabled, true);
+    assert.equal(element("downloadDestinationLabel").textContent, "默认位置 · " + defaultLabel);
+    assert.equal(element("downloadDestinationSummary").textContent, "保存到「" + defaultLabel + "」");
+    assert.equal(status.textContent, "已恢复默认下载目录。");
+    assert.equal(picker.textContent.trim(), "按平台和作者");
 });
 
 test("工具箱显示版本并通过桥接打开下载目录", context => {
@@ -678,13 +771,19 @@ test("各平台 Cookie 开关独立，关闭时仍可管理配置", context => {
 test("历史刷新并通过记录 ID 播放和打开文件位置，返回下载保留链接", { timeout: 4000 }, async context => {
     const history = [];
     const opened = [];
+    const companion = [];
     const locations = [];
     const { window, element, show, click, refresh } = openPage(context, {
         snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy: false }),
+        downloadDestination: () => JSON.stringify({ custom: false, label: "下载 / 多平台下载", classification: "none" }),
         downloadHistory: () => JSON.stringify(history),
         playHistoryVideo: id => {
             opened.push(id);
             return "找不到视频文件。";
+        },
+        playHistoryAudio: id => {
+            companion.push(id);
+            return "找不到独立音频文件。";
         },
         openHistoryVideoLocation: id => {
             locations.push(id);
@@ -704,35 +803,50 @@ test("历史刷新并通过记录 ID 播放和打开文件位置，返回下载�
         { id: "failed", title: "", platform: "youtube", finishedAt: 1699999999000, status: "failed" },
         { id: "canceled", title: "", platform: "bilibili", finishedAt: 1699999998000, status: "canceled" },
         { id: "audio", title: "示例音频", platform: "youtube", finishedAt: 1699999997000, status: "completed", audioOnly: true },
+        { id: "dual", title: "双文件", platform: "youtube", finishedAt: 1699999996000, status: "completed",
+          outputMode: "silent-video-and-audio", hasAudioFile: true },
     );
     refresh();
     assert.equal(show("historyEmpty"), false);
     const list = element("historyList");
     const records = Array.from(list.querySelectorAll("[data-history-id]"));
-    assert.deepEqual(records.map(record => record.dataset.historyId), ["saved", "failed", "canceled", "audio"]);
+    assert.deepEqual(records.map(record => record.dataset.historyId), ["saved", "failed", "canceled", "audio", "dual"]);
     assert.match(records[0].textContent, /<已保存的示例>/);
     assert.match(records[1].textContent, /YouTube/);
     assert.match(records[1].textContent, /失败/);
     assert.match(records[2].textContent, /取消/);
     const plays = list.querySelectorAll("button[data-history-play]");
-    assert.equal(plays.length, 2);
+    assert.equal(plays.length, 3);
     assert.equal(plays[0].textContent, "播放视频");
     assert.equal(plays[1].textContent, "播放音频");
     assert.equal(plays[1].getAttribute("aria-label"), "播放音频：示例音频");
+    assert.equal(plays[2].textContent, "播放无声视频");
+    assert.deepEqual([0, 3, 4].map(index => records[index].querySelector("[data-history-audio]").hidden), [true, true, false]);
     plays[0].click();
     assert.deepEqual(opened, ["saved"]);
     assert.ok(window.document.body.textContent.includes("找不到视频文件。"));
     plays[1].click();
     assert.deepEqual(opened, ["saved", "audio"]);
     const locationButtons = list.querySelectorAll("button[data-history-location]");
-    assert.equal(locationButtons.length, 2);
+    assert.equal(locationButtons.length, 3);
     assert.equal(locationButtons[0].hidden, false);
     locationButtons[0].focus();
     locationButtons[0].click();
     assert.deepEqual(locations, ["saved"]);
     assert.match(records[0].querySelector(".note").textContent, /移出下载目录/);
 
+    const companionButton = list.querySelector('[data-history-id="dual"] [data-history-audio]');
+    assert.equal(companionButton.getAttribute("aria-label"), "播放独立音频：双文件");
+    companionButton.focus();
+    companionButton.click();
+    assert.deepEqual(companion, ["dual"]);
+    assert.match(records[4].querySelector(".note").textContent, /找不到独立音频/);
     history.push({ id: "newer", title: "新任务", platform: "youtube", finishedAt: 1700000001000, status: "completed" });
+    refresh();
+    assert.equal(window.document.activeElement, list.querySelector('[data-history-id="dual"] [data-history-audio]'));
+    list.querySelector('[data-history-id="saved"] [data-history-location]').focus();
+
+    history.push({ id: "newest", title: "最新任务", platform: "youtube", finishedAt: 1700000002000, status: "completed" });
     refresh();
     assert.equal(window.document.activeElement, list.querySelector('[data-history-id="saved"] [data-history-location]'));
 
@@ -742,5 +856,244 @@ test("历史刷新并通过记录 ID 播放和打开文件位置，返回下载�
     assert.equal(show("downloadForm"), true);
     assert.equal(show("historyView"), false);
     assert.equal(link.value, url);
+});
+
+test("下载历史可用平台和作者下拉筛选，列表倒序并保留播放和定位", context => {
+    const records = [
+        { id: "old", platform: "bilibili", title: "旧音频", audioOnly: true, finishedAt: 1700000000000 },
+        { id: "youtube", platform: "youtube", title: "音画", authorFolder: "作者甲", outputMode: "video-and-audio",
+          finishedAt: 1700000001000, hasAudioFile: true },
+        { id: "bilibilinew", platform: "bilibili", title: "视频", authorFolder: "作者甲", outputMode: "video",
+          finishedAt: 1700000002000 },
+        { id: "youtubeold", platform: "youtube", title: "无声视频", authorFolder: "作者乙",
+          outputMode: "silent-video-and-audio", finishedAt: 1699999999000 },
+        { id: "bilibilisecond", platform: "bilibili", title: "另一个视频", authorFolder: "作者甲", outputMode: "video",
+          finishedAt: 1700000001500 },
+    ].map(record => ({ status: "completed", ...record }));
+    const actions = [];
+    const { window, element, click, refresh } = openPage(context, {
+        snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy: false }),
+        downloadHistory: () => JSON.stringify(records),
+        playHistoryAudio(id) { actions.push(["audio", id]); return ""; },
+        openHistoryVideoLocation(id) { actions.push(["location", id]); return ""; },
+    });
+    click("openHistory");
+    const list = element("historyList");
+    const ids = () => Array.from(list.querySelectorAll(":scope > [data-history-id]"), row => row.dataset.historyId);
+    const action = (id, name) => list.querySelector(`[data-history-id="${id}"] [data-history-${name}]`);
+    const select = (id, value) => {
+        element(id + "Picker").click();
+        element(id + "Options").querySelector(`button[value="${value}"]`).click();
+    };
+    const platforms = element("historyPlatformFilterOptions");
+    const authors = element("historyAuthorFilterOptions");
+    assert.deepEqual(ids(), ["bilibilinew", "bilibilisecond", "youtube", "old", "youtubeold"]);
+    assert.deepEqual(Array.from(platforms.querySelectorAll("button"), button => button.value), ["", "bilibili", "youtube"]);
+    assert.deepEqual(Array.from(authors.querySelectorAll("button"), button => button.value), ["", "未知作者", "作者甲", "作者乙"]);
+
+    select("historyPlatformFilter", "youtube");
+    assert.deepEqual(ids(), ["youtube", "youtubeold"]);
+    assert.equal(window.document.activeElement, element("historyPlatformFilterPicker"));
+    assert.deepEqual(Array.from(authors.querySelectorAll("button"), button => button.value), ["", "作者甲", "作者乙"]);
+    select("historyAuthorFilter", "作者甲");
+    assert.deepEqual(ids(), ["youtube"]);
+    assert.equal(window.document.activeElement, element("historyAuthorFilterPicker"));
+    action("youtube", "audio").click();
+
+    const matching = element("historySearch");
+    matching.value = "音画";
+    matching.dispatchEvent(new window.Event("input"));
+    assert.deepEqual(ids(), ["youtube"]);
+    action("youtube", "location").click();
+    assert.deepEqual(actions, [["audio", "youtube"], ["location", "youtube"]]);
+    matching.value = "";
+    matching.dispatchEvent(new window.Event("input"));
+
+    select("historyPlatformFilter", "");
+    assert.equal(element("historyAuthorFilter").value, "");
+    assert.deepEqual(ids(), ["bilibilinew", "bilibilisecond", "youtube", "old", "youtubeold"]);
+    assert.equal(list.querySelectorAll(".history-group, .history-disclosure").length, 0);
+    assert.equal(element("historyEmpty").hidden, true);
+});
+
+test("批量删除只处理已筛选结果中的勾选记录，取消不删除，失败可重试", { timeout: 4000 }, async context => {
+    const records = [
+        { id: "main", title: "VIDEO 主文件", authorFolder: "作者甲", mediaNames: ["video.mp4"], attachmentNames: ["video.webp"] },
+        { id: "audio", title: "Video 音频", authorFolder: "作者甲", mediaNames: ["video.m4a"] },
+        { id: "other", title: "VIDEO 其他作者", authorFolder: "另一作者" },
+    ].map((record, index) => ({platform: "bilibili", status: "completed", finishedAt: 1700000002000 - index, ...record}));
+    const calls = [];
+    let failAudio = true;
+    const { window, element, click, show } = openPage(context, {
+        snapshot: () => '{"busy":false}',
+        downloadHistory: () => JSON.stringify(records),
+        deleteDownloadHistory(id, deleteFiles) {
+            calls.push([id, deleteFiles]);
+            if (id === "audio" && failAudio) return "没有目录授权。";
+            records.splice(records.findIndex(record => record.id === id), 1);
+            return "";
+        },
+    });
+    const closeDialog = action => new Promise(resolve => {
+        window.addEventListener("popstate", resolve, { once: true });
+        action();
+    });
+    const search = value => {
+        element("historySearch").value = value;
+        element("historySearch").dispatchEvent(new window.Event("input"));
+    };
+    const row = id => element("historyList").querySelector(`[data-history-id="${id}"]`);
+    click("openHistory");
+    click("historyBulkToggle");
+    row("other").querySelector("[data-history-select]").click();
+    assert.equal(element("historySelectionCount").textContent, "已选 1 条");
+    element("historyAuthorFilterPicker").click();
+    element("historyAuthorFilterOptions").querySelector('button[value="作者甲"]').click();
+    assert.equal(row("other"), null);
+    assert.equal(element("historySelectionCount").textContent, "已选 0 条");
+    search("  video  ");
+    assert.equal(row("other"), null);
+    assert.equal(element("historyBulkDelete").disabled, true);
+    click("historySelectAll");
+    assert.equal(element("historySelectionCount").textContent, "已选 2 条");
+    click("historySelectAll");
+    assert.equal(element("historyBulkDelete").disabled, true);
+    click("historySelectAll");
+    click("historyBulkDelete");
+    assert.match(element("historyDeleteTitle").textContent, /2 条/);
+    assert.match(element("historyDeleteEffect").textContent, /只删除/);
+    assert.equal(element("historyDeleteMediaNames").children.length, 2);
+    await closeDialog(() => click("historyDeleteCancel"));
+    assert.deepEqual(calls, []);
+
+    click("historyDeleteFiles");
+    click("historyBulkDelete");
+    assert.deepEqual(Array.from(element("historyDeleteMediaNames").children, item => item.textContent), [
+        "VIDEO 主文件", "VIDEO 主文件 · video.mp4", "VIDEO 主文件 · video.webp",
+        "Video 音频", "Video 音频 · video.m4a",
+    ]);
+    assert.match(element("historyDeleteEffect").textContent, /关联的本地文件/);
+    await closeDialog(() => click("historyDeleteConfirm"));
+    assert.deepEqual(calls, [["main", true], ["audio", true]]);
+    assert.equal(row("main"), null);
+    assert.equal(row("audio").querySelector("[data-history-select]").checked, true);
+    assert.match(element("historyNote").textContent, /1 条未能删除.*没有目录授权/);
+    failAudio = false;
+    search("音频");
+    click("historyBulkDelete");
+    await closeDialog(() => click("historyDeleteConfirm"));
+    assert.equal(show("historyEmpty"), true);
+    assert.equal(element("historyEmpty").textContent, "没有符合筛选条件的下载记录。");
+    search("");
+    assert.ok(row("other"));
+    assert.deepEqual(calls, [["main", true], ["audio", true], ["audio", true]]);
+});
+
+test("逐条删除列出媒体和附件，重试时只列出剩余文件，离开历史后关闭本地文件删除", { timeout: 4000 }, async context => {
+    const records = [
+        { id: "dual", platform: "youtube", title: "<示例音画>", outputMode: "video-and-audio", status: "completed",
+          finishedAt: 1700000002000, hasMainFile: true, hasAudioFile: true, mediaNames: ["示例.mp4", "<示例>.opus"],
+          attachmentNames: ["示例.webp", "示例.zh-Hans.srt", "<示例>.auto.en.srt"] },
+        { id: "failed", platform: "bilibili", title: "解析失败", status: "failed", finishedAt: 1700000001000 },
+        { id: "old", platform: "bilibili", title: "旧下载", status: "completed", finishedAt: 1700000000000 },
+    ];
+    const calls = [];
+    const { window, element, show, click, refresh } = openPage(context, {
+        snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy: false }),
+        downloadHistory: () => JSON.stringify(records),
+        playHistoryAudio: () => "",
+        openHistoryVideoLocation: () => "",
+        deleteDownloadHistory(id, deleteFiles) {
+            calls.push([id, deleteFiles]);
+            const index = records.findIndex(record => record.id === id);
+            if (id === "dual" && deleteFiles) {
+                if (records[index].hasMainFile) {
+                    records[index] = { ...records[index], hasMainFile: false, mediaNames: ["<示例>.opus"] };
+                    return "无法删除独立音频。";
+                }
+                if (records[index].hasAudioFile) {
+                    records[index] = { ...records[index], hasAudioFile: false,
+                        mediaNames: [], attachmentNames: ["<示例>.auto.en.srt"] };
+                    return "无法删除字幕。";
+                }
+            }
+            records.splice(index, 1);
+            return "";
+        },
+    });
+    const away = async action => {
+        const navigated = new Promise(resolve => window.addEventListener("popstate", resolve, { once: true }));
+        action();
+        await navigated;
+    };
+    const row = id => element("historyList").querySelector(`[data-history-id="${id}"]`);
+    const remove = id => row(id).querySelector("[data-history-delete]");
+    const dialog = element("historyDeleteDialog");
+    const mode = element("historyDeleteFiles");
+    const files = element("historyDeleteMediaNames");
+    const effect = element("historyDeleteEffect");
+    const fileNames = () => Array.from(files.children, file => file.textContent);
+
+    click("openHistory");
+    assert.equal(show("historyDeleteFilesOption"), true);
+    assert.equal(mode.checked, false);
+    remove("old").click();
+    assert.equal(dialog.open, true);
+    assert.equal(window.document.activeElement, element("historyDeleteCancel"));
+    assert.equal(element("historyDeleteTitle").textContent, "旧下载");
+    assert.match(element("historyDeleteMetadata").textContent, /B 站/);
+    assert.match(effect.textContent, /只删除.*记录/);
+    assert.equal(files.hidden, true);
+    assert.deepEqual(calls, []);
+    await away(() => window.history.back());
+    assert.equal(dialog.open, false);
+    assert.equal(window.document.activeElement, remove("old"));
+    assert.deepEqual(calls, []);
+
+    remove("old").click();
+    await away(() => click("historyDeleteConfirm"));
+    assert.equal(row("old"), null);
+    assert.deepEqual(calls, [["old", false]]);
+
+    mode.click();
+    remove("dual").click();
+    assert.equal(element("historyDeleteTitle").textContent, "<示例音画>");
+    assert.deepEqual(fileNames(), ["示例.mp4", "<示例>.opus", "示例.webp", "示例.zh-Hans.srt", "<示例>.auto.en.srt"]);
+    assert.match(effect.textContent, /关联的本地文件/);
+    assert.equal(files.querySelector("img, script"), null);
+    await away(() => click("historyDeleteCancel"));
+    assert.deepEqual(calls, [["old", false]]);
+
+    remove("dual").click();
+    await away(() => click("historyDeleteConfirm"));
+    assert.equal(row("dual").querySelector("[data-history-play]").hidden, true);
+    assert.equal(row("dual").querySelector("[data-history-audio]").hidden, false);
+    assert.equal(row("dual").querySelector("[data-history-location]").hidden, false);
+    assert.equal(row("dual").querySelector(".note").textContent, "无法删除独立音频。");
+    refresh();
+    assert.equal(element("historyNote").textContent, "无法删除独立音频。");
+    remove("dual").click();
+    assert.deepEqual(fileNames(), ["<示例>.opus", "示例.webp", "示例.zh-Hans.srt", "<示例>.auto.en.srt"]);
+    await away(() => click("historyDeleteConfirm"));
+    assert.equal(row("dual").querySelector("[data-history-audio]").hidden, true);
+    assert.equal(row("dual").querySelector(".note").textContent, "无法删除字幕。");
+    remove("dual").click();
+    assert.deepEqual(fileNames(), ["<示例>.auto.en.srt"]);
+    assert.match(effect.textContent, /关联的本地文件/);
+    await away(() => click("historyDeleteConfirm"));
+    assert.equal(row("dual"), null);
+    assert.equal(element("historyNote").textContent, "");
+
+    remove("failed").click();
+    assert.match(effect.textContent, /只删除.*记录/);
+    await away(() => click("historyDeleteCancel"));
+    assert.equal(mode.checked, true);
+    await away(() => click("openSettings"));
+    click("openHistory");
+    assert.equal(mode.checked, false);
+    remove("failed").click();
+    await away(() => click("historyDeleteConfirm"));
+    assert.equal(show("historyEmpty"), true);
+    assert.deepEqual(calls, [["old", false], ["dual", true], ["dual", true], ["dual", true], ["failed", false]]);
 });
 

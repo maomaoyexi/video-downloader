@@ -1,70 +1,95 @@
-# 多平台视频下载工具 · 安卓正式版
+# 多平台视频下载工具 · 安卓端
 
-安卓正式版面向搭载 Android 10 或更新版本的 ARM64 实体设备。安卓端由猫猫葉汐A_spy（@maomaoyexi）移植。界面与下载服务都在手机上运行，下载时需要设备能访问视频平台。
+![Version](https://img.shields.io/badge/Android-v1.1.0-purple) ![Platform](https://img.shields.io/badge/platform-Android%2010%2B%20ARM64-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
-## 安装与使用
+面向 Android 10 及以上 ARM64 设备的点播下载工具。使用应用内 WebUI 下载哔哩哔哩和 YouTube 视频、处理批量队列及归档 FANBOX 公开单帖。
 
-1. 在 Android 10 或更新版本的 ARM64 实体设备上下载并安装正式 APK。[下载安卓 1.0.1 ARM64 APK](https://github.com/maomaoyexi/video-downloader/releases/download/android-v1.0.1/video-downloader-android-1.0.1-arm64-v8a.apk) · [发布说明与校验文件](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.1)
-2. 打开「多平台视频下载工具」，粘贴 YouTube 或哔哩哔哩点播链接。B 站可使用 `b23.tv` 和 `bili2233.cn` 的分享短链。在「下载选项」中选择画质、仅音频或字幕，选好后点「开始下载」。已结束且可播放的 YouTube 直播回放可使用同一视频的 `/live/` 链接。
-3. 下载进度卡会显示当前音视频流的速度，下载引擎提供预计时间时也会显示。视频默认以 MP4 保存，音频以 M4A 保存，目录为「下载 / 多平台下载」。完成后可以播放文件。点「打开文件位置」可在「打开方式」中选择支持目录跳转的文件管理器，已安装的兼容版本 MT 管理器会使用其「定位所在位置」入口。如果没有可选的应用，会尝试用系统文件选择器显示该目录。下载时可以从页面或通知中取消。第一次下载需要在手机上解包运行依赖，准备阶段可能较长。
+**[下载安卓 APK](https://github.com/maomaoyexi/video-downloader/releases/download/android-v1.1.0/video-downloader-android-1.1.0-arm64-v8a.apk)** · **[安卓发布说明与校验](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.1.0)** · **[Windows 版](https://github.com/maomaoyexi/video-downloader#readme)**
 
-第一次打开应用时，将「使用与免责协议」的正文滑到底部，点「我已阅读并确认」即可继续。确认状态保存在本机，之后可在「设置 → 关于软件」查看协议。
+[下载安装](#下载安装) · [支持平台](#支持平台) · [功能与使用](#功能与使用) · [源码构建](#源码构建) · [使用注意](#使用注意) · [文档](#文档) · [作者与贡献者](#作者与贡献者)
 
-选择「仅音频」可以保存 M4A。下载视频时开启「同时下载字幕」，应用会把平台提供的人工字幕转换为 SRT，保存到视频旁边。字幕文件名包含语言代码，例如 `视频名.zh-Hans.srt`。无可用字幕或字幕处理失败时，应用会保留成功保存的视频并显示提示。
+## 下载安装
 
-批量下载时每行放一个视频链接，一次最多 20 条，两站可混合提交。应用按输入顺序逐条下载，共用本次的画质或音频模式、字幕及网络设置。单条失败后继续下一条。点「停止队列」或通知里的取消按钮，会中止当前下载和剩余队列。已下载的文件保留，未开始的链接不会写入下载历史。
+| 文件 | 用途 |
+| --- | --- |
+| `video-downloader-android-1.1.0-arm64-v8a.apk` | ARM64 正式安装包 |
+| `video-downloader-android-1.1.0-arm64-v8a-corresponding-source.zip` | 正式 APK 对应源码 |
+| `SHA256SUMS.txt` | 发布附件校验值 |
 
-展开任务卡上的队列明细可查看每条链接的进度状态，包括等待、下载中、完成、失败、跳过和取消。
+1. 从发布页下载 APK，用系统安装器安装。
+2. 首次打开时，把「使用与免责协议」滑到底，点「我已阅读并确认」。
+3. 在首页粘贴视频链接，按需展开「下载选项」，再点「开始下载」。
 
-点链接框上方的「导入 TXT」可从系统文件选择器读取链接。每行一个链接，支持 UTF-8 和带 BOM 的 UTF-16，忽略空行和以 `#` 开头的注释。导入后可检查或编辑链接，再手动开始下载。队列还有后续任务时，点「跳过当前条」会取消当前条目并继续下一条。跳过的条目在历史里记为「已取消」。
+首次确认协议后，可按「允许后台下载」提示打开系统电池设置，也可选「暂不设置」。使用小米设备时，可在应用电池设置中选择「无限制」。
 
-单独粘贴一个 B 站多 P 视频链接或 YouTube 播放列表链接，点「开始下载」后可先查看分集并勾选要下载的内容。最多浏览前 100 项，每批最多选 20 项，按列表顺序提交到同一个队列。粘贴已指定 P 号的 B 站链接可直接下载该分集。请先用公开可播放的视频测试。频道下载和直播录制暂未接入。
+### 老用户升级
 
-点首页右上角的「历史」可查看本机最近 200 条下载记录。记录显示标题、平台、时间和结果，未取到标题时显示「未命名视频」。重启应用后仍可查看。成功的记录支持播放视频或音频，也可打开文件位置。文件已移动或删除时，记录会保留，原文件无法访问时会显示提示。历史从安装带有「历史」功能的版本后开始记录。
+在「设置 → 关于软件」点「检查更新」。下载新版正式 APK 后，使用系统安装器覆盖安装，以保留历史和设置。试用版与正式版可以同时安装，各自保存 Cookie、历史和预设。
 
-「自动」优先选择兼容的编码。「最高」优先选择可用的最高分辨率。8K、4K、2K 分别以 4320p、2160p、1440p 为上限，在上限内优先选择高分辨率。「1080p60」以 1080p 和 60 帧每秒为上限，先比较分辨率，再比较帧率。平台没有 1080p60 时，会从满足上限的可用格式中选择。
+## 支持平台
 
-若息屏后进度停住、解锁后恢复，可在系统的应用详情中检查「多平台视频下载工具」的省电策略。小米真机测试采用「无限制」。
+| 平台 | 已接入能力 | 使用要点 |
+| --- | --- | --- |
+| 哔哩哔哩 | 点播、多 P | 支持 `b23.tv`、`bili2233.cn` 分享短链；带明确 P 号的视频直链可直接下载对应分集 |
+| YouTube | 点播、播放列表、可播放的直播回放 | 已结束且可播放的回放可用 `/live/` 链接 |
+| FANBOX | 公开单帖预览与 ZIP 归档 | 位于「设置 → 专项归档」，可保存正文、图片和附件 |
 
-「设置」顶部提供输出与画质、网络与代理、平台 Cookie、专项归档和工具箱的目录。点一个分类会定位并展开，重复点当前分类可收起或展开。
+频道批量下载、正在直播的录制、FANBOX 创作者批量扫描和 Withny 暂未接入安卓端。
 
-手动代理位于「设置 → 网络与代理」。选择 HTTP 或 SOCKS5 后，填写手机能访问的地址和实际端口。「代理类型」旁的「启用代理」控制点播和分集解析是否使用手动代理。代理默认关闭，设置在切换页面时保留，应用重新加载界面后恢复默认。使用手机 VPN 时通常保持关闭即可。手机上的 `127.0.0.1` 指向手机本身。代理运行在电脑上时，应使用手机能连接的电脑地址和端口。
+## 功能与使用
 
-在「设置 → 平台 Cookie」点标题或旁边的箭头，可展开或收起 B 站和 YouTube 的配置列表。各平台可分别导入从已登录浏览器导出的 Netscape 格式 `cookies.txt`，或移除应用保存的副本。应用只保留对应平台的记录，存入应用私有目录。各平台的开关控制点播和分集解析是否读取本平台的 Cookie，关闭后仍可导入或移除。升级自旧总开关的版本时，两站初始沿用原开关状态。「已配置」表示文件已导入，实际登录状态和可用画质由平台决定。
+### 下载与批量任务
 
-「设置 → 网络与代理」也可填写下载限速和分片并发数。限速单位为 KiB/s，`0` 表示不限速。分片并发数为 1–16，只在音视频流支持分片下载时生效。每条媒体下载使用本批提交时的数值，这两项独立于手动代理开关。
+- 每行一个链接，一次最多 20 条，哔哩哔哩和 YouTube 可混合提交。也可用「导入 TXT」填入链接，支持 UTF-8 和带 BOM 的 UTF-16。
+- 单独提交多 P 视频或 YouTube 播放列表，可浏览前 100 项，每批最多勾选 20 项。B 站分 P 列表会显示可取得的分集标题。
+- 队列按顺序下载，支持跳过当前条或停止队列。单条失败后继续下一条。展开「队列详情」可看各条链接状态。
 
-在「设置 → 输出与画质」可选 MP4、MKV 或 WebM 封装，编码可选自动、H.264 优先、AV1 优先或 VP9 优先。应用从平台提供的轨道中选择兼容的格式。WebM 需要平台提供兼容音视频流，遇到格式不兼容时可改选 MP4 或 MKV。
+### 音画输出、字幕与封面
 
-设置标题右侧的「配置预设」可管理画质或仅音频、字幕、视频封装、编码偏好、限速和分片并发。用「另存为」给当前配置命名，点对应的「加载」应用，并在下次打开时沿用。内置的「默认配置」可恢复自动画质、MP4、自动编码、字幕关闭、不限速和分片并发 1。自定义预设可以同名覆盖，删除需再次确认。代理和 Cookie 在各自的设置项中管理。
+| 音画输出 | 保存结果 |
+| --- | --- |
+| 带声音的视频（默认） | 有声 MP4 |
+| 只输出音频 | 一个独立音频文件 |
+| 带声音的视频 + 独立音频 | 有声 MP4 和独立音频 |
+| 无声视频 + 独立音频 | 无声 MP4 和独立音频 |
 
-在「设置 → 工具箱」可打开总下载目录，并查看当前应用和内置 yt-dlp 的版本。
+- 在「下载选项」选择画质。「更多选项」提供编码偏好、音频格式、字幕和封面。独立音频可选 M4A（默认）、FLAC、Opus 或 WAV。
+- 开启「同时下载字幕」后，单个视频可搜索语言，勾选人工、自动生成或自动翻译字幕，也可跳过。批量任务保存可用的人工字幕。字幕以独立 SRT 文件保存，封面以图片保存。
+- 进度卡显示当前传输速度和可用的预计剩余时间。单条任务同时输出视频、独立音频和字幕时，按「1/3 · 视频」「2/3 · 独立音频」「3/3 · 字幕」提示。封面另计一项。
 
-设置页底部的「使用帮助」提供下载、分集、Cookie、代理、专项归档和常见问题的手机操作说明。「关于软件」显示实际应用和内置 yt-dlp 版本、近期更新、贡献者和项目主页。
+### 历史与文件位置
 
-在「设置 → 关于软件」点「检查更新」，可查询 GitHub 上的 ARM64 安卓正式版。发现新版时会显示版本和更新说明。点「下载更新」后在浏览器下载 APK，再用系统安装器覆盖安装。
+- 默认保存到「下载 / 多平台下载」，按平台和作者分文件夹。可在「设置 → 下载目录」自选位置和分类方式。
+- 首页「历史」保留最近 200 条记录，可按平台、作者和标题筛选。完成卡及历史记录可播放文件、打开文件位置。
+- 支持单条和批量删除。开启「删除记录时同时删除本地文件」后，确认框会列出关联的视频、音频、封面和字幕。旧记录未关联的封面和字幕可在原目录手动清理。
 
-在「设置 → 专项归档」粘贴公开的 FANBOX 单帖链接，点「预览帖子」查看正文摘要和可归档文件数，再点「保存 ZIP」。正文、可下载图片和附件一起保存到「下载 / 多平台下载 / FANBOX」，每篇最多收录 60 个文件，单文件上限 128 MiB，单帖文件合计上限 256 MiB。FANBOX 使用设备的网络连接，平台要求登录或验证时会显示原因。创作者批量扫描、登录归档和 Withny 尚未接入。
+### 设置与使用帮助
 
-## 浏览器交互预览
+在「设置」按分类打开配置。标题右侧的「配置预设」可保存、加载和恢复下载参数。工具箱提供下载目录入口和版本信息，使用帮助可查看手机端操作说明。
 
-直接打开 [预览页面](app/src/main/assets/index.html)，点「使用示例链接」后可体验开始、模拟进度、取消和再次下载。页面中的模拟任务不会产生文件。
+### FANBOX 内容归档
 
-## 构建
+进入「设置 → 专项归档」，粘贴公开单帖链接，点「预览帖子」再点「保存 ZIP」。默认存到「下载 / 多平台下载 / FANBOX」。每篇最多收录 60 个文件，单文件上限 128 MiB，每帖合计上限 256 MiB。
 
-在本目录使用 Node.js 24、Python 3、JDK 17、Gradle 9.3 和 Android SDK Platform 35、Build Tools 36.0.0。将 `JAVA_HOME` 指向 JDK 17，配置 `ANDROID_HOME` 后，运行 `node prepare-core.cjs` 准备并核验锁定的 yt-dlp。按原生运行库说明准备 `.build/native-runtime/` 下的两个 AAR 和校验清单，再运行 `gradle :app:assembleDebug` 构建 `arm64-v8a` 试用包。生成的 APK 位于 `app/build/outputs/apk/debug/`。[ARM64 运行库构建说明](native-runtime/README.md)
+<a name="构建"></a>
 
-本机离线构建可将 `GRADLE_USER_HOME` 指向已准备好的 Gradle 缓存，并为 Gradle 添加 `--offline`。
+## 源码构建
 
-安卓封装沿用 youtubedl-android 0.18.1 的 Java 接口。ARM64 的 FFmpeg、FFprobe、QuickJS 和 CPython 从固定源码重建，解析核心使用 yt-dlp 2026.11.23。[原生库源码与许可](THIRD_PARTY_NOTICES.md) · [yt-dlp 2026.11.23](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.11.23)
+构建环境为 Node.js 24、Python 3、JDK 17、Gradle 9.3、Android SDK Platform 35 和 Build Tools 36.0.0。设置 `JAVA_HOME` 和 `ANDROID_HOME`，在安卓源码目录执行。
+
+1. 运行 `node prepare-core.cjs`，准备锁定版本的 yt-dlp。
+2. 按 [ARM64 运行库构建说明](native-runtime/README.md) 准备 `.build/native-runtime/` 下的两个 AAR 和校验清单。
+3. 运行 `gradle :app:assembleDebug`。试用包位于 `app/build/outputs/apk/debug/app-debug.apk`。
+
+依赖已缓存时，可配置 `GRADLE_USER_HOME` 并加上 `--offline`。下载引擎锁定为 yt-dlp 2026.11.23，安卓封装采用 youtubedl-android 0.18.1 的 Java 接口。[第三方组件与源码](THIRD_PARTY_NOTICES.md)
+
+也可以在浏览器打开 [本地预览页面](app/src/main/assets/index.html)，用示例链接体验模拟下载。
 
 ### 构建与签名正式包
 
-`release` 变体使用应用 ID `io.github.maomaoyexi.videodownloader`，当前正式版本为 `1.0.1`（`versionCode 6`）。用于开发测试的 `debug` 变体使用应用 ID `io.github.maomaoyexi.videodownloader.prototype`，版本为 `0.1.3`，可与正式版同时安装。已下载的公共文件仍在原目录，两个应用各自保存 Cookie、预设、历史和协议确认。从试用版切换到正式版时，需要在正式版重新导入 Cookie。
+运行 `gradle :app:assembleRelease`，未签名包位于 `app/build/outputs/apk/release/app-release-unsigned.apk`。正式应用 ID 为 `io.github.maomaoyexi.videodownloader`，本版为 `1.1.0`（`versionCode 7`）。试用版使用 ID `io.github.maomaoyexi.videodownloader.prototype`，显示版本为 `0.1.3`。
 
-准备运行库后，运行 `gradle :app:assembleRelease` 构建 ARM64 正式包。未签名 APK 位于 `app/build/outputs/apk/release/app-release-unsigned.apk`。
-
-首次公开分发前，由发行者准备长期使用的 APK 签名密钥，并备份签名库和口令。密钥文件与口令存放在 Git 工作区外。使用 SDK Build Tools 的 `apksigner`，在本机交互式输入口令。
+正式升级包沿用正式版签名证书，并递增 `versionCode`。使用 Build Tools 的 `apksigner` 签名和校验，在本机交互式输入口令。
 
 ```powershell
 apksigner sign --ks '签名库路径' --ks-key-alias '签名别名' --out '签名后.apk' '未签名.apk'
@@ -72,12 +97,34 @@ apksigner verify --verbose --print-certs '签名后.apk'
 Get-FileHash -Algorithm SHA256 -LiteralPath '签名后.apk'
 ```
 
-未来的正式升级包沿用包名和证书，并递增 `versionCode`。GitHub 标签使用独立的 `android-v<versionName>`，指向包含对应安卓源码和构建脚本的提交。分发资料包含 ARM64 APK 校验值、实际验收范围以及 APK 中第三方组件的许可和对应源码。[应用源码许可](LICENSE) · [第三方组件与对应源码清单](THIRD_PARTY_NOTICES.md)
+检查更新按 `android-vX.Y.Z` 标签识别正式发布，APK 附件名为 `video-downloader-android-X.Y.Z-arm64-v8a.apk`。
 
-应用按 `android-vX.Y.Z` 正式标签检查更新。将签名 APK 命名为 `video-downloader-android-X.Y.Z-arm64-v8a.apk`，上传到对应标签的 GitHub Release 后，应用才能识别该版本。
+### 验证
 
-## 验证
+先运行 `npm --prefix tests ci`，再运行 `npm --prefix tests test`。正式包的 16 KiB 静态对齐和 ARM64 实体设备验收范围见对应版本的发布说明。
 
-在本目录运行 `npm --prefix tests ci` 安装锁定的测试依赖，再运行 `npm --prefix tests test`。覆盖首启协议、工具箱、TXT 导入、队列控制和详情、配置预设、专项归档界面、音视频选项、分集选择、历史和设置。
+## 使用注意
 
-安卓 1.0.0 的 APK 和原生库 ELF 加载段已通过 16 KiB 静态对齐检查。运行验收使用 4 KiB 内存页的 ARM64 实体设备，已验证安装、启动和检查更新。同版运行库已验证哔哩哔哩 MP4 下载和 YouTube 仅音频 M4A 下载。
+- 两个点播平台可在「设置 → 平台 Cookie」分别导入 Netscape 格式的 `cookies.txt`。请妥善保管 Cookie。账号权限和可用画质由平台决定。
+- 手动 HTTP 或 SOCKS5 代理默认关闭。使用手机 VPN 时通常保持关闭。电脑上的代理应填写手机能访问的电脑地址和端口。
+- 「设置 → 网络与代理」可独立配置限速和分片并发。限速单位为 KiB/s，`0` 表示不限速。分片并发范围为 1–16，只在支持分片的流上生效。
+- 若息屏后下载暂停，可在手机的应用电池设置中检查省电策略。
+- 仅下载或归档拥有权利或已获授权的内容，并遵守平台规则及适用法律。
+
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [安卓 1.1.0 发布页](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.1.0) | APK、对应源码、校验文件与版本说明 |
+| [ARM64 运行库构建](native-runtime/README.md) | 构建环境、输入和校验流程 |
+| [第三方组件声明](THIRD_PARTY_NOTICES.md) | 组件版本、对应源码与许可证 |
+
+## 作者与贡献者
+
+| 贡献者 | 主要贡献 |
+| --- | --- |
+| [猫猫葉汐A_spy（@maomaoyexi）](https://github.com/maomaoyexi) | 安卓端移植、开发与维护 |
+
+## 许可证
+
+项目源码采用 MIT 许可证。第三方组件遵循各自的许可证。[MIT License](LICENSE) · [第三方组件声明](THIRD_PARTY_NOTICES.md)

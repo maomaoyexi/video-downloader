@@ -5,21 +5,24 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 
 import com.yausername.ffmpeg.FFmpeg;
 import com.yausername.youtubedl_android.YoutubeDL;
 import com.yausername.youtubedl_android.YoutubeDLRequest;
 import io.github.maomaoyexi.videodownloader.prototype.DownloadHistory.Status;
+import io.github.maomaoyexi.videodownloader.prototype.MediaTracks.AudioFormat;
 import io.github.maomaoyexi.videodownloader.prototype.PlatformCookies.Platform;
 
 import java.io.File;
@@ -33,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,15 +61,18 @@ public final class DownloadService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final int MAX_LINKS = 20;
     static final int MAX_RATE_LIMIT_KIB = 102400;
-    private static final List<String> VIDEO_CONTAINERS = Arrays.asList("mp4", "mkv", "webm");
     private static final List<String> VIDEO_CODECS = Arrays.asList("auto", "h264", "av1", "vp9");
     private static final int COLLECTION_TIMEOUT_SECONDS = 40;
     private static final int SUBTITLE_TIMEOUT_SECONDS = 40;
     private static final int HIGHEST_RESOLUTION = -1;
     private static final int FULL_HD_60 = -2;
-    private static final int AUDIO_ONLY = -3;
     private static final List<Integer> RESOLUTION_OPTIONS =
-            Arrays.asList(HIGHEST_RESOLUTION, 0, 4320, 2160, 1440, 1080, FULL_HD_60, 720, 480, AUDIO_ONLY);
+            Arrays.asList(HIGHEST_RESOLUTION, 0, 4320, 2160, 1440, 1080, FULL_HD_60, 720, 480);
+    private static final String VIDEO = "video";
+    private static final String AUDIO = "audio";
+    private static final String VIDEO_AND_AUDIO = "video-and-audio";
+    private static final String SILENT_VIDEO_AND_AUDIO = "silent-video-and-audio";
+    private static final List<String> OUTPUT_MODES = Arrays.asList(VIDEO, AUDIO, VIDEO_AND_AUDIO, SILENT_VIDEO_AND_AUDIO);
     private static final Object LOCK = new Object();
     private static final List<String> YOUTUBE = Arrays.asList("youtube.com", "www.youtube.com", "m.youtube.com");
     private static final List<String> BILIBILI = Arrays.asList("bilibili.com", "www.bilibili.com", "m.bilibili.com");
@@ -74,14 +81,8 @@ public final class DownloadService extends Service {
     private static final ScheduledExecutorService REQUEST_DEADLINE =
             Executors.newSingleThreadScheduledExecutor(task -> new Thread(task, "request-deadline"));
     private static final String SUBTITLE_STEM = "subtitle";
-    private static final Pattern SUBTITLE_FILE = Pattern.compile("subtitle\\.[A-Za-z0-9][A-Za-z0-9._-]{0,63}\\.srt");
-    private static final String BYTE_NUMBER = "\\d+(?:\\.\\d+)?";
-    private static final String BYTE_UNIT = "(?:[KMGTPEZY]i)?B";
-    private static final String BYTE_SIZE = BYTE_NUMBER + BYTE_UNIT;
-    private static final Pattern DOWNLOAD_TRANSFER = Pattern.compile(
-            "^\\[download\\]\\s+(?:(?:(\\d{1,3}(?:\\.\\d+)?)|N/A)%(?:\\s+of\\s+~?\\s*" + BYTE_SIZE + ")?|"
-                    + BYTE_SIZE + ")\\s+at\\s+(?:(" + BYTE_NUMBER + ")(" + BYTE_UNIT + "/s)|Unknown B/s)(?=\\s|$)");
-    private static final Pattern DOWNLOAD_ETA = Pattern.compile("\\bETA (?:(\\d{1,3}):)?(\\d{1,2}):(\\d{2})(?=\\s|$)");
+    private static final String STREAM_PREFIX = "stream-";
+    private static final Pattern SUBTITLE_FILE = Pattern.compile("subtitle[0-9]+\\.[A-Za-z0-9][A-Za-z0-9._-]{0,63}\\.srt");
     private static State state = new State("等待添加任务", "粘贴链接后，任务进度会显示在这里。", -1, false);
     private static Batch batch;
     private static Job active;
@@ -97,28 +98,41 @@ public final class DownloadService extends Service {
         final float percent;
         final boolean busy;
         final Uri savedVideo;
+        final Uri savedAudio;
+        Uri savedDirectory;
         final String speed;
         final boolean audioOnly;
         final int etaSeconds;
 
         State(String phase, String detail, float percent, boolean busy) {
-            this(phase, detail, percent, busy, null, false);
+            this(phase, detail, percent, busy, null, null, false, "", -1);
         }
 
-        State(String phase, String detail, float percent, boolean busy, Uri savedVideo, boolean audioOnly) {
-            this(phase, detail, percent, busy, savedVideo, audioOnly, "", -1);
+        State(String phase, String detail, float percent, boolean busy, Uri savedVideo, Uri savedAudio, boolean audioOnly) {
+            this(phase, detail, percent, busy, savedVideo, savedAudio, audioOnly, "", -1);
         }
 
-        State(String phase, String detail, float percent, boolean busy, Uri savedVideo, boolean audioOnly,
+        State(String phase, String detail, float percent, boolean busy, Uri savedVideo, Uri savedAudio, boolean audioOnly,
               String speed, int etaSeconds) {
             this.phase = phase;
             this.detail = detail;
             this.percent = percent;
             this.busy = busy;
             this.savedVideo = savedVideo;
+            this.savedAudio = savedAudio;
             this.speed = speed;
             this.audioOnly = audioOnly;
             this.etaSeconds = etaSeconds;
+        }
+    }
+
+    private enum MediaStep {
+        VIDEO("视频"), AUDIO("音频"), COMPANION_AUDIO("独立音频"), SUBTITLES("字幕"), COVER("封面");
+
+        final String label;
+
+        MediaStep(String label) {
+            this.label = label;
         }
     }
 
@@ -131,29 +145,50 @@ public final class DownloadService extends Service {
         final boolean cookiesEnabled;
         final boolean audioOnly;
         final int rateLimitKiB;
-        final String videoContainer;
+        final String outputMode;
+        final AudioFormat audioFormat;
+        final boolean cover;
+        final Uri destinationTree;
+        final String classification;
+        List<String> folders;
         final String videoCodec;
         final int fragments;
         Status result;
         volatile boolean canceled;
         boolean skipped;
         boolean finalizing;
-        boolean subtitlesPending;
-        Thread subtitleWorker;
+        boolean extrasPending;
+        final DownloadSubtitles subtitles;
+        final List<DownloadHistory.Attachment> attachments = new ArrayList<>();
+        Thread attachmentWorker;
+        final List<MediaStep> mediaSteps = new ArrayList<>();
+        int mediaStepIndex;
 
-        Job(String url, int resolutionOption, String proxyUrl, SharedPreferences settings, boolean subtitles,
-            int rateLimitKiB, String videoContainer, String videoCodec, int fragments) {
+        Job(String url, int resolutionOption, String proxyUrl, SharedPreferences settings, DownloadSubtitles subtitles,
+            int rateLimitKiB, String outputMode, String videoCodec, int fragments, AudioFormat audioFormat,
+            boolean cover, Uri destinationTree, String classification) {
             this.url = url;
             this.platform = platformForUrl(url);
             this.resolutionOption = resolutionOption;
             this.proxyUrl = proxyUrl;
             this.cookiesEnabled = settings.getBoolean(cookieEnabledKey(platform), false);
             this.rateLimitKiB = rateLimitKiB;
-            this.videoContainer = videoContainer;
+            this.outputMode = outputMode;
+            this.audioFormat = audioFormat;
+            this.cover = cover;
+            this.destinationTree = destinationTree;
+            this.classification = classification;
             this.videoCodec = videoCodec;
             this.fragments = fragments;
-            audioOnly = resolutionOption == AUDIO_ONLY;
-            subtitlesPending = subtitles && !audioOnly;
+            audioOnly = AUDIO.equals(outputMode);
+            this.subtitles = audioOnly ? null : subtitles;
+            extrasPending = this.subtitles != null || cover;
+            mediaSteps.add(audioOnly ? MediaStep.AUDIO : MediaStep.VIDEO);
+            if (VIDEO_AND_AUDIO.equals(outputMode) || SILENT_VIDEO_AND_AUDIO.equals(outputMode)) {
+                mediaSteps.add(MediaStep.COMPANION_AUDIO);
+            }
+            if (this.subtitles != null) mediaSteps.add(MediaStep.SUBTITLES);
+            if (cover) mediaSteps.add(MediaStep.COVER);
         }
 
         void checkCanceled() {
@@ -161,16 +196,11 @@ public final class DownloadService extends Service {
         }
 
         String fileFormat() {
-            return audioOnly ? "m4a" : videoContainer;
+            return audioOnly ? audioFormat.extension : "mp4";
         }
 
         String mimeType() {
-            if (audioOnly) return "audio/mp4";
-            switch (videoContainer) {
-                case "mkv": return "video/x-matroska";
-                case "webm": return "video/webm";
-                default: return "video/mp4";
-            }
+            return audioOnly ? audioFormat.mimeType : "video/mp4";
         }
     }
 
@@ -183,12 +213,16 @@ public final class DownloadService extends Service {
         boolean stopped;
         boolean workerStarted;
         Uri latestVideo;
+        Uri latestAudio;
+        Uri latestDirectory;
+        String latestCompletedId;
 
-        Batch(List<String> urls, int resolutionOption, String proxyUrl, SharedPreferences settings, boolean subtitles,
-              int rateLimitKiB, String videoContainer, String videoCodec, int fragments) {
+        Batch(List<String> urls, int resolutionOption, String proxyUrl, SharedPreferences settings, DownloadSubtitles subtitles,
+              int rateLimitKiB, String outputMode, String videoCodec, int fragments, AudioFormat audioFormat,
+              boolean cover, Uri destinationTree, String classification) {
             for (String url : urls) {
                 jobs.add(new Job(url, resolutionOption, proxyUrl, settings, subtitles, rateLimitKiB,
-                        videoContainer, videoCodec, fragments));
+                        outputMode, videoCodec, fragments, audioFormat, cover, destinationTree, classification));
             }
         }
 
@@ -203,15 +237,17 @@ public final class DownloadService extends Service {
         final Platform platform;
         final String proxyUrl;
         final boolean cookiesEnabled;
+        final boolean subtitles;
         final Thread worker;
         ScheduledFuture<?> deadline;
         volatile boolean stopped;
 
-        CollectionProbe(Context context, String url, String proxyUrl) {
+        CollectionProbe(Context context, String url, String proxyUrl, boolean subtitles) {
             this.url = url;
             this.platform = platformForUrl(url);
             this.proxyUrl = proxyUrl;
             this.cookiesEnabled = cookieSettings(context).getBoolean(cookieEnabledKey(platform), false);
+            this.subtitles = subtitles;
             worker = new Thread(() -> resolveCollection(context, this), "collection-probe");
         }
 
@@ -229,8 +265,8 @@ public final class DownloadService extends Service {
         return RESOLUTION_OPTIONS.contains(resolution);
     }
 
-    static boolean validVideoContainer(String container) {
-        return VIDEO_CONTAINERS.contains(container);
+    static boolean validOutputMode(String outputMode) {
+        return OUTPUT_MODES.contains(outputMode);
     }
 
     static boolean validVideoCodec(String codec) {
@@ -246,24 +282,9 @@ public final class DownloadService extends Service {
     }
 
     static String enqueue(Context context, String value, int resolutionOption, boolean proxyEnabled,
-                          String proxyAddress, String proxyPort) {
-        return enqueue(context, value, resolutionOption, proxyEnabled, proxyAddress, proxyPort, false);
-    }
-
-    static String enqueue(Context context, String value, int resolutionOption, boolean proxyEnabled,
-                          String proxyAddress, String proxyPort, boolean subtitles) {
-        return enqueue(context, value, resolutionOption, proxyEnabled, proxyAddress, proxyPort, subtitles, 0);
-    }
-
-    static String enqueue(Context context, String value, int resolutionOption, boolean proxyEnabled,
-                          String proxyAddress, String proxyPort, boolean subtitles, int rateLimitKiB) {
-        return enqueue(context, value, resolutionOption, proxyEnabled, proxyAddress, proxyPort, subtitles,
-                rateLimitKiB, "mp4", "auto", "http", 1);
-    }
-
-    static String enqueue(Context context, String value, int resolutionOption, boolean proxyEnabled,
                           String proxyAddress, String proxyPort, boolean subtitles, int rateLimitKiB,
-                          String videoContainer, String videoCodec, String proxyScheme, int fragments) {
+                          String outputMode, String videoCodec, String proxyScheme, int fragments,
+                          String audioFormatId, boolean cover, String selectedSubtitles) {
         if (value == null) return "请输入 YouTube 或哔哩哔哩点播链接。";
         String[] lines = value.split("\\r\\n|[\\r\\n]", -1);
         List<String> urls = new ArrayList<>();
@@ -278,16 +299,25 @@ public final class DownloadService extends Service {
             }
         }
         if (urls.isEmpty()) return "请输入 YouTube 或哔哩哔哩点播链接。";
+        DownloadSubtitles subtitleSelection = subtitles ? DownloadSubtitles.ALL_MANUAL : null;
+        if (selectedSubtitles != null) {
+            if (!subtitles || urls.size() != 1 || AUDIO.equals(outputMode)) return "请为单个视频选择字幕。";
+            try {
+                subtitleSelection = DownloadSubtitles.parse(selectedSubtitles);
+            } catch (IllegalArgumentException invalid) {
+                return "请选择有效的字幕轨道。";
+            }
+        }
         if (!validResolution(resolutionOption)) {
             return "请选择一个有效的画质上限。";
         }
         if (rateLimitKiB < 0 || rateLimitKiB > MAX_RATE_LIMIT_KIB) {
             return "请输入 0–102400 KiB/s 的下载限速。";
         }
-        if (!validVideoContainer(videoContainer) || !validVideoCodec(videoCodec)) return "请选择有效的视频格式和编码。";
-        if (resolutionOption != AUDIO_ONLY && "webm".equals(videoContainer) && "h264".equals(videoCodec)) {
-            return "WebM 不支持 H.264，请选择其他编码或文件格式。";
-        }
+        if (!validOutputMode(outputMode)) return "请选择有效的音画输出模式。";
+        AudioFormat audioFormat = AudioFormat.fromId(audioFormatId);
+        if (audioFormat == null) return "请选择有效的音频格式。";
+        if (!validVideoCodec(videoCodec)) return "请选择有效的视频编码。";
         if (!validFragments(fragments)) return "分片并发数需在 1–16 之间。";
         String proxyUrl = "";
         if (proxyEnabled) {
@@ -301,9 +331,13 @@ public final class DownloadService extends Service {
             if (active != null) return "请先完成或取消当前任务。";
             if (collectionProbe != null) return "请等待列表解析结束。";
             if (changingCookies || cookiePickerToken != null) return "请等待 Cookie 操作完成。";
+            DownloadDestination.Snapshot destination = DownloadDestination.snapshot(context);
+            if (destination.tree != null && !DownloadDestination.hasWriteAccess(context, destination.tree)) {
+                return "自选下载目录的授权已失效，请在设置中重新选择目录。";
+            }
             collectionResult = COLLECTION_IDLE;
-            batch = new Batch(urls, resolutionOption, proxyUrl, cookieSettings(context), subtitles, rateLimitKiB,
-                    videoContainer, videoCodec, fragments);
+            batch = new Batch(urls, resolutionOption, proxyUrl, cookieSettings(context), subtitleSelection, rateLimitKiB,
+                    outputMode, videoCodec, fragments, audioFormat, cover, destination.tree, destination.classification);
             active = batch.jobs.get(0);
             state = new State("正在准备", "正在启动下载引擎。", -1, true);
             try {
@@ -323,11 +357,21 @@ public final class DownloadService extends Service {
 
     static String inspectCollection(Context context, String value, boolean proxyEnabled, String proxyAddress,
                                     String proxyPort, String proxyScheme) {
+        return inspectMetadata(context, value, proxyEnabled, proxyAddress, proxyPort, proxyScheme, false);
+    }
+
+    static String inspectSubtitles(Context context, String value, boolean proxyEnabled, String proxyAddress,
+                                   String proxyPort, String proxyScheme) {
+        return inspectMetadata(context, value, proxyEnabled, proxyAddress, proxyPort, proxyScheme, true);
+    }
+
+    private static String inspectMetadata(Context context, String value, boolean proxyEnabled, String proxyAddress,
+                                          String proxyPort, String proxyScheme, boolean subtitles) {
         String url;
         try {
-            url = normalizeCollectionUrl(value);
+            url = subtitles ? normalizeUrl(value) : normalizeCollectionUrl(value);
         } catch (IllegalArgumentException invalid) {
-            return "请输入有效的 B 站视频或 YouTube 播放列表链接。";
+            return subtitles ? "请输入有效的单个视频链接。" : "请输入有效的 B 站视频或 YouTube 播放列表链接。";
         }
         String proxyUrl;
         try {
@@ -339,9 +383,9 @@ public final class DownloadService extends Service {
             if (active != null) return "请先完成或取消当前任务。";
             if (collectionProbe != null) return "请等待列表解析结束。";
             if (changingCookies || cookiePickerToken != null) return "请等待 Cookie 操作完成。";
-            CollectionProbe probe = new CollectionProbe(context, url, proxyUrl);
+            CollectionProbe probe = new CollectionProbe(context, url, proxyUrl, subtitles);
             collectionProbe = probe;
-            collectionResult = DownloadCollections.status("loading", "正在读取视频列表…");
+            collectionResult = DownloadCollections.status("loading", subtitles ? "正在读取字幕…" : "正在读取视频列表…");
             probe.deadline = REQUEST_DEADLINE.schedule(() -> expireCollection(probe),
                     COLLECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             probe.worker.start();
@@ -365,8 +409,8 @@ public final class DownloadService extends Service {
     private static void expireCollection(CollectionProbe probe) {
         synchronized (LOCK) {
             if (probe != collectionProbe || probe.stopped) return;
-            collectionResult = DownloadCollections.status("error",
-                    "读取 " + probe.platform.label + " 列表超时，请检查网络后重试。");
+            collectionResult = DownloadCollections.status("error", "读取 " + probe.platform.label
+                    + (probe.subtitles ? " 字幕" : " 列表") + "超时，请检查网络后重试。");
             stopCollection(probe);
         }
     }
@@ -380,36 +424,58 @@ public final class DownloadService extends Service {
 
     private static void resolveCollection(Context context, CollectionProbe probe) {
         File work = new File(context.getCacheDir(), "job-" + probe.id);
-        String next = DownloadCollections.status("error", "无法读取视频列表，请重试。");
+        String subject = probe.subtitles ? "字幕列表" : "视频列表";
+        String next = DownloadCollections.status("error", "无法读取" + subject + "，请重试。");
         try {
             probe.checkStopped();
             if (!work.mkdir()) throw new IOException();
             YoutubeDL engine = YoutubeDL.getInstance();
             engine.init(context);
-            YoutubeDLRequest request = new YoutubeDLRequest(probe.url);
-            request.addOption("--ignore-config");
-            request.addOption("--proxy=" + probe.proxyUrl);
-            request.addOption("--no-cache-dir");
-            request.addOption("--socket-timeout", "8");
-            request.addOption("--retries", "0");
-            request.addOption("--extractor-retries", "0");
-            request.addOption("--skip-download");
-            request.addOption("--flat-playlist");
-            request.addOption("--yes-playlist");
-            request.addOption("--playlist-end", DownloadCollections.PROBE_LIMIT);
-            request.addOption("--dump-single-json");
+            YoutubeDLRequest request = probe.subtitles ? singleVideoRequest(probe.url, probe.proxyUrl)
+                    : collectionRequest(probe.url, probe.proxyUrl);
+            if (probe.subtitles) {
+                request.addOption("--socket-timeout", "15");
+                request.addOption("--retries", "1");
+                request.addOption("--extractor-retries", "1");
+                request.addOption("--simulate");
+                request.addOption("--write-subs");
+                request.addOption("--write-auto-subs");
+                request.addOption("--sub-langs", "^$");
+                request.addOption("--print", "%(.{subtitles,automatic_captions})j");
+            }
+            File cookieCopy = null;
             if (probe.cookiesEnabled) {
                 File installed = probe.platform.cookieFile(context.getNoBackupFilesDir());
-                if (installed.isFile()) copyCookiesForRequest(request, installed, work);
+                if (installed.isFile()) cookieCopy = copyCookiesForRequest(request, installed, work);
             }
             probe.checkStopped();
-            next = DownloadCollections.parse(engine.execute(request, probe.id, false).getOut(), probe.platform);
+            JSONObject result = new JSONObject(engine.execute(request, probe.id, false).getOut());
+            if (probe.subtitles) {
+                next = DownloadSubtitles.catalog(result, probe.platform);
+                return;
+            }
+            String fullVideo = bilibiliShareCollectionUrl(probe.url, result);
+            if (fullVideo != null) {
+                // A short link may select a part in its redirect even when the input had no part parameter.
+                YoutubeDLRequest allParts = collectionRequest(fullVideo, probe.proxyUrl);
+                if (cookieCopy != null) allParts.addOption("--cookies", cookieCopy.getAbsolutePath());
+                probe.checkStopped();
+                result = new JSONObject(engine.execute(allParts, probe.id, false).getOut());
+            }
+            JSONObject parsed = DownloadCollections.parse(result, probe.platform);
+            next = parsed.toString();
+            if (probe.platform == Platform.BILIBILI && !probe.stopped
+                    && probe.deadline.getDelay(TimeUnit.MILLISECONDS) > DownloadCollections.PART_TITLES_BUDGET_MS) {
+                DownloadCollections.loadBilibiliPartTitles(result.optString("id"), parsed.optJSONArray("entries"),
+                        probe.proxyUrl);
+                next = parsed.toString();
+            }
         } catch (JSONException malformed) {
-            next = DownloadCollections.status("error", "平台返回的视频列表无法读取，请重试。");
+            next = DownloadCollections.status("error", "平台返回的" + subject + "无法读取，请重试。");
         } catch (Exception error) {
             if (!probe.stopped) {
                 next = DownloadCollections.status("error", CookieDownloadFailure.describe(
-                        error.getMessage(), probe.platform, "读取列表"));
+                        error.getMessage(), probe.platform, "读取" + subject));
             }
         } finally {
             cleanWorkDirectory(work);
@@ -423,10 +489,40 @@ public final class DownloadService extends Service {
         }
     }
 
+    private static YoutubeDLRequest collectionRequest(String url, String proxyUrl) {
+        YoutubeDLRequest request = new YoutubeDLRequest(url);
+        request.addOption("--ignore-config");
+        request.addOption("--proxy=" + proxyUrl);
+        request.addOption("--no-cache-dir");
+        request.addOption("--socket-timeout", "8");
+        request.addOption("--retries", "0");
+        request.addOption("--extractor-retries", "0");
+        request.addOption("--skip-download");
+        request.addOption("--flat-playlist");
+        request.addOption("--yes-playlist");
+        request.addOption("--playlist-end", DownloadCollections.PROBE_LIMIT);
+        request.addOption("--dump-single-json");
+        return request;
+    }
+
+    private static String bilibiliShareCollectionUrl(String input, JSONObject result) {
+        if (!BILIBILI_SHORT_HOSTS.contains(Uri.parse(input).getHost())
+                || !"video".equals(result.optString("_type", "video"))) return null;
+        try {
+            Uri video = validatedWebUrl(result.optString("webpage_url"));
+            String part = video.getQueryParameter("p");
+            if (!BILIBILI.contains(video.getHost().toLowerCase(Locale.ROOT))
+                    || part == null || !part.matches("[1-9][0-9]{0,8}")) return null;
+            return normalizeCollectionUrl(video.buildUpon().clearQuery().fragment(null).build().toString());
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
+    }
+
     private static void failToStart(Context context) {
         Job job = active;
         job.result = job.canceled ? Status.CANCELED : Status.FAILED;
-        DownloadHistory.record(context, job.id, "", job.platform.id, job.result, null, job.audioOnly);
+        DownloadHistory.record(context, job.id, "", job.platform.id, job.result, null, null, job.outputMode);
         if (!job.canceled) batch.failed++;
         state = job.canceled ? new State("已取消", "当前任务已停止。", -1, false)
                 : new State("启动失败", "请在下载页重新提交任务。", -1, false);
@@ -526,6 +622,8 @@ public final class DownloadService extends Service {
                         .put("speed", state.speed)
                         .put("etaSeconds", state.etaSeconds)
                         .put("canPlay", state.savedVideo != null)
+                        .put("hasAudioFile", state.savedAudio != null)
+                        .put("outputMode", batch == null ? VIDEO : batch.jobs.get(0).outputMode)
                         .put("audioOnly", state.audioOnly)
                         .put("batchTotal", batch == null ? 0 : batch.jobs.size())
                         .put("batchIndex", batch == null ? 0 : batch.index)
@@ -535,6 +633,12 @@ public final class DownloadService extends Service {
                         .put("canSkip", canSkipCurrent())
                         .put("batchStopped", batch != null && batch.stopped)
                         .put("batchItems", batchItems());
+                if (state.busy && active != null) {
+                    int step = active.mediaStepIndex;
+                    object.put("mediaStep", step + 1)
+                            .put("mediaStepTotal", active.mediaSteps.size())
+                            .put("mediaStepLabel", active.mediaSteps.get(step).label);
+                }
             } catch (JSONException error) {
                 throw new IllegalStateException(error);
             }
@@ -551,7 +655,7 @@ public final class DownloadService extends Service {
                 if (job.result != null) status = job.skipped ? "skipped" : job.result.id;
                 else if (job == active) status = "downloading";
                 else status = active == null ? "canceled" : "waiting";
-                items.put(new JSONObject().put("url", job.url).put("status", status));
+                items.put(new JSONObject().put("url", job.url).put("status", status).put("outputMode", job.outputMode));
             }
         }
         return items;
@@ -710,6 +814,36 @@ public final class DownloadService extends Service {
         }
     }
 
+    static Uri completedAudio() {
+        synchronized (LOCK) {
+            return state.savedAudio;
+        }
+    }
+
+    static Uri completedDirectory() {
+        synchronized (LOCK) {
+            return state.savedDirectory;
+        }
+    }
+
+    static void refreshDeletedMedia(Context context, String id) {
+        synchronized (LOCK) {
+            if (batch == null || !id.equals(batch.latestCompletedId)) return;
+        }
+        Uri video = DownloadHistory.completedVideo(context, id);
+        Uri audio = DownloadHistory.completedAudio(context, id);
+        synchronized (LOCK) {
+            if (batch == null || !id.equals(batch.latestCompletedId)) return;
+            batch.latestVideo = video;
+            batch.latestAudio = audio;
+            if (active == null) {
+                Uri directory = state.savedDirectory;
+                state = new State(state.phase, state.detail, state.percent, false, video, audio, state.audioOnly);
+                state.savedDirectory = directory;
+            }
+        }
+    }
+
     static void cancel() {
         cancel(null);
     }
@@ -737,11 +871,11 @@ public final class DownloadService extends Service {
         synchronized (LOCK) {
             job = active;
             if (job == null || batch.stopped || (batchId != null && !batchId.equals(batch.id()))) return;
-            if (job.finalizing && batch.index == batch.jobs.size() && !job.subtitlesPending) return;
+            if (job.finalizing && batch.index == batch.jobs.size() && !job.extrasPending) return;
             batch.stopped = true;
             state = new State("正在取消", "正在结束当前任务。", -1, true);
             if (job.finalizing) {
-                if (job.subtitleWorker != null) job.subtitleWorker.interrupt();
+                if (job.attachmentWorker != null) job.attachmentWorker.interrupt();
                 return;
             }
             if (job.canceled) return;
@@ -834,9 +968,14 @@ public final class DownloadService extends Service {
         File work = new File(getCacheDir(), "job-" + job.id);
         String extension = "." + job.fileFormat();
         String formatLabel = job.fileFormat().toUpperCase(Locale.ROOT);
+        String audioLabel = job.audioFormat.extension.toUpperCase(Locale.ROOT);
+        String audioExtension = "." + job.audioFormat.extension;
         State terminal;
         Status result;
         String title = "";
+        String authorFolder = DownloadDestination.authorFolder(null);
+        String mainName = null;
+        String companionName = null;
         File cookieCopy = null;
         String localFailure = "无法准备下载临时目录，请检查手机剩余空间。";
         try {
@@ -856,62 +995,133 @@ public final class DownloadService extends Service {
                     cookieCopy = copyCookiesForRequest(request, installed, work);
                 }
             }
-            request.addOption("--newline");
+            addTransferProgress(request);
             request.addOption("--socket-timeout", "20");
             request.addOption("--retries", "2");
             if (job.rateLimitKiB > 0) request.addOption("--limit-rate", job.rateLimitKiB + "K");
             if (job.fragments > 1) request.addOption("--concurrent-fragments", job.fragments);
-            selectOutputFormat(request, job);
-            request.addOption("-o", new File(work, "%(title).100B [%(id)s].%(ext)s").getAbsolutePath());
             update(job, new State("正在解析", "正在获取可用的点播格式。", -1, true));
             job.checkCanceled();
             localFailure = null;
+            boolean silent = SILENT_VIDEO_AND_AUDIO.equals(job.outputMode);
+            boolean separate = selectOutputFormat(engine, request, job, cookieCopy);
+            String nameTemplate = "%(title).100B [%(id)s]";
+            String template = (silent || job.audioOnly ? STREAM_PREFIX : "") + nameTemplate
+                    + (silent ? ".%(format_id)s" : "") + ".%(ext)s";
+            request.addOption("-o", new File(work, template).getAbsolutePath());
+            File authorMetadata = new File(work, "author.jsonl");
+            request.addCommands(Arrays.asList("--print-to-file", "after_move:%(.{channel,uploader,creator})j",
+                    authorMetadata.getAbsolutePath().replace("%", "%%")));
             engine.execute(request, job.id, false, (progress, eta, line) -> {
                 if (line.startsWith("[Merger]") || line.startsWith("[VideoRemuxer]")) {
                     update(job, new State("正在处理视频", "正在封装为 " + formatLabel + "。", -1, true));
-                } else if (line.startsWith("[ExtractAudio]")) {
-                    update(job, new State("正在处理音频", "正在准备 M4A 文件。", -1, true));
                 } else if (line.startsWith("[download]")) {
-                    update(job, downloadProgress(progress, line));
+                    TransferProgress transfer = TransferProgress.parse(line);
+                    if (transfer != null) update(job, new State("正在下载", "当前音频或视频流进度",
+                            transfer.percent, true, null, null, false, transfer.speed, transfer.etaSeconds));
                 }
                 return Unit.INSTANCE;
             });
             job.checkCanceled();
+            String author = readAuthor(authorMetadata, job.platform);
+            authorFolder = DownloadDestination.authorFolder(author);
+            job.folders = DownloadDestination.folders(job.classification, job.platform.label, job.outputMode, author);
+            File mainFile;
+            File audioFile = null;
             localFailure = "下载结束后未取得可保存的 " + formatLabel + " 文件。";
-            File[] files = work.listFiles(file -> file.getName().toLowerCase(Locale.ROOT).endsWith(extension));
-            if (files == null || files.length != 1 || !nonEmptyFile(files[0])) throw new IOException();
+            File[] files = work.listFiles(file -> nonEmptyFile(file) && (silent || job.audioOnly
+                    ? file.getName().startsWith(STREAM_PREFIX) : file.getName().toLowerCase(Locale.ROOT).endsWith(extension)));
+            if (files == null || files.length != (separate ? 2 : 1)) throw new IOException();
+            localFailure = "无法读取媒体轨道，请尝试其他画质或编码。";
+            update(job, new State("正在检查轨道", "正在核对下载文件的画面和声音。", -1, true));
+            mainFile = files[0];
+            if (silent) {
+                update(job, new State("正在分离轨道", "正在生成无声 MP4 和独立 " + audioLabel + "。", -1, true));
+                File videoSource = findTrack(files, true, job);
+                File audioSource = findTrack(files, false, job);
+                String name = videoSource.getName();
+                int stemEnd = name.lastIndexOf("].") + 1;
+                if (stemEnd <= STREAM_PREFIX.length()) throw new IOException();
+                String stem = name.substring(STREAM_PREFIX.length(), stemEnd);
+                mainFile = new File(work, stem + ".mp4");
+                audioFile = new File(work, stem + audioExtension);
+                localFailure = "无法生成无声 MP4 或独立 " + audioLabel + "，请尝试其他画质或编码。";
+                MediaTracks.silentVideo(this, videoSource, mainFile, job::checkCanceled);
+                update(job, new State("正在处理音频", "正在生成独立 " + audioLabel + " 文件。", -1, true),
+                        MediaStep.COMPANION_AUDIO);
+                MediaTracks.audio(this, audioSource, audioFile, job.audioFormat, job::checkCanceled);
+            } else {
+                MediaTracks.Tracks tracks = MediaTracks.inspect(this, mainFile, job::checkCanceled);
+                if (!job.audioOnly && !tracks.hasVideo) throw new MissingTracks("源素材缺少视频轨，无法输出视频。");
+                if (!tracks.hasAudio) throw new MissingTracks("源素材缺少音频轨，无法输出声音。");
+                if (job.audioOnly) {
+                    update(job, new State("正在处理音频", "正在准备 " + audioLabel + " 文件。", -1, true));
+                    String sourceName = mainFile.getName();
+                    String stem = sourceName.substring(STREAM_PREFIX.length(), sourceName.lastIndexOf('.'));
+                    mainFile = new File(work, stem + audioExtension);
+                    localFailure = "无法生成 " + audioLabel + " 音频。";
+                    MediaTracks.audio(this, files[0], mainFile, job.audioFormat, job::checkCanceled);
+                } else if (VIDEO_AND_AUDIO.equals(job.outputMode)) {
+                    update(job, new State("正在提取音频", "正在从已下载的 MP4 生成独立 " + audioLabel + "。", -1, true),
+                            MediaStep.COMPANION_AUDIO);
+                    String stem = mainFile.getName().substring(0, mainFile.getName().length() - extension.length());
+                    audioFile = new File(work, stem + audioExtension);
+                    localFailure = "无法从已下载的视频提取 " + audioLabel + "。";
+                    MediaTracks.audio(this, mainFile, audioFile, job.audioFormat, job::checkCanceled);
+                }
+            }
             update(job, new State("正在保存", "正在写入手机的下载目录。", -1, true));
-            localFailure = "文件已下载，写入手机的下载目录失败，请检查剩余空间后重试。";
-            Uri savedVideo = saveOutput(job, files[0], files[0].getName(), job.mimeType(), true);
-            String savedName = readDisplayName(savedVideo);
-            String detail = "已保存到「下载 / 多平台下载」";
-            if (savedName != null && !savedName.isEmpty()) detail += "：" + savedName;
-            title = savedName == null || savedName.isEmpty() ? files[0].getName() : savedName;
+            localFailure = job.destinationTree == null ? "文件已下载，写入手机的下载目录失败，请检查剩余空间后重试。"
+                    : "无法写入自选下载目录，请在设置中重新授权或检查剩余空间。";
+            Uri[] saved = saveMedia(job, mainFile, audioFile);
+            Uri savedVideo = saved[0];
+            Uri savedAudio = saved[1];
+            mainName = readDisplayName(savedVideo);
+            Uri savedDirectory = saved[2];
+            String destination = job.destinationTree == null ? "下载 / 多平台下载" : "自选目录";
+            if (!job.folders.isEmpty()) destination += " / " + String.join(" / ", job.folders);
+            String detail = "已保存到「" + destination + "」";
+            title = mainName == null || mainName.isEmpty() ? mainFile.getName() : mainName;
+            detail += "：" + title;
+            if (savedAudio != null) {
+                companionName = readDisplayName(savedAudio);
+                detail += " 和 " + (companionName == null ? audioFile.getName() : companionName);
+            }
             if (title.toLowerCase(Locale.ROOT).endsWith(extension)) title = title.substring(0, title.length() - extension.length());
-            if (job.subtitlesPending) detail += "。" + finishSubtitles(running, job, engine, work, cookieCopy, savedName);
-            terminal = new State("下载完成", detail, 100, false, savedVideo, job.audioOnly);
+            if (job.subtitles != null) detail += "。" + finishSubtitles(running, job, engine, work, cookieCopy, title);
+            if (job.cover) detail += "。" + finishCover(running, job, engine, work, cookieCopy,
+                    mainName == null || mainName.isEmpty() ? mainFile.getName() : mainName);
+            synchronized (LOCK) {
+                job.extrasPending = false;
+            }
+            terminal = new State("下载完成", detail, 100, false, savedVideo, savedAudio, job.audioOnly);
+            terminal.savedDirectory = savedDirectory;
             result = Status.COMPLETED;
         } catch (Exception error) {
             boolean canceled;
             synchronized (LOCK) {
                 job.finalizing = true;
-                canceled = job.canceled || error instanceof CancellationException;
+                canceled = job.canceled || error instanceof CancellationException || error instanceof InterruptedException;
             }
             terminal = canceled
                     ? new State("已取消", job.skipped ? "当前条目已跳过。" : "当前任务已停止。", -1, false)
-                    : new State("下载失败", localFailure != null ? localFailure
+                    : new State("下载失败", error instanceof MissingTracks ? error.getMessage() : localFailure != null ? localFailure
                             : describeEngineFailure(error, job, cookieCopy != null), -1, false);
             result = canceled ? Status.CANCELED : Status.FAILED;
         } finally {
             cleanWorkDirectory(work);
         }
 
-        DownloadHistory.record(this, job.id, title, job.platform.id, result, terminal.savedVideo, job.audioOnly);
+        DownloadHistory.record(this, job.id, title, job.platform.id, result, terminal.savedVideo, terminal.savedAudio,
+                job.outputMode, terminal.savedDirectory, authorFolder, mainName, companionName, job.attachments);
         synchronized (LOCK) {
             job.result = result;
             if (result == Status.COMPLETED) {
                 running.completed++;
                 running.latestVideo = terminal.savedVideo;
+                running.latestAudio = terminal.savedAudio;
+                running.latestDirectory = terminal.savedDirectory;
+                running.latestCompletedId = job.id;
             } else if (result == Status.FAILED) {
                 running.failed++;
             } else if (job.skipped) {
@@ -929,18 +1139,63 @@ public final class DownloadService extends Service {
             stopSelf();
             boolean playableAudio = running.latestVideo != null && job.audioOnly;
             state = running.stopped && result != Status.CANCELED && running.index < running.jobs.size()
-                    ? new State("已取消", "未开始的链接已取消。", -1, false, running.latestVideo, playableAudio)
-                    : new State(terminal.phase, terminal.detail, terminal.percent, false, running.latestVideo, playableAudio);
+                    ? new State("已取消", "未开始的链接已取消。", -1, false, running.latestVideo, running.latestAudio, playableAudio)
+                    : new State(terminal.phase, terminal.detail, terminal.percent, false, running.latestVideo, running.latestAudio, playableAudio);
+            state.savedDirectory = running.latestDirectory;
             active = null;
             return null;
         }
     }
 
+    private static String readAuthor(File metadata, Platform platform) {
+        if (metadata == null || !nonEmptyFile(metadata) || metadata.length() > 64 * 1024) return null;
+        String[] fields = platform == Platform.BILIBILI
+                ? new String[] {"uploader", "channel", "creator"} : new String[] {"channel", "uploader", "creator"};
+        try {
+            for (String line : Files.readAllLines(metadata.toPath())) {
+                JSONObject values;
+                try {
+                    values = new JSONObject(line);
+                } catch (JSONException malformed) {
+                    continue;
+                }
+                for (String field : fields) {
+                    Object value = values.opt(field);
+                    if (value instanceof String) {
+                        String name = ((String) value).trim();
+                        if (!name.isEmpty() && !"NA".equals(name)) return name;
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+            // Metadata is optional and must not discard a completed download.
+        }
+        return null;
+    }
+
+    private static final class MissingTracks extends IOException {
+        MissingTracks(String message) {
+            super(message);
+        }
+    }
+
+    private File findTrack(File[] files, boolean video, Job job) throws IOException, InterruptedException {
+        for (File file : files) {
+            MediaTracks.Tracks tracks = MediaTracks.inspect(this, file, job::checkCanceled);
+            if (video ? tracks.hasVideo : tracks.hasAudio) return file;
+        }
+        throw new MissingTracks(video ? "源素材缺少视频轨，无法输出无声视频。" : "源素材缺少音频轨，无法输出独立音频。");
+    }
+
     private static YoutubeDLRequest singleVideoRequest(Job job) {
-        YoutubeDLRequest request = new YoutubeDLRequest(job.url);
+        return singleVideoRequest(job.url, job.proxyUrl);
+    }
+
+    private static YoutubeDLRequest singleVideoRequest(String url, String proxyUrl) {
+        YoutubeDLRequest request = new YoutubeDLRequest(url);
         request.addOption("--ignore-config");
         // The Android wrapper drops empty option values passed separately.
-        request.addOption("--proxy=" + job.proxyUrl);
+        request.addOption("--proxy=" + proxyUrl);
         request.addOption("--no-cache-dir");
         request.addOption("--no-playlist");
         request.addOption("--no-live-from-start");
@@ -948,86 +1203,126 @@ public final class DownloadService extends Service {
         return request;
     }
 
-    private static void selectOutputFormat(YoutubeDLRequest request, Job job) {
+    private boolean selectOutputFormat(YoutubeDL engine, YoutubeDLRequest request, Job job, File cookieCopy) throws Exception {
         if (job.audioOnly) {
-            request.addOption("-f", "ba[ext=m4a]/ba/b");
-            request.addOption("--extract-audio");
-            request.addOption("--audio-format", "m4a");
-            return;
+            request.addOption("-f", "ba[ext=m4a]/ba/b/bv*");
+            return false;
         }
-        request.addOption("--merge-output-format", job.videoContainer);
-        request.addOption("--remux-video", job.videoContainer);
         boolean fullHd60 = job.resolutionOption == FULL_HD_60;
         int height = fullHd60 ? 1080 : job.resolutionOption;
-        boolean webm = "webm".equals(job.videoContainer);
-        String preferredCodec = "auto".equals(job.videoCodec) ? (webm ? "vp9" : "h264") : job.videoCodec;
-        String formatSort = "vcodec:" + preferredCodec + (webm ? ",acodec:opus" : ",acodec:aac");
+        addVideoSort(request, job, height, fullHd60);
+        String limit = height > 0 ? "[height<=" + height + "]" : "";
+        if (fullHd60) limit += "[fps<=?60]";
+        if (!SILENT_VIDEO_AND_AUDIO.equals(job.outputMode)) {
+            request.addOption("--merge-output-format", "mp4");
+            request.addOption("--remux-video", "mp4");
+            if (height > 0) request.addOption("-f", "bv*" + limit + "+ba/b" + limit + "/bv" + limit);
+            return false;
+        }
+
+        // Choose whether to download two independent streams or a single combined stream before transferring media.
+        String video = "bv" + limit;
+        String combined = "b" + limit;
+        String audio = "ba[ext=m4a]/ba";
+        YoutubeDLRequest probe = singleVideoRequest(job);
+        if (cookieCopy != null) probe.addOption("--cookies", cookieCopy.getAbsolutePath());
+        probe.addOption("--socket-timeout", "20");
+        probe.addOption("--retries", "2");
+        addVideoSort(probe, job, height, fullHd60);
+        probe.addOption("-f", video + "+(" + audio + ")/" + combined + "/" + video + "/(" + audio + ")");
+        probe.addOption("--skip-download");
+        probe.addOption("--dump-single-json");
+        JSONObject formats = new JSONObject(engine.execute(probe, job.id, false).getOut());
+        job.checkCanceled();
+        JSONArray streams = formats.optJSONArray("requested_formats");
+        if (streams != null && streams.length() == 2) {
+            request.addOption("-f", video + ",(" + audio + ")");
+            return true;
+        }
+        if ("none".equals(formats.optString("vcodec"))) throw new MissingTracks("源素材缺少符合当前画质的视频轨。");
+        if ("none".equals(formats.optString("acodec"))) throw new MissingTracks("源素材缺少音频轨，无法输出独立音频。");
+        request.addOption("-f", combined);
+        return false;
+    }
+
+    private static void addVideoSort(YoutubeDLRequest request, Job job, int height, boolean fullHd60) {
+        String preferredCodec = "auto".equals(job.videoCodec) ? "h264" : job.videoCodec;
+        String formatSort = "vcodec:" + preferredCodec + ",acodec:aac";
         if (height == HIGHEST_RESOLUTION || height > 1080 || fullHd60) {
             request.addOption("--format-sort-force");
             formatSort = (fullHd60 ? "res,fps," : "res,") + formatSort;
         }
         request.addOption("-S", formatSort);
-        String limit = height > 0 ? "[height<=" + height + "]" : "";
-        if (fullHd60) limit += "[fps<=?60]";
-        if (webm) {
-            String compatible = "[ext=webm]";
-            request.addOption("-f", "bv" + compatible + limit + "+ba" + compatible + "/b" + compatible + limit);
-        } else if (height > 0) {
-            request.addOption("-f", "bv*" + limit + "+ba/b" + limit);
-        }
     }
 
-    private String finishSubtitles(Batch running, Job job, YoutubeDL engine, File work, File cookieCopy, String savedName) {
+    private String finishSubtitles(Batch running, Job job, YoutubeDL engine, File work, File cookieCopy, String savedStem) {
         Thread worker = Thread.currentThread();
         ScheduledFuture<?> deadline = null;
         int savedCount = 0;
-        String extension = "." + job.videoContainer;
         try {
             synchronized (LOCK) {
                 if (running.stopped) return "已停止下载字幕。";
-                if (savedName == null || !savedName.toLowerCase(Locale.ROOT).endsWith(extension)) {
-                    return "无法确认视频文件名，字幕未保存。";
-                }
-                job.subtitleWorker = worker;
-                state = new State("正在下载字幕", "视频已保存，正在获取人工字幕。", -1, true);
+                job.attachmentWorker = worker;
+                job.mediaStepIndex = job.mediaSteps.indexOf(MediaStep.SUBTITLES);
+                state = new State("正在下载字幕", "视频已保存，正在获取字幕。", -1, true);
             }
             deadline = REQUEST_DEADLINE.schedule(() -> {
                 synchronized (LOCK) {
-                    if (job.subtitleWorker == worker) worker.interrupt();
+                    if (job.attachmentWorker == worker) worker.interrupt();
                 }
             }, SUBTITLE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            // Run a separate request so unavailable subtitles cannot fail the saved video.
-            YoutubeDLRequest request = singleVideoRequest(job);
-            if (cookieCopy != null) request.addOption("--cookies", cookieCopy.getAbsolutePath());
-            request.addOption("--socket-timeout", "8");
-            request.addOption("--retries", "0");
-            request.addOption("--extractor-retries", "0");
-            request.addOption("--skip-download");
-            request.addOption("--write-subs");
-            request.addOption("--sub-langs", "all,-live_chat,-danmaku,-ai-.*");
-            request.addOption("--sub-format", "srt/vtt/ass/best");
-            request.addOption("--convert-subs", "srt");
-            request.addOption("-o", new File(work, SUBTITLE_STEM + ".%(ext)s").getAbsolutePath());
-            job.checkCanceled();
-            engine.execute(request, job.id, false);
-            job.checkCanceled();
-
-            File[] subtitles = work.listFiles(file -> SUBTITLE_FILE.matcher(file.getName()).matches() && nonEmptyFile(file));
-            if (subtitles == null) throw new IOException();
-            if (subtitles.length == 0) return "未找到可下载的人工字幕。";
-            String savedStem = savedName.substring(0, savedName.length() - extension.length());
-            for (File subtitle : subtitles) {
-                String name = savedStem + subtitle.getName().substring(SUBTITLE_STEM.length());
+            boolean incomplete = false;
+            int requestIndex = 0;
+            for (DownloadSubtitles.Request selection : job.subtitles.requests(job.platform)) {
+                String stem = SUBTITLE_STEM + ++requestIndex;
+                YoutubeDLRequest request = singleVideoRequest(job);
+                if (cookieCopy != null) request.addOption("--cookies", cookieCopy.getAbsolutePath());
+                request.addOption("--socket-timeout", "8");
+                request.addOption("--retries", "0");
+                request.addOption("--extractor-retries", "0");
+                request.addOption("--skip-download");
+                addTransferProgress(request);
+                request.addOption(selection.automatic ? "--write-auto-subs" : "--write-subs");
+                request.addOption("--sub-langs", selection.languages);
+                request.addOption("--sub-format", "srt/vtt/ass/best");
+                request.addOption("--convert-subs", "srt");
+                request.addOption("-o", new File(work, stem).getAbsolutePath().replace("%", "%%") + ".%(ext)s");
+                job.checkCanceled();
                 try {
-                    saveOutput(job, subtitle, name, "application/x-subrip", false);
-                    savedCount++;
-                } catch (IOException | RuntimeException error) {
-                    job.checkCanceled();
+                    engine.execute(request, job.id, false, (progress, eta, line) -> {
+                        if (line.startsWith("[download]")) {
+                            TransferProgress transfer = TransferProgress.parse(line);
+                            if (transfer != null) update(job, new State("正在下载字幕", "当前字幕文件进度",
+                                    transfer.percent, true, null, null, false, transfer.speed, transfer.etaSeconds));
+                        }
+                        return Unit.INSTANCE;
+                    });
+                } catch (Exception error) {
+                    incomplete = true;
+                }
+                job.checkCanceled();
+
+                File[] subtitles = work.listFiles(file -> file.getName().startsWith(stem + ".")
+                        && SUBTITLE_FILE.matcher(file.getName()).matches() && nonEmptyFile(file));
+                if (subtitles == null) throw new IOException();
+                incomplete |= subtitles.length < selection.expectedCount;
+                for (File subtitle : subtitles) {
+                    String name = savedStem + selection.suffix + subtitle.getName().substring(stem.length());
+                    try {
+                        saveExtra(job, subtitle, name, DownloadHistory.SUBTITLE_MIME);
+                        savedCount++;
+                    } catch (IOException | RuntimeException error) {
+                        job.checkCanceled();
+                        incomplete = true;
+                    }
                 }
             }
-            if (savedCount == 0) return "未能保存字幕。";
-            return savedCount == subtitles.length ? "已保存 " + savedCount + " 个 SRT 字幕。"
+            if (savedCount == 0) {
+                if (job.subtitles != DownloadSubtitles.ALL_MANUAL || incomplete) return "所选字幕未能下载或保存。";
+                return "未找到可下载的人工字幕。";
+            }
+            return !incomplete ? "已保存 " + savedCount + " 个 SRT 字幕。"
                     : "已保存 " + savedCount + " 个 SRT 字幕，部分字幕未能保存。";
         } catch (Exception error) {
             synchronized (LOCK) {
@@ -1036,11 +1331,48 @@ public final class DownloadService extends Service {
             return savedCount == 0 ? "字幕未能下载或保存。" : "已保存 " + savedCount + " 个 SRT 字幕，部分字幕未能保存。";
         } finally {
             synchronized (LOCK) {
-                job.subtitleWorker = null;
-                job.subtitlesPending = false;
+                job.attachmentWorker = null;
                 if (deadline != null) deadline.cancel(false);
             }
             // Both the deadline and the user's stop action interrupt this worker.
+            Thread.interrupted();
+        }
+    }
+
+    private String finishCover(Batch running, Job job, YoutubeDL engine, File work, File cookieCopy, String savedName) {
+        Thread worker = Thread.currentThread();
+        ScheduledFuture<?> deadline = null;
+        try {
+            synchronized (LOCK) {
+                if (running.stopped) return "已停止下载封面。";
+                job.attachmentWorker = worker;
+                job.mediaStepIndex = job.mediaSteps.indexOf(MediaStep.COVER);
+                state = new State("正在下载封面", "媒体已保存，正在获取视频封面。", -1, true);
+            }
+            deadline = REQUEST_DEADLINE.schedule(() -> {
+                synchronized (LOCK) {
+                    if (job.attachmentWorker == worker) worker.interrupt();
+                }
+            }, SUBTITLE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            YoutubeDLRequest request = singleVideoRequest(job);
+            if (cookieCopy != null) request.addOption("--cookies", cookieCopy.getAbsolutePath());
+            DownloadCover.configure(request, work);
+            job.checkCanceled();
+            engine.execute(request, job.id, false);
+            job.checkCanceled();
+            DownloadCover.Image image = DownloadCover.find(work, savedName);
+            if (image == null) return "未取得可保存的封面。";
+            saveExtra(job, image.file, image.displayName, image.mimeType);
+            return "已保存封面。";
+        } catch (Exception error) {
+            synchronized (LOCK) {
+                return running.stopped ? "已停止下载封面。" : "封面未能下载或保存。";
+            }
+        } finally {
+            synchronized (LOCK) {
+                job.attachmentWorker = null;
+                if (deadline != null) deadline.cancel(false);
+            }
             Thread.interrupted();
         }
     }
@@ -1065,42 +1397,22 @@ public final class DownloadService extends Service {
         work.delete();
     }
 
-    private static State downloadProgress(float reportedPercent, String line) {
-        // The wrapper may reuse the previous percent when a line has no numeric ETA.
-        Matcher transfer = DOWNLOAD_TRANSFER.matcher(line);
-        float percent = -1;
-        String speed = "";
-        int eta = -1;
-        if (transfer.find()) {
-            String percentText = transfer.group(1);
-            if (percentText != null) percent = Math.min(100, Float.parseFloat(percentText));
-            if (percent < 100) {
-                if (transfer.group(2) != null) speed = transfer.group(2) + " " + transfer.group(3);
-                // The wrapper can carry the previous ETA into lines indicating another stream or no ETA.
-                Matcher remaining = DOWNLOAD_ETA.matcher(line);
-                if (remaining.find(transfer.end())) {
-                    int hours = remaining.group(1) == null ? 0 : Integer.parseInt(remaining.group(1));
-                    eta = hours * 3600 + Integer.parseInt(remaining.group(2)) * 60 + Integer.parseInt(remaining.group(3));
-                }
-            }
-        } else if (!line.startsWith("[download] Destination:")
-                && Float.isFinite(reportedPercent) && reportedPercent >= 0 && reportedPercent <= 100) {
-            percent = reportedPercent;
-        }
-        return new State("正在下载", "当前音频或视频流进度", percent, true, null, false, speed, eta);
+    private static void addTransferProgress(YoutubeDLRequest request) {
+        request.addOption("--newline");
+        request.addOption("--progress");
+        request.addOption("--progress-template", TransferProgress.TEMPLATE);
     }
 
-    private Uri saveOutput(Job job, File file, String displayName, String mimeType, boolean primary) throws IOException {
+    private Uri stageOutput(Job job, File file, String displayName, String mimeType) throws IOException {
         job.checkCanceled();
         ContentValues values = new ContentValues();
         values.put(MediaStore.Downloads.DISPLAY_NAME, displayName);
         values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
-        values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/多平台下载");
+        values.put(MediaStore.Downloads.RELATIVE_PATH, DownloadDestination.mediaStorePath(job.folders.toArray(new String[0])));
         values.put(MediaStore.Downloads.IS_PENDING, 1);
         Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
         if (uri == null) throw new IOException("手机的下载目录暂不可写。");
 
-        boolean published = false;
         try {
             try (FileInputStream input = new FileInputStream(file);
                  OutputStream output = getContentResolver().openOutputStream(uri, "w")) {
@@ -1111,21 +1423,91 @@ public final class DownloadService extends Service {
                     output.write(buffer, 0, count);
                 }
             }
+            return uri;
+        } catch (IOException | RuntimeException error) {
+            discardOutput(uri);
+            throw error;
+        }
+    }
+
+    private Uri[] saveMedia(Job job, File main, File audio) throws IOException {
+        if (job.destinationTree != null) {
+            List<DownloadDestination.Output> outputs = new ArrayList<>();
+            outputs.add(new DownloadDestination.Output(main, main.getName(), job.mimeType()));
+            if (audio != null) outputs.add(new DownloadDestination.Output(audio, audio.getName(), job.audioFormat.mimeType));
+            DownloadDestination.Saved saved = DownloadDestination.save(this, job.destinationTree, job.folders, outputs,
+                    job::checkCanceled, () -> markFinalizing(job));
+            return new Uri[] {saved.files.get(0), audio == null ? null : saved.files.get(1), saved.directory};
+        }
+        Uri primary = null;
+        Uri companion = null;
+        try {
+            primary = stageOutput(job, main, main.getName(), job.mimeType());
+            if (audio != null) companion = stageOutput(job, audio, audio.getName(), job.audioFormat.mimeType);
             synchronized (LOCK) {
                 job.checkCanceled();
-                values.clear();
+                ContentValues values = new ContentValues();
                 values.put(MediaStore.Downloads.IS_PENDING, 0);
-                if (getContentResolver().update(uri, values, null, null) != 1) {
-                    throw new IOException("无法确认文件已保存。");
+                ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+                operations.add(ContentProviderOperation.newUpdate(primary).withValues(values).withExpectedCount(1).build());
+                if (companion != null) {
+                    operations.add(ContentProviderOperation.newUpdate(companion).withValues(values).withExpectedCount(1).build());
                 }
-                published = true;
-                // The main file remains published while subtitles and history are finalized.
-                if (primary) job.finalizing = true;
+                try {
+                    getContentResolver().applyBatch(MediaStore.AUTHORITY, operations);
+                } catch (RemoteException | OperationApplicationException error) {
+                    throw new IOException("无法确认文件已保存。", error);
+                }
+                job.finalizing = true;
             }
-        } finally {
-            if (!published) getContentResolver().delete(uri, null, null);
+            return new Uri[] {primary, companion, null};
+        } catch (IOException | RuntimeException error) {
+            discardOutput(primary);
+            discardOutput(companion);
+            throw error;
         }
-        return uri;
+    }
+
+    private static void markFinalizing(Job job) {
+        synchronized (LOCK) {
+            job.checkCanceled();
+            job.finalizing = true;
+        }
+    }
+
+    private void saveExtra(Job job, File file, String name, String mimeType) throws IOException {
+        Uri uri;
+        Uri directory = null;
+        if (job.destinationTree != null) {
+            DownloadDestination.Saved saved = DownloadDestination.save(this, job.destinationTree, job.folders,
+                    Collections.singletonList(new DownloadDestination.Output(file, name, mimeType)),
+                    job::checkCanceled, job::checkCanceled);
+            uri = saved.files.get(0);
+            directory = saved.directory;
+        } else {
+            uri = stageOutput(job, file, name, mimeType);
+            try {
+                job.checkCanceled();
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.IS_PENDING, 0);
+                if (getContentResolver().update(uri, values, null, null) != 1) throw new IOException("附件保存失败。");
+            } catch (IOException | RuntimeException error) {
+                discardOutput(uri);
+                throw error;
+            }
+        }
+        String actualName = readDisplayName(uri);
+        job.attachments.add(new DownloadHistory.Attachment(uri, directory,
+                actualName == null || actualName.isEmpty() ? name : actualName, mimeType));
+    }
+
+    private void discardOutput(Uri uri) {
+        if (uri == null) return;
+        try {
+            getContentResolver().delete(uri, null, null);
+        } catch (RuntimeException ignored) {
+            // The pending file remains hidden and is eligible for expiration.
+        }
     }
 
     private String readDisplayName(Uri uri) {
@@ -1139,16 +1521,22 @@ public final class DownloadService extends Service {
     }
 
     private static void update(Job job, State next) {
+        update(job, next, null);
+    }
+
+    private static void update(Job job, State next, MediaStep step) {
         synchronized (LOCK) {
-            if (active == job && !job.canceled) state = next;
+            if (active != job || job.canceled) return;
+            if (step != null) job.mediaStepIndex = job.mediaSteps.indexOf(step);
+            state = next;
         }
     }
 
     private static String describeEngineFailure(Exception error, Job job, boolean usesCookies) {
         String diagnostic = error.getMessage();
-        if (!job.audioOnly && "webm".equals(job.videoContainer) && diagnostic != null
-                && diagnostic.toLowerCase(Locale.ROOT).contains("requested format is not available")) {
-            return "未找到符合当前画质的 WebM 音视频流，请尝试选择 MP4 或 MKV。";
+        if (diagnostic != null && diagnostic.toLowerCase(Locale.ROOT).contains("requested format is not available")) {
+            return job.audioOnly ? "源素材没有可用的音频或音视频流。"
+                    : "源素材缺少符合当前画质的音轨或视频轨，请尝试切换画质。";
         }
         if (!usesCookies && diagnostic != null && !diagnostic.trim().isEmpty()) return describe(error);
         String phase;

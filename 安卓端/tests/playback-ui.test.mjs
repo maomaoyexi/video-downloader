@@ -42,9 +42,11 @@ test("进度卡显示速度和剩余时间，下载完成后可播放和打开�
     let state = { phase: "等待添加任务", detail: "等待下载", percent: -1, busy: false, canPlay: false };
     let clicks = 0;
     let locationOpens = 0;
+    let audioOpens = 0;
     const page = openPage(context, {
         snapshot: () => JSON.stringify(state),
         playVideo: () => { clicks += 1; },
+        playCompanionAudio: () => ++audioOpens === 1 ? "独立音频文件已删除或已移动。" : "",
         openVideoLocation: () => ++locationOpens === 1 ? "视频文件已删除或已移动。" : "",
     });
     assert.equal(page.element("detail").textContent, "等待下载");
@@ -57,6 +59,8 @@ test("进度卡显示速度和剩余时间，下载完成后可播放和打开�
     assert.equal(play.hidden, true, "初始状态应隐藏播放按钮");
     const location = page.element("openVideoLocation");
     assert.equal(location.hidden, true);
+    const companion = page.element("playCompanionAudio");
+    assert.equal(companion.hidden, true);
     const speed = page.element("speed");
     const eta = page.element("eta");
     assert.equal(speed.hidden, true);
@@ -87,6 +91,7 @@ test("进度卡显示速度和剩余时间，下载完成后可播放和打开�
     assert.equal(play.hidden, false, "原生完成状态应显示播放按钮");
     assert.equal(play.disabled, false, "完成状态应允许点击播放");
     assert.equal(play.textContent, "播放视频");
+    assert.equal(companion.hidden, true);
     play.click();
     assert.equal(clicks, 1, "点击一次应调用原生播放一次");
     state.audioOnly = true;
@@ -105,6 +110,23 @@ test("进度卡显示速度和剩余时间，下载完成后可播放和打开�
     assert.equal(locationOpens, 2);
     assert.equal(locationNote.textContent, "");
 
+    state = { ...state, audioOnly: false, outputMode: "silent-video-and-audio", hasAudioFile: true };
+    page.tick();
+    assert.equal(play.textContent, "播放无声视频");
+    assert.equal(companion.hidden, false);
+    companion.click();
+    assert.equal(audioOpens, 1);
+    assert.match(locationNote.textContent, /独立音频文件已删除或已移动/);
+    companion.click();
+    assert.equal(audioOpens, 2);
+    assert.equal(locationNote.textContent, "");
+
+    state.canPlay = false;
+    page.tick();
+    assert.equal(play.hidden, true);
+    assert.equal(companion.hidden, false);
+    assert.equal(location.hidden, false);
+
     for (const phase of ["正在下载", "下载失败", "已取消"]) {
         state = { phase, detail: phase, percent: -1, busy: phase === "正在下载", canPlay: false };
         page.tick();
@@ -112,6 +134,7 @@ test("进度卡显示速度和剩余时间，下载完成后可播放和打开�
         assert.equal(stop.hidden, !state.busy, "停止操作只在任务运行时显示");
         assert.equal(page.element("start").hidden, state.busy, "开始按钮只在空闲时显示");
         assert.equal(play.hidden, true, phase + "时应隐藏播放按钮");
+        assert.equal(companion.hidden, true, phase + "时应隐藏独立音频按钮");
         assert.equal(location.hidden, true);
         assert.equal(speed.hidden, true);
     }
@@ -169,7 +192,7 @@ test("清除视频链接会清除校验提示和平台高亮，下载中禁止�
     assert.equal(clear.disabled, true);
 });
 
-test("视频画质和仅音频选项将对应的参数传给安卓桥接", context => {
+test("所有视频画质可从折叠菜单选取并传给安卓桥接", context => {
     const heights = [];
     const page = openPage(context, {
         snapshot: () => JSON.stringify({
@@ -181,30 +204,33 @@ test("视频画质和仅音频选项将对应的参数传给安卓桥接", conte
         },
     });
     const start = page.element("start");
-    const picker = page.element("resolutionPicker");
-    const summary = page.element("resolutionSummary");
+    const downloadSummary = page.element("resolutionSummary");
+    const picker = page.element("qualityPicker");
+    const summary = page.element("qualitySummary");
     const value = page.element("resolutionValue");
     const choices = page.element("downloadForm").querySelectorAll("[data-height]");
     page.element("url").value = "https://youtu.be/jNQXAC9IVRw";
 
-    assert.equal(picker.open, false, "首次打开时应收起分辨率选项");
+    assert.equal(picker.open, false, "首次打开时应收起画质选项");
     assert.equal(value.textContent, "自动");
     start.click();
     assert.deepEqual(Array.from(choices, button => button.textContent), [
-        "自动", "最高", "8K", "4K", "2K", "1080p60", "1080p", "720p", "480p", "仅音频",
+        "自动", "最高", "8K", "4K", "2K", "1080p60", "1080p", "720p", "480p",
     ]);
+    downloadSummary.click();
     for (const button of choices) {
         summary.click();
-        assert.equal(picker.open, true, "点击当前档位应展开选项");
+        assert.equal(picker.open, true, "点击画质档位应展开选项");
         button.click();
-        assert.equal(picker.open, false, "选中档位后应收起选项");
+        assert.equal(picker.open, false, "选中档位后应收起画质选项");
+        assert.equal(downloadSummary.closest("details").open, true, "选中档位后仍保留下载选项面板");
         assert.equal(value.textContent, button.textContent);
         start.click();
     }
-    assert.deepEqual(heights, [0, 0, -1, 4320, 2160, 1440, -2, 1080, 720, 480, -3]);
+    assert.deepEqual(heights, [0, 0, -1, 4320, 2160, 1440, -2, 1080, 720, 480]);
 });
 
-test("仅音频忽略字幕，切回视频后恢复字幕选择，下载中锁定选项", context => {
+test("四种音画输出提交独立模式，音频模式保留原画质及字幕选择", context => {
     const url = "https://youtu.be/jNQXAC9IVRw";
     const started = [];
     let busy = false;
@@ -217,39 +243,130 @@ test("仅音频忽略字幕，切回视频后恢复字幕选择，下载中锁�
     });
     const value = page.element("resolutionValue");
     const subtitles = page.element("downloadSubtitles");
-    const audio = page.element("audioOnlyChoice");
+    const cover = page.element("downloadCover");
+    const audioPicker = page.element("audioFormatPicker");
+    const audioSummary = page.element("audioFormatSummary");
+    const outputPicker = page.element("outputModePicker");
+    const outputSummary = page.element("outputModeSummary");
+    const outputValue = page.element("outputModeValue");
+    const qualityPicker = page.element("qualityPicker");
+    const qualitySummary = page.element("qualitySummary");
+    const moreOptionsPicker = page.element("moreOptionsPicker");
+    const moreOptionsSummary = page.element("moreOptionsSummary");
+    const moreOptionsValue = page.element("moreOptionsValue");
+    const chooseMode = mode => {
+        outputSummary.click();
+        assert.equal(outputPicker.open, true);
+        const button = outputPicker.querySelector(`[data-output-mode="${mode}"]`);
+        button.click();
+        assert.equal(button.getAttribute("aria-pressed"), "true");
+        assert.equal(outputPicker.open, false);
+        assert.equal(page.window.document.activeElement, outputSummary);
+    };
+    const chooseFormat = format => {
+        if (!moreOptionsPicker.open) moreOptionsSummary.click();
+        audioSummary.click();
+        assert.equal(audioPicker.open, true);
+        const button = audioPicker.querySelector(`[data-audio-format="${format}"]`);
+        button.click();
+        assert.equal(button.getAttribute("aria-pressed"), "true");
+        assert.equal(audioPicker.open, false);
+        assert.equal(page.window.document.activeElement, audioSummary);
+    };
+    const chooseCodec = codec => {
+      if (!moreOptionsPicker.open) moreOptionsSummary.click();
+      const summary = page.element("videoCodecSummary");
+      const picker = page.element("videoCodecPicker");
+      summary.click();
+      assert.equal(picker.open, true);
+      const button = picker.querySelector(`[data-video-codec="${codec}"]`);
+      button.click();
+      assert.equal(button.getAttribute("aria-pressed"), "true");
+      assert.equal(picker.open, false);
+      assert.equal(page.window.document.activeElement, summary);
+    };
     const start = page.element("start");
     page.element("url").value = url;
 
+    assert.equal(outputPicker.open, false);
+    assert.deepEqual(Array.from(outputPicker.querySelectorAll("[data-output-mode]"), button => button.textContent), [
+        "带声音的视频", "只输出音频", "带声音的视频 + 独立音频", "无声视频 + 独立音频",
+    ]);
+    assert.equal(outputValue.textContent, "带声音的视频");
+    assert.equal(page.element("outputModePicker").parentElement.className, "download-primary-options");
+    assert.equal(page.element("qualityPicker").parentElement.className, "download-primary-options");
+    assert.equal(audioPicker.hidden, true);
+    assert.equal(cover.checked, false);
+    assert.equal(moreOptionsValue.textContent, "默认");
     page.element("resolutionSummary").click();
+    qualitySummary.click();
+    qualityPicker.querySelector('[data-height="720"]').click();
+    assert.equal(qualityPicker.open, false);
+    assert.equal(page.window.document.activeElement, qualitySummary);
+    assert.equal(page.element("qualityValue").textContent, "720p");
     assert.equal(subtitles.checked, false);
+    moreOptionsSummary.click();
     subtitles.click();
-    assert.equal(value.textContent, "自动 · 字幕");
+    assert.equal(value.textContent, "720p");
+    assert.equal(moreOptionsValue.textContent, "字幕");
     start.click();
 
+    cover.click();
+    assert.equal(value.textContent, "720p");
+    assert.equal(moreOptionsValue.textContent, "字幕 · 封面");
+    start.click();
     busy = true;
     page.tick();
     assert.equal(subtitles.disabled, true);
-    assert.equal(audio.disabled, true);
+    assert.equal(cover.disabled, true);
+    assert.equal(Array.from(outputPicker.querySelectorAll("button")).every(button => button.disabled), true);
     busy = false;
     page.tick();
-    audio.click();
-    assert.equal(value.textContent, "仅音频");
+    chooseMode("audio");
+    assert.equal(value.textContent, "只输出音频");
+    assert.equal(outputValue.textContent, "只输出音频");
+    assert.equal(audioPicker.hidden, false);
+    assert.equal(page.element("audioFormatValue").textContent, "M4A");
+    assert.deepEqual(Array.from(audioPicker.querySelectorAll("button"), option => option.textContent),
+        ["M4A", "FLAC", "Opus", "WAV"]);
+    assert.equal(page.element("qualityChoices").hidden, true);
+    assert.equal(qualityPicker.hidden, true);
     assert.equal(page.element("subtitleOption").hidden, true);
     assert.equal(subtitles.disabled, true);
+    assert.equal(cover.disabled, false);
+    chooseFormat("flac");
+    assert.equal(page.element("audioFormatValue").textContent, "FLAC");
     start.click();
 
-    page.element("resolutionSummary").click();
-    page.element("downloadForm").querySelector('[data-height="720"]').click();
+    chooseMode("video-and-audio");
+    assert.equal(page.element("qualityChoices").hidden, false);
+    assert.equal(qualityPicker.hidden, false);
+    assert.equal(audioPicker.hidden, false);
+    assert.equal(page.element("audioFormatValue").textContent, "FLAC");
     assert.equal(page.element("subtitleOption").hidden, false);
     assert.equal(subtitles.checked, true);
     assert.equal(subtitles.disabled, false);
-    assert.equal(value.textContent, "720p · 字幕");
+    assert.equal(value.textContent, "视频 + 音频 · 720p");
+    chooseFormat("opus");
+    assert.equal(moreOptionsValue.textContent, "Opus · 字幕 · 封面");
+    chooseCodec("av1");
+    assert.equal(moreOptionsValue.textContent, "Opus · AV1 · 字幕 · 封面");
     start.click();
+    chooseMode("silent-video-and-audio");
+    assert.equal(audioPicker.hidden, false);
+    assert.equal(value.textContent, "无声视频 + 音频 · 720p");
+    chooseFormat("wav");
+    start.click();
+    chooseMode("video");
+    assert.equal(audioPicker.hidden, true);
+    chooseMode("audio");
+    assert.equal(page.element("audioFormatValue").textContent, "WAV");
     assert.deepEqual(started, [
-        [url, 0, false, "", "", true, 0, "mp4", "auto", "http", 1],
-        [url, -3, false, "", "", false, 0, "mp4", "auto", "http", 1],
-        [url, 720, false, "", "", true, 0, "mp4", "auto", "http", 1],
+        [url, 720, false, "", "", true, 0, "mp4", "auto", "http", 1, "video", "m4a", false],
+        [url, 720, false, "", "", true, 0, "mp4", "auto", "http", 1, "video", "m4a", true],
+        [url, 720, false, "", "", false, 0, "mp4", "auto", "http", 1, "audio", "flac", true],
+        [url, 720, false, "", "", true, 0, "mp4", "av1", "http", 1, "video-and-audio", "opus", true],
+        [url, 720, false, "", "", true, 0, "mp4", "av1", "http", 1, "silent-video-and-audio", "wav", true],
     ]);
 });
 
@@ -341,7 +458,7 @@ test("批量链接按行校验并一次提交，任务卡显示队列进度和�
     page.element("downloadSubtitles").click();
     start.click();
     assert.equal(accepted.length, 1);
-    assert.deepEqual(accepted[0], [input.value, 0, false, "", "", true, 0, "mp4", "auto", "http", 1]);
+    assert.deepEqual(accepted[0], [input.value, 0, false, "", "", true, 0, "mp4", "auto", "http", 1, "video", "m4a", false]);
     assert.match(page.element("batchPosition").textContent, /1\s*\/\s*2/);
     assert.match(page.element("cancel").textContent, /停止队列/);
 
@@ -352,6 +469,55 @@ test("批量链接按行校验并一次提交，任务卡显示队列进度和�
     assert.equal(stopCount, 1);
     assert.match(page.element("batchSummary").textContent, /(?:完成|成功)\s*1/);
     assert.equal(page.element("playVideo").hidden, false);
+});
+
+test("任务卡分别显示输出项序号和队列条数", context => {
+    let state = {
+        phase: "正在下载", detail: "", percent: 42, speed: "825.00 KiB/s", busy: true, batchTotal: 2, batchIndex: 1,
+        mediaStep: 1, mediaStepTotal: 3, mediaStepLabel: "视频",
+    };
+    const page = openPage(context, { snapshot: () => JSON.stringify(state) });
+    const mediaPosition = page.element("mediaPosition");
+    const batchPosition = page.element("batchPosition");
+    assert.equal(mediaPosition.hidden, false);
+    assert.equal(mediaPosition.textContent, "1/3 · 视频");
+    assert.equal(page.element("progress").hidden, false);
+    assert.equal(page.element("percent").textContent, "42%");
+    assert.equal(page.element("speed").textContent, "825.00 KiB/s");
+    assert.equal(batchPosition.hidden, false);
+    assert.equal(batchPosition.textContent, "第 1 / 2 条");
+
+    state = { ...state, phase: "正在提取音频", percent: -1, mediaStep: 2, mediaStepLabel: "独立音频" };
+    page.tick();
+    assert.equal(mediaPosition.hidden, false);
+    assert.equal(mediaPosition.textContent, "2/3 · 独立音频");
+    assert.equal(page.element("progress").hidden, false);
+    assert.equal(page.element("progress").hasAttribute("value"), false);
+    assert.equal(page.element("speed").hidden, true);
+    assert.equal(batchPosition.textContent, "第 1 / 2 条");
+
+    state = { ...state, phase: "正在下载字幕", percent: 25, speed: "18.00 KiB/s", mediaStep: 3, mediaStepLabel: "字幕" };
+    page.tick();
+    assert.equal(mediaPosition.hidden, false);
+    assert.equal(mediaPosition.textContent, "3/3 · 字幕");
+    assert.equal(page.element("percent").textContent, "25%");
+    assert.equal(page.element("speed").textContent, "18.00 KiB/s");
+    assert.equal(batchPosition.textContent, "第 1 / 2 条");
+
+    state = { ...state, phase: "正在解析", batchIndex: 2, mediaStep: 1, mediaStepLabel: "视频" };
+    page.tick();
+    assert.equal(mediaPosition.textContent, "1/3 · 视频");
+    assert.equal(batchPosition.textContent, "第 2 / 2 条");
+
+    state = { ...state, busy: false, phase: "下载完成", batchCompleted: 2, batchFailed: 0 };
+    page.tick();
+    assert.equal(mediaPosition.hidden, true);
+    assert.equal(batchPosition.hidden, true);
+
+    state = { ...state, busy: true, phase: "正在下载", batchTotal: 1, mediaStepTotal: 1, mediaStepLabel: "音频" };
+    page.tick();
+    assert.equal(mediaPosition.hidden, true);
+    assert.equal(batchPosition.hidden, true);
 });
 
 test("只在队列允许时跳过当前条，结算区分跳过与未开始", context => {
@@ -412,7 +578,7 @@ test("队列详情按原顺序更新每条任务状态和链接", context => {
     assert.equal(details.open, false);
 });
 
-function openCollectionPage(context) {
+function openCollectionPage(context, additionalBridge = {}) {
     const inspections = [];
     const downloads = [];
     let status = { status: "idle" };
@@ -435,6 +601,7 @@ function openCollectionPage(context) {
             downloads.push(args);
             return "";
         },
+        ...additionalBridge,
     });
     return {
         ...page,
@@ -460,10 +627,12 @@ test("B 站多 P 初始不选，按分 P 顺序提交，单次限选 20 条", co
     page.element("proxyPort").value = "7890";
     page.element("proxyScheme").value = "socks5";
     page.element("fragments").value = "5";
-    page.element("videoContainer").value = "mkv";
-    page.element("videoCodec").value = "av1";
+    page.element("videoCodecPicker").querySelector('[data-video-codec="av1"]').click();
     page.element("rateLimit").value = "2048";
     page.element("downloadForm").querySelector('[data-height="1080"]').click();
+    page.element("outputModePicker").querySelector('[data-output-mode="silent-video-and-audio"]').click();
+    page.element("audioFormatPicker").querySelector('[data-audio-format="opus"]').click();
+    page.element("downloadCover").click();
     page.element("downloadSubtitles").click();
     page.submit(url);
     assert.deepEqual(page.inspections, [[url, true, "127.0.0.1", "7890", "socks5"]]);
@@ -493,7 +662,7 @@ test("B 站多 P 初始不选，按分 P 顺序提交，单次限选 20 条", co
     assert.equal(page.element("collectionDialog").open, false);
     const picked = [...entries.slice(0, 19), entries[20]];
     assert.deepEqual(page.downloads, [[picked.map(entry => entry.url).join("\n"), 1080, true, "127.0.0.1", "7890",
-        true, 2048, "mkv", "av1", "socks5", 5]]);
+        true, 2048, "mp4", "av1", "socks5", 5, "silent-video-and-audio", "opus", true]]);
     assert.equal(page.cancellations(), 1);
 });
 
@@ -525,7 +694,7 @@ test("B 站单 P 自动下载，显式分 P 不做预检，带列表的单视频
     page.element("downloadSubtitles").click();
     page.submit(url + "?p=2");
     assert.equal(page.inspections.length, 0);
-    page.element("audioOnlyChoice").click();
+    page.element("outputModePicker").querySelector('[data-output-mode="audio"]').click();
     page.submit(url);
     page.result({ status: "single" });
     assert.equal(page.element("collectionDialog").open, false);
@@ -536,9 +705,9 @@ test("B 站单 P 自动下载，显式分 P 不做预检，带列表的单视频
     assert.equal(page.element("collectionSingle").hidden, false);
     page.element("collectionSingle").click();
     assert.deepEqual(page.downloads, [
-        [url + "?p=2", 0, false, "", "", true, 0, "mp4", "auto", "http", 1],
-        [url, -3, false, "", "", false, 0, "mp4", "auto", "http", 1],
-        [watch, -3, false, "", "", false, 0, "mp4", "auto", "http", 1],
+        [url + "?p=2", 0, false, "", "", true, 0, "mp4", "auto", "http", 1, "video", "m4a", false],
+        [url, 0, false, "", "", false, 0, "mp4", "auto", "http", 1, "audio", "m4a", false],
+        [watch, 0, false, "", "", false, 0, "mp4", "auto", "http", 1, "audio", "m4a", false],
     ]);
 });
 
@@ -582,4 +751,183 @@ test("B 站 bili2233.cn 短链可从分集解析和批量下载入口提交", co
     assert.match(page.element("formNote").textContent, /安卓端支持/);
     assert.equal(page.inspections.length, 1);
     assert.equal(page.downloads.length, 2);
+});
+
+function openSubtitlePage(context) {
+    const subtitleInspections = [];
+    const subtitleDownloads = [];
+    let subtitleState = { status: "idle" };
+    let subtitleCancellations = 0;
+    const page = openCollectionPage(context, {
+        inspectSubtitles: (...args) => {
+            subtitleInspections.push(args);
+            subtitleState = { status: "loading" };
+            return "";
+        },
+        subtitleState: () => JSON.stringify(subtitleState),
+        cancelSubtitles: () => {
+            subtitleCancellations++;
+            subtitleState = { status: "idle" };
+        },
+        startWithSubtitles: (...args) => {
+            subtitleDownloads.push(args);
+            return "";
+        },
+    });
+    page.element("downloadSubtitles").click();
+    return {
+        ...page,
+        subtitleInspections,
+        subtitleDownloads,
+        subtitleCancellations: () => subtitleCancellations,
+        subtitleResult: value => {
+            subtitleState = value;
+            page.tick();
+        },
+        searchSubtitles: value => {
+            const search = page.element("subtitleSearch");
+            search.value = value;
+            search.dispatchEvent(new page.window.Event("input"));
+        },
+    };
+}
+
+test("人工和自动字幕可分别勾选，搜索语言时保留已选轨道", context => {
+    const page = openSubtitlePage(context);
+    const url = "https://youtu.be/jNQXAC9IVRw";
+    page.element("proxyEnabled").checked = true;
+    page.element("proxyAddress").value = "127.0.0.1";
+    page.element("proxyPort").value = "7890";
+    page.element("proxyScheme").value = "socks5";
+    page.submit(url);
+    assert.deepEqual(page.subtitleInspections, [[url, true, "127.0.0.1", "7890", "socks5"]]);
+    assert.equal(page.element("subtitleProgress").hidden, false);
+    page.subtitleResult({ status: "ready", tracks: [
+        { language: "en", label: "英语", source: "manual" },
+        { language: "en", label: "英语（自动生成）", source: "auto" },
+        { language: "ja", label: "日语（自动翻译）", source: "auto" },
+    ] });
+
+    const list = page.element("subtitleList");
+    const checks = Array.from(list.querySelectorAll("input"));
+    assert.match(list.textContent, /人工字幕/);
+    assert.match(list.textContent, /自动字幕/);
+    assert.match(list.textContent, /自动生成/);
+    assert.match(list.textContent, /自动翻译/);
+    assert.equal(checks.length, 3);
+    assert.ok(checks.every(check => !check.checked));
+    assert.equal(page.element("subtitleStart").disabled, true);
+    checks[0].click();
+    page.searchSubtitles("JA");
+    assert.deepEqual(checks.filter(check => !check.closest("[hidden]")), [checks[2]]);
+    checks[2].click();
+    page.searchSubtitles("英语");
+    assert.deepEqual(checks.filter(check => !check.closest("[hidden]")), checks.slice(0, 2));
+    assert.equal(checks[0].checked, true);
+    checks[1].click();
+    page.element("subtitleStart").click();
+
+    assert.equal(page.element("subtitleDialog").open, false);
+    assert.equal(page.downloads.length, 0);
+    assert.deepEqual(page.subtitleDownloads, [[url, 0, true, "127.0.0.1", "7890", true,
+        0, "mp4", "auto", "socks5", 1, "video", "m4a", false, JSON.stringify([
+            { language: "en", source: "manual" }, { language: "en", source: "auto" },
+            { language: "ja", source: "auto" },
+        ])]]);
+});
+
+test("字幕目录读取失败可重试，无可用字幕仍可下载视频", context => {
+    const page = openSubtitlePage(context);
+    const url = "https://youtu.be/jNQXAC9IVRw";
+    page.element("downloadCover").click();
+    page.submit(url);
+    page.subtitleResult({ status: "error", message: "字幕读取超时。" });
+    assert.equal(page.element("subtitleError").textContent, "字幕读取超时。");
+    assert.equal(page.element("subtitleRetry").hidden, false);
+    assert.equal(page.element("subtitleSkip").hidden, false);
+    assert.equal(page.downloads.length, 0);
+    page.element("subtitleRetry").click();
+    assert.equal(page.subtitleInspections.length, 2);
+    assert.equal(page.element("subtitleProgress").hidden, false);
+    assert.equal(page.element("subtitleError").textContent, "");
+    page.subtitleResult({ status: "ready", tracks: [] });
+    assert.match(page.element("subtitleStatus").textContent, /没有可下载的字幕/);
+    assert.equal(page.element("subtitleStart").hidden, true);
+    page.element("subtitleSkip").click();
+
+    assert.deepEqual(page.downloads, [[url, 0, false, "", "", false, 0, "mp4", "auto", "http", 1, "video", "m4a", true]]);
+    assert.equal(page.subtitleDownloads.length, 0);
+    assert.equal(page.element("downloadSubtitles").checked, true);
+});
+
+test("单分集可以选择字幕，返回键取消读取并忽略迟到结果", async context => {
+    const page = openSubtitlePage(context);
+    const url = "https://www.bilibili.com/video/BV1ZMoeBPEqs";
+    const part = url + "?p=2";
+    const initialHistory = page.window.history.state;
+    page.submit(url);
+    page.result({ status: "ready", entries: [
+        { ordinal: 1, title: "中文字幕", url: url + "?p=1" },
+        { ordinal: 2, title: "日文原版", url: part },
+    ] });
+    page.element("collectionEntry2").click();
+    page.element("collectionStart").click();
+    assert.equal(page.element("collectionDialog").open, false);
+    assert.equal(page.element("subtitleDialog").open, true);
+    assert.equal(page.subtitleInspections[0]?.[0], part);
+    await new Promise(resolve => {
+        page.window.addEventListener("popstate", resolve, { once: true });
+        page.window.history.back();
+    });
+    assert.equal(page.window.history.state, initialHistory);
+    assert.equal(page.element("subtitleDialog").open, false);
+    assert.equal(page.subtitleCancellations(), 1);
+    page.subtitleResult({ status: "ready", tracks: [{ language: "ja", label: "日语", source: "manual" }] });
+    assert.equal(page.subtitleDownloads.length, 0);
+    assert.equal(page.downloads.length, 0);
+
+    page.submit(part);
+    assert.equal(page.subtitleInspections[1]?.[0], part);
+    page.element("subtitleCancel").click();
+    assert.equal(page.subtitleCancellations(), 2);
+    assert.equal(page.element("subtitleDialog").open, false);
+});
+
+test("字幕最多选择 20 条，搜索隐藏的轨道仍计入上限", context => {
+    const page = openSubtitlePage(context);
+    page.submit("https://youtu.be/jNQXAC9IVRw");
+    page.subtitleResult({ status: "ready", tracks: Array.from({ length: 21 }, (_, index) => ({
+        language: `en-${index + 1}`, label: `英语 ${index + 1}`, source: "auto",
+    })) });
+    const checks = Array.from(page.element("subtitleList").querySelectorAll("input"));
+    for (const check of checks.slice(0, 20)) check.click();
+    page.searchSubtitles("en-21");
+    assert.match(page.element("subtitleCount").textContent, /20\s*\/\s*20/);
+    assert.equal(checks[20].disabled, true);
+    page.searchSubtitles("en-20");
+    checks[19].click();
+    page.searchSubtitles("en-21");
+    assert.equal(checks[20].disabled, false);
+    checks[20].click();
+    page.element("subtitleStart").click();
+    const submitted = JSON.parse(page.subtitleDownloads[0].at(-1));
+    assert.equal(submitted.length, 20);
+    assert.deepEqual(submitted.at(-1), { language: "en-21", source: "auto" });
+    assert.ok(!submitted.some(track => track.language === "en-20"));
+});
+
+test("批量下载沿用人工字幕，只输出音频时不读取字幕轨道", context => {
+    const page = openSubtitlePage(context);
+    const url = "https://youtu.be/jNQXAC9IVRw";
+    const batch = url + "\nhttps://bili2233.cn/vaopxkP";
+    page.submit(batch);
+    assert.equal(page.subtitleInspections.length, 0);
+    assert.equal(page.downloads[0][0], batch);
+    assert.equal(page.downloads[0][5], true);
+
+    page.element("outputModePicker").querySelector('[data-output-mode="audio"]').click();
+    page.submit(url);
+    assert.equal(page.subtitleInspections.length, 0);
+    assert.equal(page.downloads[1][5], false);
+    assert.equal(page.downloads[1][11], "audio");
 });

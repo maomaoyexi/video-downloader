@@ -9,8 +9,8 @@ def ffmpegAar = new File(runtimeDirectory, 'ffmpeg-0.18.1-arm64-rebuilt.aar')
 def runtimeManifests = new File(runtimeDirectory, 'runtime-manifest.json')
 def thirdPartyLicenses = rootProject.file('native-runtime/licenses')
 
-def releaseVersionName = providers.gradleProperty('androidReleaseVersion').getOrElse('1.0.1')
-def releaseVersionCode = providers.gradleProperty('androidReleaseVersionCode').map { it.toInteger() }.getOrElse(6)
+def releaseVersionName = providers.gradleProperty('androidReleaseVersion').getOrElse('1.1.0')
+def releaseVersionCode = providers.gradleProperty('androidReleaseVersionCode').map { it.toInteger() }.getOrElse(7)
 
 android {
     namespace = 'io.github.maomaoyexi.videodownloader.prototype'

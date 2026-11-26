@@ -6,6 +6,7 @@ import { Window } from "happy-dom";
 const html = await readFile(new URL("../app/src/main/assets/index.html", import.meta.url), "utf8");
 const initialDefaults = {
     height: 0, subtitles: false, rateLimitKiB: 0, videoContainer: "mp4", videoCodec: "auto", fragments: 1,
+    outputMode: "video", audioFormat: "m4a", cover: false,
 };
 
 function presetBridge(initialPresets = [], savedDefaults = initialDefaults) {
@@ -17,14 +18,14 @@ function presetBridge(initialPresets = [], savedDefaults = initialDefaults) {
     const bridge = {
         snapshot: () => JSON.stringify({ phase: "等待添加任务", detail: "", percent: -1, busy: false }),
         downloadDefaults: () => JSON.stringify(defaults),
-        saveDownloadDefaults(height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments) {
-            defaults = { height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments };
+        saveDownloadDefaults(height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments, outputMode, audioFormat, cover) {
+            defaults = { height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments, outputMode, audioFormat, cover };
             defaultWrites.push(defaults);
             return "";
         },
         downloadPresets: () => JSON.stringify([...named.values()]),
-        saveDownloadPreset(name, height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments) {
-            const preset = { name, height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments };
+        saveDownloadPreset(name, height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments, outputMode, audioFormat, cover) {
+            const preset = { name, height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments, outputMode, audioFormat, cover };
             presetWrites.push(preset);
             named.set(name, preset);
             return "";
@@ -72,8 +73,17 @@ test("设置顶栏可保存命名预设，重新打开后可加载并记住", co
     const { element, show, click } = page;
 
     click("resolutionSummary");
-    element("resolutionPicker").querySelector('[data-height="720"]').click();
+    click("qualitySummary");
+    element("qualityPicker").querySelector('[data-height="720"]').click();
+    click("outputModeSummary");
+    element("outputModePicker").querySelector('[data-output-mode="video-and-audio"]').click();
+    click("moreOptionsSummary");
+    click("audioFormatSummary");
+    element("audioFormatPicker").querySelector('[data-audio-format="opus"]').click();
+    click("videoCodecSummary");
+    element("videoCodecPicker").querySelector('[data-video-codec="av1"]').click();
     click("downloadSubtitles");
+    click("downloadCover");
     click("openSettings");
     const heading = element("settingsHeading").closest(".settings-heading");
     assert.ok(heading?.contains(element("openDownloadPresets")));
@@ -81,11 +91,6 @@ test("设置顶栏可保存命名预设，重新打开后可加载并记住", co
     assert.doesNotMatch(heading.textContent, /保存为默认/);
     assert.equal(show("downloadPresetsPanel"), false);
 
-    click("outputDisclosure");
-    click("videoContainerPicker");
-    element("videoContainerOptions").querySelector('[value="mkv"]').click();
-    click("videoCodecPicker");
-    element("videoCodecOptions").querySelector('[value="av1"]').click();
     click("proxyDisclosure");
     element("rateLimit").value = "1600";
     element("fragments").value = "6";
@@ -97,7 +102,8 @@ test("设置顶栏可保存命名预设，重新打开后可加载并记住", co
     page.namePreset("常用配置");
     click("saveDownloadPreset");
     const configuration = {
-        height: 720, subtitles: true, rateLimitKiB: 1600, videoContainer: "mkv", videoCodec: "av1", fragments: 6,
+        height: 720, subtitles: true, rateLimitKiB: 1600, videoContainer: "mp4", videoCodec: "av1", fragments: 6,
+        outputMode: "video-and-audio", audioFormat: "opus", cover: true,
     };
     assert.deepEqual(presetWrites, [{ name: "常用配置", ...configuration }]);
     assert.deepEqual(named.get("常用配置"), { name: "常用配置", ...configuration });
@@ -106,6 +112,7 @@ test("设置顶栏可保存命名预设，重新打开后可加载并记住", co
 
     const reopened = openPage(context, bridge);
     assert.equal(reopened.element("resolutionValue").textContent, "自动");
+    assert.equal(reopened.element("outputModeValue").textContent, "带声音的视频");
     reopened.click("openSettings");
     reopened.click("openDownloadPresets");
     const name = reopened.element("downloadPresetList").querySelectorAll(".preset-name")[1];
@@ -120,17 +127,23 @@ test("设置顶栏可保存命名预设，重新打开后可加载并记住", co
     load.click();
     assert.deepEqual(defaultWrites, [configuration]);
     assert.equal(reopened.show("downloadPresetsPanel"), false);
-    assert.equal(reopened.element("resolutionValue").textContent, "720p · 字幕");
+    assert.equal(reopened.element("resolutionValue").textContent, "视频 + 音频 · 720p");
+    assert.equal(reopened.element("moreOptionsValue").textContent, "Opus · AV1 · 字幕 · 封面");
+    assert.equal(reopened.element("outputModeValue").textContent, "视频 + 音频");
+    assert.equal(reopened.element("audioFormatValue").textContent, "Opus");
+    assert.equal(reopened.element("downloadCover").checked, true);
     assert.equal(reopened.element("downloadSubtitles").checked, true);
     assert.equal(reopened.element("rateLimit").value, "1600");
     assert.equal(reopened.element("fragments").value, "6");
-    assert.equal(reopened.element("videoContainerPicker").textContent.trim(), "MKV");
-    assert.equal(reopened.element("videoCodecPicker").textContent.trim(), "AV1");
+    assert.equal(reopened.element("videoCodecValue").textContent, "AV1");
 
     const restarted = openPage(context, bridge);
-    assert.equal(restarted.element("resolutionValue").textContent, "720p · 字幕");
-    assert.equal(restarted.element("videoContainer").value, "mkv");
-    assert.equal(restarted.element("videoCodec").value, "av1");
+    assert.equal(restarted.element("resolutionValue").textContent, "视频 + 音频 · 720p");
+    assert.equal(restarted.element("moreOptionsValue").textContent, "Opus · AV1 · 字幕 · 封面");
+    assert.equal(restarted.element("outputModeValue").textContent, "视频 + 音频");
+    assert.equal(restarted.element("audioFormatValue").textContent, "Opus");
+    assert.equal(restarted.element("downloadCover").checked, true);
+    assert.equal(restarted.element("videoCodecValue").textContent, "AV1");
 });
 
 test("同名预设显示覆盖，删除需再次确认", context => {
@@ -167,15 +180,17 @@ test("同名预设显示覆盖，删除需再次确认", context => {
     assert.equal(presets.querySelector(".preset-delete"), null);
 });
 
-test("保留以前的下载配置和预设，可加载列表首行的内置默认配置", context => {
+test("读取旧视频配置时保留画质和编码，并可恢复内置默认配置", context => {
     const priorDefaults = {
         height: 1080, subtitles: true, rateLimitKiB: 3500, videoContainer: "mkv", videoCodec: "h264", fragments: 8,
     };
     const priorPreset = { name: "默认配置", ...initialDefaults, height: 480 };
     const { bridge, named, defaultWrites, presetWrites, deletions } = presetBridge([priorPreset], priorDefaults);
     const { element, click } = openPage(context, bridge);
-    assert.equal(element("resolutionValue").textContent, "1080p · 字幕");
-    assert.equal(element("videoCodec").value, "h264");
+    assert.equal(element("resolutionValue").textContent, "1080p");
+    assert.equal(element("moreOptionsValue").textContent, "H.264 · 字幕");
+    assert.equal(element("outputModeValue").textContent, "带声音的视频");
+    assert.equal(element("videoCodecValue").textContent, "H.264");
     assert.equal(element("rateLimit").value, "3500");
     assert.equal(element("fragments").value, "8");
     assert.deepEqual(defaultWrites, []);
@@ -192,9 +207,9 @@ test("保留以前的下载配置和预设，可加载列表首行的内置默�
     rows[0].querySelector(".preset-load").click();
     assert.deepEqual(defaultWrites, [initialDefaults]);
     assert.equal(element("resolutionValue").textContent, "自动");
+    assert.equal(element("outputModeValue").textContent, "带声音的视频");
     assert.equal(element("downloadSubtitles").checked, false);
-    assert.equal(element("videoContainerPicker").textContent.trim(), "MP4");
-    assert.equal(element("videoCodecPicker").textContent.trim(), "自动");
+    assert.equal(element("videoCodecValue").textContent, "自动");
     assert.equal(element("rateLimit").value, "0");
     assert.equal(element("fragments").value, "1");
     assert.deepEqual([...named.values()], [priorPreset]);
@@ -210,4 +225,28 @@ test("保留以前的下载配置和预设，可加载列表首行的内置默�
     restarted.element("downloadPresetList").querySelectorAll(".preset-load")[1].click();
     assert.deepEqual(defaultWrites, [initialDefaults, { ...initialDefaults, height: 480 }]);
     assert.equal(restarted.element("resolutionValue").textContent, "480p");
+});
+
+test("旧版仅音频预设加载为自动画质和独立音频模式", context => {
+    const legacy = {
+        height: -3, subtitles: true, rateLimitKiB: 1000, videoContainer: "webm", videoCodec: "vp9", fragments: 3,
+    };
+    const { bridge, defaultWrites } = presetBridge([{ name: "通勤音频", ...legacy }], legacy);
+    const { element, click } = openPage(context, bridge);
+    assert.equal(element("outputModeValue").textContent, "只输出音频");
+    assert.equal(element("qualityChoices").hidden, true);
+    assert.equal(element("subtitleOption").hidden, true);
+    assert.equal(element("audioFormatValue").textContent, "M4A");
+    assert.equal(element("downloadCover").checked, false);
+    assert.deepEqual(defaultWrites, []);
+
+    click("openSettings");
+    click("openDownloadPresets");
+    element("downloadPresetList").querySelectorAll(".preset-load")[1].click();
+    assert.deepEqual(defaultWrites, [{
+        height: 0, subtitles: false, rateLimitKiB: 1000, videoContainer: "mp4",
+        videoCodec: "vp9", fragments: 3, outputMode: "audio", audioFormat: "m4a", cover: false,
+    }]);
+    assert.equal(element("outputModeValue").textContent, "只输出音频");
+    assert.equal(element("qualityChoices").querySelector('[aria-pressed="true"]').dataset.height, "0");
 });

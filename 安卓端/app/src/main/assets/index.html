@@ -52,13 +52,26 @@ textarea:disabled{color:var(--fg3)}
 .chip .bili{background:#00a1d6}
 #platformHint{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .quality{min-width:0;margin-top:18px}
-.quality summary{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border:1px solid var(--line2);border-radius:13px;background:var(--bg);font-weight:600;list-style:none;cursor:pointer}
-.quality summary::-webkit-details-marker{display:none}
-.quality summary::after{content:"";width:7px;height:7px;flex:none;border-right:1.5px solid var(--fg2);border-bottom:1.5px solid var(--fg2);transform:translateY(-2px) rotate(45deg);transition:transform 200ms ease}
-.quality[open] summary::after{transform:translateY(2px) rotate(225deg)}
-#resolutionValue{margin-left:auto;color:var(--fg2)}
+.download-disclosure>summary{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 12px;border:1px solid var(--line2);border-radius:13px;background:var(--bg);font-weight:600;list-style:none;cursor:pointer}
+.download-disclosure>summary::-webkit-details-marker{display:none}
+.download-disclosure>summary::after{content:"";width:7px;height:7px;flex:none;border-right:1.5px solid var(--fg2);border-bottom:1.5px solid var(--fg2);transform:translateY(-2px) rotate(45deg);transition:transform 200ms ease}
+.download-disclosure[open]>summary::after{transform:translateY(2px) rotate(225deg)}
+.download-disclosure>summary>span:first-child{flex:none}
+.download-option-value{margin-left:auto;color:var(--fg2);min-width:0;text-align:right;overflow-wrap:anywhere}
+.download-primary-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.download-primary-options>.download-disclosure{min-width:0;margin-top:0}
+.download-primary-options.audio-only{grid-template-columns:1fr}
+.download-primary-options>details>summary{display:grid;grid-template-columns:minmax(0,1fr) 8px;grid-template-rows:auto auto;min-height:56px;padding:6px 9px;gap:0 6px;font-size:13px}
+.download-primary-options>details>summary>span:first-child{grid-column:1;grid-row:1}
+.download-primary-options>details>summary::after{grid-column:2;grid-row:1 / span 2;align-self:center}
+.download-primary-options .download-option-value{grid-column:1;grid-row:2;margin-left:0;overflow:hidden;text-align:left;text-overflow:ellipsis;white-space:nowrap}
+.output-mode,.audio-format,.quality-limit,.more-options,.video-codec{margin-top:8px}
 .choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin-top:8px;padding:4px;background:var(--surface2);border-radius:16px}
-.output-options{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;margin-top:8px}
+.output-mode .choices{grid-template-columns:minmax(0,1fr)}
+.output-mode .choice{justify-content:flex-start;padding:6px 8px;white-space:normal;text-align:left}
+.quality-limit .choices{grid-template-columns:repeat(auto-fit,minmax(min(100%,56px),1fr))}
+.audio-format .choices,.video-codec .choices{grid-template-columns:repeat(4,minmax(0,1fr))}
+.output-options{display:flex;align-items:center;flex-wrap:wrap;gap:0 8px;margin-top:8px}
 .proxy-fields label{min-width:0;font-size:13px;color:var(--fg2)}
 .text-input{width:100%;min-width:0;min-height:44px;padding:0 9px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:14px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--surface);color:var(--fg);font-size:14px;font-weight:550;white-space:nowrap;cursor:pointer}
@@ -70,7 +83,6 @@ textarea:disabled{color:var(--fg3)}
 .choice,.choice:disabled{min-width:0;padding:0 2px;border-color:transparent;border-radius:12px;background:transparent;font-size:13px}
 .choice{color:var(--fg2)}
 .choice[aria-pressed=true]{border-color:var(--line2);background:var(--surface);font-weight:650}
-.audio-choice[aria-pressed=true]:not(:disabled){border-color:var(--fg);background:var(--fg);color:var(--surface)}
 .download-action{display:flex;width:100%;min-height:48px;margin-top:16px}
 #cancel:not(:disabled){border-color:var(--err);color:var(--err)}
 .note{margin-top:8px;color:var(--err);font-size:13px;overflow-wrap:anywhere}
@@ -102,7 +114,6 @@ h2{font-size:16px;font-weight:650}
 .settings-description{margin:4px 3px 8px}
 .settings-field{display:block;color:var(--fg2);font-size:13px}
 .settings-field .text-input{margin-top:5px}
-.settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .settings-picker{position:relative;margin-top:5px}
 .settings-picker-toggle{display:flex;justify-content:space-between;gap:8px;width:100%;min-width:0;padding:0 10px;background:var(--bg);font-weight:500;text-align:left}
 .settings-picker-toggle::after{content:"";flex:none;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform 160ms ease}
@@ -127,6 +138,9 @@ h2{font-size:16px;font-weight:650}
 .tool-versions{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
 .tool-versions dd{margin:0;font-family:var(--mono);overflow-wrap:anywhere}
 .settings-links{display:flex;flex-wrap:wrap;gap:8px}
+.destination-label{overflow-wrap:anywhere}
+.destination-actions{margin-top:8px}
+.destination-classification{margin-top:12px}
 .guide-card{padding:4px 16px}
 .guide-topic + .guide-topic{border-top:1px solid var(--line)}
 .guide-topic summary{min-height:44px;padding:11px 0;font-size:15px;font-weight:600;cursor:pointer}
@@ -136,7 +150,6 @@ h2{font-size:16px;font-weight:650}
 .guide-copy li + li,.about-list li + li{margin-top:5px}
 .about-name{display:flex;align-items:center;gap:10px}
 .about-credits{margin:8px 0 0;overflow-wrap:anywhere}
-.about-credits > div + div{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .about-credits dt{font-weight:650}
 .about-credits dd{margin:4px 0 0;color:var(--fg2)}
 .about-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
@@ -171,18 +184,35 @@ h2{font-size:16px;font-weight:650}
 .cookie-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .cookie-feedback{margin-top:8px}
 .cookie-feedback:empty{display:none}
+.history-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px}
+.history-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.history-tools input[type=search]{flex:1 1 180px;width:auto;min-width:0;font-family:inherit}
+.history-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:8px}
+.history-filters .settings-picker-toggle>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.history-filters .settings-picker{position:relative}
+.history-filters .settings-picker-options{position:absolute;z-index:4;top:calc(100% + 4px);left:0;right:0;max-height:min(240px,40vh);overflow:auto;overscroll-behavior:contain;border-radius:10px;box-shadow:0 4px 12px #16161a1a}
+.history-filters .settings-picker-option{white-space:normal;overflow-wrap:anywhere}
+.history-selection{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.history-selection .hint{margin-inline-end:auto}
 .history-list{margin:0;padding:0 16px;list-style:none}
 .history-entry{padding:14px 0}
 .history-entry + .history-entry{border-top:1px solid var(--line)}
-.history-title{font-size:15px;overflow-wrap:anywhere}
-.history-details{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px}
-.history-meta{flex:1 0 120px;min-width:0}
-.history-meta p{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px}
+.history-title{margin:0;font-size:15px;overflow-wrap:anywhere}
+.history-details{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
+.history-details .video-actions{justify-content:flex-end}
+.history-select{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}
+.history-select input{width:18px;height:18px;margin:0;accent-color:var(--fg)}
+.history-meta p{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;overflow-wrap:anywhere}
 .history-meta time{display:block;margin-top:3px}
 .history-status{font-weight:600;color:var(--fg2)}
 .history-entry[data-status=completed] .history-status{color:var(--ok)}
 .history-entry[data-status=failed] .history-status{color:var(--err)}
 #historyView > .note{margin-top:0}
+[data-history-delete]:not(:disabled),#historyDeleteConfirm,#historyBulkDelete:not(:disabled){color:var(--err)}
+#historyDeleteConfirm{border-color:var(--err)}
+.history-delete-content{min-height:0;overflow:auto;overflow-wrap:anywhere;padding:0 16px 14px}
+.history-delete-content > * + *{margin-top:8px}
+.history-delete-files{margin-bottom:0;padding-inline-start:1.4em}
 .demo{display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;color:var(--fg2);font-size:13px}
 body.preview .demo{display:flex}
 .taskhead{display:flex;align-items:center;gap:8px}
@@ -192,7 +222,9 @@ body.preview .demo{display:flex}
 .dot[data-state=failed]{background:var(--err)}
 .task-metrics{display:flex;align-items:baseline;justify-content:flex-end;flex-wrap:wrap;gap:2px 12px;margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums}
 #speed{color:var(--fg2);font-size:13px;white-space:nowrap}
-#batchPosition{margin-top:4px}
+.task-position{display:flex;flex-wrap:wrap;column-gap:12px;font-variant-numeric:tabular-nums}
+.task-position>p{margin-top:4px}
+#mediaPosition{color:var(--fg2)}
 #eta{margin-top:6px;text-align:right;font-variant-numeric:tabular-nums}
 .batch-details{margin-top:12px;border-top:1px solid var(--line)}
 .batch-details summary{line-height:44px;color:var(--fg2);cursor:pointer}
@@ -208,9 +240,9 @@ body.preview .demo{display:flex}
 .video-actions{display:flex;flex-wrap:wrap;gap:8px}
 #taskActions{margin-top:12px}
 #skipCurrent{margin-top:12px}
-.collection-dialog,.agreement-dialog{width:min(480px,calc(100% - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:auto;padding:0;color:var(--fg)}
-.collection-dialog[open],.agreement-dialog[open]{display:flex;flex-direction:column}
-.collection-dialog::backdrop,.agreement-dialog::backdrop{background:#16161a66}
+.collection-dialog,.subtitle-dialog,.agreement-dialog,.history-delete-dialog{width:min(480px,calc(100% - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:auto;padding:0;color:var(--fg)}
+.collection-dialog[open],.subtitle-dialog[open],.agreement-dialog[open],.history-delete-dialog[open]{display:flex;flex-direction:column}
+.collection-dialog::backdrop,.subtitle-dialog::backdrop,.agreement-dialog::backdrop,.history-delete-dialog::backdrop{background:#16161a66}
 .agreement-dialog{width:min(420px,calc(100% - 24px))}
 .agreement-header,.agreement-footer{flex:none;padding:12px 16px}
 .agreement-text{min-height:0;max-height:188px;overflow-y:auto;overscroll-behavior:contain;padding:12px 16px;border-block:1px solid var(--line)}
@@ -231,6 +263,14 @@ body.preview .demo{display:flex}
 .collection-row:has(input:disabled){color:var(--fg3);cursor:default}
 .collection-row span{min-width:0;overflow-wrap:anywhere}
 .collection-number{display:block;color:var(--fg2);font-size:12px}
+.subtitle-search{flex:none;padding:0 16px 12px}
+.subtitle-list{min-height:0;margin:0;padding:0 16px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
+.subtitle-source{min-width:0;margin:0;padding:0;border:0}
+.subtitle-source legend{padding:10px 0 2px;color:var(--fg2);font-size:13px;font-weight:650}
+.subtitle-row-code{display:block;color:var(--fg3);font-size:12px}
+.subtitle-hint{margin-top:6px}
+#subtitleCount{margin-bottom:8px}
+#subtitleNoMatches{padding:12px 0}
 .collection-footer{border-top:1px solid var(--line)}
 .collection-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px}
 #collectionCount{margin-bottom:8px}
@@ -238,6 +278,8 @@ progress{display:block;width:100%;height:4px;margin-top:12px;appearance:none;ove
 progress::-webkit-progress-bar{background:var(--surface3);border-radius:2px}
 progress::-webkit-progress-value{background:var(--live);border-radius:2px}
 progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--live),var(--surface3));background-size:200%;animation:slide 1.3s linear infinite}
+#progress{height:6px}
+#progress:indeterminate::-webkit-progress-bar{background:transparent}
 @keyframes slide{from{background-position:100% 0}to{background-position:-100% 0}}
 @media(prefers-reduced-motion:reduce){
   progress:indeterminate{animation:none}
@@ -291,23 +333,59 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
       <p class="note" id="formNote" role="status"></p>
       <button class="btn primary download-action" type="submit" id="start">开始下载</button>
       <button class="btn download-action" type="button" id="cancel" hidden disabled>停止下载</button>
-      <details class="quality" id="resolutionPicker">
-        <summary id="resolutionSummary"><span>下载选项</span><span id="resolutionValue">自动</span></summary>
-        <div class="choices" role="group" aria-label="分辨率上限">
-          <button class="btn choice" type="button" data-height="0" aria-pressed="true">自动</button>
-          <button class="btn choice" type="button" data-height="-1" aria-pressed="false">最高</button>
-          <button class="btn choice" type="button" data-height="4320" aria-pressed="false">8K</button>
-          <button class="btn choice" type="button" data-height="2160" aria-pressed="false">4K</button>
-          <button class="btn choice" type="button" data-height="1440" aria-pressed="false">2K</button>
-          <button class="btn choice" type="button" data-height="-2" aria-pressed="false">1080p60</button>
-          <button class="btn choice" type="button" data-height="1080" aria-pressed="false">1080p</button>
-          <button class="btn choice" type="button" data-height="720" aria-pressed="false">720p</button>
-          <button class="btn choice" type="button" data-height="480" aria-pressed="false">480p</button>
+      <details class="quality download-disclosure" id="resolutionPicker">
+        <summary id="resolutionSummary"><span>下载选项</span><span class="download-option-value" id="resolutionValue">自动</span></summary>
+        <div class="download-primary-options" id="downloadPrimaryOptions">
+          <details class="output-mode download-disclosure" id="outputModePicker">
+            <summary id="outputModeSummary"><span>音画输出</span><span class="download-option-value" id="outputModeValue">带声音的视频</span></summary>
+            <div class="choices" role="group" aria-label="音画输出">
+              <button class="btn choice" type="button" data-output-mode="video" data-label="带声音的视频" aria-pressed="true">带声音的视频</button>
+              <button class="btn choice" type="button" data-output-mode="audio" data-label="只输出音频" aria-pressed="false">只输出音频</button>
+              <button class="btn choice" type="button" data-output-mode="video-and-audio" data-label="视频 + 音频" aria-pressed="false">带声音的视频 + 独立音频</button>
+              <button class="btn choice" type="button" data-output-mode="silent-video-and-audio" data-label="无声视频 + 音频" aria-pressed="false">无声视频 + 独立音频</button>
+            </div>
+          </details>
+          <details class="quality-limit download-disclosure" id="qualityPicker">
+            <summary id="qualitySummary"><span>画质</span><span class="download-option-value" id="qualityValue">自动</span></summary>
+            <div class="choices" id="qualityChoices" role="group" aria-label="分辨率上限">
+              <button class="btn choice" type="button" data-height="0" aria-pressed="true">自动</button>
+              <button class="btn choice" type="button" data-height="-1" aria-pressed="false">最高</button>
+              <button class="btn choice" type="button" data-height="4320" aria-pressed="false">8K</button>
+              <button class="btn choice" type="button" data-height="2160" aria-pressed="false">4K</button>
+              <button class="btn choice" type="button" data-height="1440" aria-pressed="false">2K</button>
+              <button class="btn choice" type="button" data-height="-2" aria-pressed="false">1080p60</button>
+              <button class="btn choice" type="button" data-height="1080" aria-pressed="false">1080p</button>
+              <button class="btn choice" type="button" data-height="720" aria-pressed="false">720p</button>
+              <button class="btn choice" type="button" data-height="480" aria-pressed="false">480p</button>
+            </div>
+          </details>
         </div>
-        <div class="output-options">
-          <button class="btn audio-choice" type="button" id="audioOnlyChoice" data-height="-3" aria-pressed="false">仅音频</button>
-          <label class="switch-row labeled-switch" id="subtitleOption">同时下载字幕<input type="checkbox" role="switch" id="downloadSubtitles"></label>
-        </div>
+        <details class="more-options download-disclosure" id="moreOptionsPicker">
+          <summary id="moreOptionsSummary"><span>更多选项</span><span class="download-option-value" id="moreOptionsValue">默认</span></summary>
+          <details class="audio-format download-disclosure" id="audioFormatPicker" hidden>
+            <summary id="audioFormatSummary"><span>音频格式</span><span class="download-option-value" id="audioFormatValue">M4A</span></summary>
+            <div class="choices" role="group" aria-label="音频格式">
+              <button class="btn choice" type="button" data-audio-format="m4a" aria-pressed="true">M4A</button>
+              <button class="btn choice" type="button" data-audio-format="flac" aria-pressed="false">FLAC</button>
+              <button class="btn choice" type="button" data-audio-format="opus" aria-pressed="false">Opus</button>
+              <button class="btn choice" type="button" data-audio-format="wav" aria-pressed="false">WAV</button>
+            </div>
+          </details>
+          <details class="video-codec download-disclosure" id="videoCodecPicker">
+            <summary id="videoCodecSummary"><span>编码偏好</span><span class="download-option-value" id="videoCodecValue">自动</span></summary>
+            <div class="choices" role="group" aria-label="编码偏好">
+              <button class="btn choice" type="button" data-video-codec="auto" aria-pressed="true">自动</button>
+              <button class="btn choice" type="button" data-video-codec="h264" aria-pressed="false">H.264</button>
+              <button class="btn choice" type="button" data-video-codec="av1" aria-pressed="false">AV1</button>
+              <button class="btn choice" type="button" data-video-codec="vp9" aria-pressed="false">VP9</button>
+            </div>
+          </details>
+          <div class="output-options">
+            <label class="switch-row labeled-switch" id="subtitleOption">同时下载字幕<input type="checkbox" role="switch" id="downloadSubtitles"></label>
+            <label class="switch-row labeled-switch">同时下载封面<input type="checkbox" role="switch" id="downloadCover"></label>
+          </div>
+          <p class="hint subtitle-hint" id="subtitleHint" hidden>单条视频可选字幕。一次下载多条时保存可用的人工字幕。</p>
+        </details>
       </details>
     </div>
   </form>
@@ -316,7 +394,10 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
       <span class="dot" id="statusDot" aria-hidden="true"></span><h2 id="phase"></h2>
       <div class="task-metrics"><span id="speed" hidden></span><span id="percent"></span></div>
     </div>
-    <p class="hint" id="batchPosition" hidden></p>
+    <div class="task-position">
+      <p class="hint" id="batchPosition" hidden></p>
+      <p class="hint" id="mediaPosition" role="status" hidden></p>
+    </div>
     <p class="detail" id="detail" aria-live="polite"></p>
     <p class="detail" id="batchSummary" role="status" hidden></p>
     <progress id="progress" aria-label="下载进度" max="100" value="0" hidden></progress>
@@ -328,11 +409,12 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
     </details>
     <div class="video-actions" id="taskActions" hidden>
       <button type="button" class="btn" id="playVideo" hidden>播放视频</button>
+      <button type="button" class="btn" id="playCompanionAudio" hidden>播放独立音频</button>
       <button type="button" class="btn" id="openVideoLocation" hidden>打开文件位置</button>
     </div>
     <p class="note" id="videoLocationNote" role="status"></p>
   </section>
-  <p class="hint">保存到「下载 / 多平台下载」</p>
+  <p class="hint destination-label" id="downloadDestinationSummary">保存到「下载 / 多平台下载」</p>
   <div class="demo"><span>浏览器预览使用模拟下载</span><button type="button" class="btn" id="example">使用示例链接</button></div>
 </main>
 <main id="settingsView" hidden>
@@ -356,34 +438,35 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
   </div>
   <p class="hint feedback" id="defaultsNote" role="status"></p>
   <nav class="settings-directory" id="settingsDirectory" aria-label="设置目录">
-    <button type="button" class="btn" data-settings-target="outputDisclosure" aria-controls="outputPanel" aria-expanded="false" hidden>输出与画质</button>
+    <button type="button" class="btn" data-settings-target="destinationDisclosure" aria-controls="downloadDestinationPanel" aria-expanded="false" hidden>下载目录</button>
     <button type="button" class="btn" data-settings-target="proxyDisclosure" aria-controls="networkPanel" aria-expanded="false">网络与代理</button>
     <button type="button" class="btn" data-settings-target="cookieDisclosure" aria-controls="cookieList" aria-expanded="false">平台 Cookie</button>
     <button type="button" class="btn" data-settings-target="toolboxDisclosure" aria-controls="toolboxPanel" aria-expanded="false" hidden>工具箱</button>
     <button type="button" class="btn" data-settings-target="fanboxDisclosure" aria-controls="fanboxPanel" aria-expanded="false" hidden>专项归档</button>
   </nav>
-  <section class="card settings-card" id="outputSection" aria-labelledby="outputHeading" hidden>
+  <section class="card settings-card" id="downloadDestinationSection" aria-labelledby="downloadDestinationHeading" hidden>
     <div class="settings-row">
-      <h2 id="outputHeading"><button type="button" class="settings-disclosure" id="outputDisclosure" aria-controls="outputPanel" aria-expanded="false">输出与画质</button></h2>
+      <h2 id="downloadDestinationHeading"><button type="button" class="settings-disclosure" id="destinationDisclosure"
+        aria-controls="downloadDestinationPanel" aria-expanded="false">下载目录</button></h2>
     </div>
-    <div class="settings-panel" id="outputPanel" inert>
+    <div class="settings-panel" id="downloadDestinationPanel" inert>
       <div>
         <div class="settings-content">
-          <div class="settings-fields">
-            <div class="settings-field">
-              <span id="videoContainerLabel">视频封装</span>
-              <select id="videoContainer" aria-labelledby="videoContainerLabel" aria-describedby="outputHint" hidden>
-                <option value="mp4">MP4</option><option value="mkv">MKV</option><option value="webm">WebM</option>
-              </select>
-            </div>
-            <div class="settings-field">
-              <span id="videoCodecLabel">编码偏好</span>
-              <select id="videoCodec" aria-labelledby="videoCodecLabel" aria-describedby="outputHint" hidden>
-                <option value="auto">自动</option><option value="h264">H.264</option><option value="av1">AV1</option><option value="vp9">VP9</option>
-              </select>
-            </div>
+          <p class="hint destination-label" id="downloadDestinationLabel">默认位置 · 下载 / 多平台下载</p>
+          <div class="settings-links destination-actions">
+            <button type="button" class="btn" id="chooseDownloadDestination">选择目录</button>
+            <button type="button" class="btn" id="resetDownloadDestination" disabled>恢复默认</button>
           </div>
-          <p class="hint feedback" id="outputHint">WebM 需要平台提供兼容音视频轨道。仅音频保存为 M4A。</p>
+          <div class="settings-field destination-classification">
+            <span id="downloadClassificationLabel">分类方式</span>
+            <select id="downloadClassification" aria-labelledby="downloadClassificationLabel" aria-describedby="downloadDestinationNote" hidden>
+              <option value="none">不分类</option>
+              <option value="platform">按平台</option>
+              <option value="platform-author" selected>按平台和作者</option>
+              <option value="output">按输出模式</option>
+            </select>
+          </div>
+          <p class="hint feedback" id="downloadDestinationNote" role="status"></p>
         </div>
       </div>
     </div>
@@ -511,7 +594,29 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
   </nav>
 </main>
 <main id="historyView" hidden>
-  <h1 id="historyHeading" tabindex="-1">下载历史</h1>
+  <div class="history-heading" id="historyHeader">
+    <h1 id="historyHeading" tabindex="-1">下载历史</h1>
+    <label class="switch-row labeled-switch" id="historyDeleteFilesOption" hidden>删除记录时同时删除本地文件<input type="checkbox" role="switch" id="historyDeleteFiles" autocomplete="off"></label>
+  </div>
+  <div class="history-tools">
+    <input class="text-input" type="search" id="historySearch" aria-label="搜索下载标题" placeholder="搜索标题" autocomplete="off">
+    <button type="button" class="btn" id="historyBulkToggle" aria-pressed="false" hidden>批量删除</button>
+  </div>
+  <div class="history-filters" role="group" aria-label="下载历史筛选">
+    <div class="settings-field">
+      <span id="historyPlatformLabel">平台</span>
+      <select id="historyPlatformFilter" aria-labelledby="historyPlatformLabel" hidden><option value="">全部平台</option></select>
+    </div>
+    <div class="settings-field">
+      <span id="historyAuthorLabel">作者</span>
+      <select id="historyAuthorFilter" aria-labelledby="historyAuthorLabel" hidden><option value="">全部作者</option></select>
+    </div>
+  </div>
+  <div class="history-selection" id="historySelection" hidden>
+    <span class="hint" id="historySelectionCount" role="status"></span>
+    <button type="button" class="btn" id="historySelectAll">全选结果</button>
+    <button type="button" class="btn" id="historyBulkDelete" disabled>删除所选</button>
+  </div>
   <p class="note" id="historyNote" role="status"></p>
   <p class="card hint" id="historyEmpty">暂无下载记录。</p>
   <ol class="card history-list" id="historyList" role="list" aria-label="下载记录" hidden></ol>
@@ -524,8 +629,8 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
       <div class="guide-copy">
         <ol>
           <li>粘贴 YouTube 或 B 站点播链接。</li>
-          <li>打开「下载选项」选择画质、仅音频或字幕，再点「开始下载」。</li>
-          <li>下载完成后，可在任务卡或「历史」播放和打开文件位置。文件保存在「下载 / 多平台下载」。</li>
+          <li>打开「下载选项」选择音画输出和画质。在「更多选项」中可以设置音频格式、编码偏好、字幕和封面。</li>
+          <li>点「开始下载」。下载完成后，可在任务卡或「历史」播放和打开文件位置。</li>
         </ol>
       </div>
     </details>
@@ -560,16 +665,18 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
       </div>
     </details>
     <details class="guide-topic">
-      <summary>画质、封装或字幕不可用</summary>
+      <summary>画质或字幕不可用</summary>
       <div class="guide-copy">
-        <p>画质不可用时可试「自动」或较低画质。WebM 需要平台提供兼容的音视频流，可在「输出与画质」改选 MP4 或 MKV。</p>
-        <p>「同时下载字幕」保存平台提供的人工字幕为 SRT。缺少字幕时，已保存的视频仍可播放。</p>
+        <p>画质不可用时可试「自动」或较低画质。视频保存为 MP4，独立音频按下载选项中选择的格式保存。</p>
+        <p>开启「同时下载字幕」后，下载单条视频时可按语言勾选人工字幕、自动生成或翻译的字幕，也可跳过。一次下载多条时保存可用的人工字幕。字幕以独立 SRT 文件保存在视频旁。</p>
       </div>
     </details>
     <details class="guide-topic">
       <summary>找不到下载的文件</summary>
       <div class="guide-copy">
-        <p>在「历史」找到对应记录，点「打开文件位置」。也可以在「设置 → 工具箱」打开总下载目录。文件移动或删除后，原记录仍会保留。</p>
+        <p>在「历史」找到对应记录，点「打开文件位置」。在「设置 → 下载目录」可选择保存位置。默认目录为「下载 / 多平台下载」。</p>
+        <p>默认按平台和作者分类，在平台目录下再按作者分文件夹。也可选「不分类」「按平台」或「按输出模式」。</p>
+        <p>在历史页顶部可用「平台」「作者」下拉菜单和标题搜索来筛选记录，也可勾选多条记录批量删除。开启「删除记录时同时删除本地文件」后，可一并删除关联的视频、音频、封面和字幕。</p>
       </div>
     </details>
   </section>
@@ -582,7 +689,6 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
       <dt>应用版本</dt><dd id="aboutAppVersion">未读取</dd>
       <dt>内置 yt-dlp</dt><dd id="aboutEngineVersion">未读取</dd>
       <dt>支持系统</dt><dd>Android 10 及以上</dd>
-      <dt>安卓端移植</dt><dd>猫猫葉汐A_spy<wbr>（@maomaoyexi）</dd>
     </dl>
     <div class="app-update" id="appUpdate" hidden>
       <div class="settings-links">
@@ -597,39 +703,25 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
     <h2 id="aboutFeatures">安卓端功能</h2>
     <ul class="about-list">
       <li>B 站和 YouTube 点播、分集选择与批量队列。</li>
-      <li>视频封装、M4A 音频和随视频保存的 SRT 字幕。</li>
+      <li>MP4 视频、独立音频、封面和 SRT 字幕。</li>
       <li>下载历史、文件定位和 FANBOX 公开单帖 ZIP 归档。</li>
     </ul>
     <details class="guide-topic">
       <summary>近期更新</summary>
       <div class="guide-copy">
-        <p>1.0.1 修复 B 站 bili2233.cn 分享短链无法识别的问题，支持直接下载、分集解析和批量队列。</p>
+        <p>1.1.0 新增四种音画输出、可选音频格式、封面和字幕轨道选择、自选下载目录，以及历史筛选和批量删除。</p>
+        <p>本版还补充分集标题和多文件下载进度，并修复本地文件已被移除时无法联动删除历史的问题。</p>
       </div>
     </details>
   </section>
   <section class="card" aria-labelledby="aboutCredits">
-    <h2 id="aboutCredits">原项目作者与贡献者</h2>
+    <h2 id="aboutCredits">安卓端作者与贡献者</h2>
     <dl class="about-credits">
-      <div>
-        <dt>猫猫葉汐A_spy（@maomaoyexi）</dt>
-        <dd>原版开发与维护，Withny 存档和直播监控，多平台直播录制。</dd>
-      </div>
-      <div>
-        <dt>DarkKandaoMaster（强壮的砍刀）</dt>
-        <dd>重构 WebUI 视觉与交互，改进明暗主题、响应式布局和设置面板。</dd>
-      </div>
-      <div>
-        <dt>ErgouTree（@ergou10086）</dt>
-        <dd>接入 B 站多 P、NicoChannel、Twitter/X、TwitCasting、Rplay 和 FANBOX。开发批量 CLI 和音频工具，完善下载设置，重构直播框架并加入追播校验、弹幕和多任务。</dd>
-      </div>
-      <div>
-        <dt>ZheYi101</dt>
-        <dd>加入随视频下载字幕设置与独立字幕下载工具。</dd>
-      </div>
+      <dt>猫猫葉汐A_spy<wbr>（@maomaoyexi）</dt>
+      <dd>安卓端移植、开发与维护</dd>
     </dl>
     <p class="hint feedback">源码采用 MIT 许可证。yt-dlp、youtubedl-android 和 FFmpeg 遵循各自的许可证。</p>
     <div class="about-links">
-      <a class="btn" id="aboutCreditsLink" href="https://github.com/maomaoyexi/video-downloader/blob/main/CREDITS.txt" target="_blank" rel="noopener noreferrer">完整贡献记录</a>
       <a class="btn" id="aboutProjectLink" href="https://github.com/maomaoyexi/video-downloader" target="_blank" rel="noopener noreferrer">打开项目主页</a>
     </div>
   </section>
@@ -676,6 +768,47 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
     </div>
   </div>
 </dialog>
+<dialog class="card subtitle-dialog" id="subtitleDialog" aria-labelledby="subtitleTitle">
+  <div class="collection-header">
+    <h2 id="subtitleTitle" tabindex="-1">选择字幕</h2>
+    <p class="hint" id="subtitleStatus" hidden></p>
+    <p class="note" id="subtitleError" role="alert"></p>
+    <progress id="subtitleProgress" aria-label="读取字幕轨道进度" hidden></progress>
+  </div>
+  <div class="subtitle-search" id="subtitleSearchRow" hidden>
+    <input class="text-input" id="subtitleSearch" type="search" aria-label="搜索字幕语言" placeholder="搜索语言或代码">
+  </div>
+  <div class="subtitle-list" id="subtitleList" hidden>
+    <fieldset class="subtitle-source" id="subtitleManual" hidden><legend>人工字幕</legend></fieldset>
+    <fieldset class="subtitle-source" id="subtitleAuto" hidden><legend>自动字幕</legend></fieldset>
+    <p class="hint" id="subtitleNoMatches" role="status" hidden>没有匹配的语言。</p>
+  </div>
+  <div class="collection-footer">
+    <p class="hint" id="subtitleCount" aria-live="polite" hidden></p>
+    <div class="collection-actions">
+      <button type="button" class="btn" id="subtitleCancel">取消</button>
+      <button type="button" class="btn" id="subtitleRetry" hidden>重试</button>
+      <button type="button" class="btn" id="subtitleSkip" hidden>跳过字幕</button>
+      <button type="button" class="btn primary" id="subtitleStart" disabled hidden>开始下载</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="card history-delete-dialog" id="historyDeleteDialog" aria-labelledby="historyDeleteHeading"
+  aria-describedby="historyDeleteTitle historyDeleteMetadata historyDeleteEffect">
+  <div class="collection-header">
+    <h2 id="historyDeleteHeading">删除下载记录</h2>
+  </div>
+  <div class="history-delete-content">
+    <p id="historyDeleteTitle"></p>
+    <p class="hint" id="historyDeleteMetadata"></p>
+    <p id="historyDeleteEffect"></p>
+    <ul class="hint history-delete-files" id="historyDeleteMediaNames" hidden></ul>
+  </div>
+  <div class="collection-footer collection-actions">
+    <button type="button" class="btn" id="historyDeleteCancel" autofocus>取消</button>
+    <button type="button" class="btn" id="historyDeleteConfirm">确认删除</button>
+  </div>
+</dialog>
 <template id="settingsPicker">
   <div class="settings-picker">
     <button type="button" class="btn settings-picker-toggle" aria-expanded="false"><span></span></button>
@@ -684,15 +817,17 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
 </template>
 <template id="historyEntry">
   <li class="history-entry">
-    <h2 class="history-title"></h2>
+    <label class="history-select" hidden><input type="checkbox" data-history-select>选择这条记录</label>
     <div class="history-details">
       <div class="hint history-meta">
-        <p><span class="history-status"></span><span class="history-platform"></span></p>
+        <p><span class="history-status"></span><span class="history-platform"></span><span class="history-author"></span></p>
         <time></time>
       </div>
       <div class="video-actions">
         <button type="button" class="btn" data-history-play>播放视频</button>
+        <button type="button" class="btn" data-history-audio hidden>播放独立音频</button>
         <button type="button" class="btn" data-history-location>打开文件位置</button>
+        <button type="button" class="btn" data-history-delete hidden>删除</button>
       </div>
     </div>
   </li>
@@ -726,6 +861,9 @@ const bridge = window.Downloader || null;
 const hasCookieBridge = typeof bridge?.setPlatformCookiesEnabled === "function";
 const hasCollectionBridge = typeof bridge?.inspectCollection === "function" &&
   typeof bridge.collectionState === "function" && typeof bridge.cancelCollection === "function";
+const hasSubtitleBridge = typeof bridge?.inspectSubtitles === "function" &&
+  typeof bridge.subtitleState === "function" && typeof bridge.cancelSubtitles === "function" &&
+  typeof bridge.startWithSubtitles === "function";
 const hasLinksImport = typeof bridge?.importLinks === "function" && typeof bridge.linksImportState === "function";
 const hasDownloadDefaults = typeof bridge?.downloadDefaults === "function" && typeof bridge.saveDownloadDefaults === "function";
 const hasDownloadPresets = hasDownloadDefaults && typeof bridge.downloadPresets === "function" &&
@@ -733,6 +871,11 @@ const hasDownloadPresets = hasDownloadDefaults && typeof bridge.downloadPresets 
 const hasFanbox = typeof bridge?.inspectFanbox === "function" && typeof bridge.archiveFanbox === "function" &&
   typeof bridge.cancelFanbox === "function" && typeof bridge.fanboxState === "function";
 const hasDownloadDirectory = typeof bridge?.openDownloadDirectory === "function";
+const canReadDownloadDestination = typeof bridge?.downloadDestination === "function";
+const hasHistoryDelete = typeof bridge?.deleteDownloadHistory === "function";
+const hasDownloadDestination = canReadDownloadDestination &&
+  typeof bridge.chooseDownloadDestination === "function" &&
+  typeof bridge.resetDownloadDestination === "function" && typeof bridge.setDownloadClassification === "function";
 const hasEngineInfo = typeof bridge?.engineInfo === "function";
 const cookieList = byId("cookieList");
 const cookieControls = Array.from(cookieList.querySelectorAll("[data-cookie-platform]"), row => ({
@@ -744,9 +887,10 @@ const cookieControls = Array.from(cookieList.querySelectorAll("[data-cookie-plat
   removeButton: row.querySelector("[data-cookie-remove]"),
   note: row.querySelector("[data-cookie-note]"),
 }));
-byId("outputSection").hidden = !hasDownloadDefaults;
 byId("transferFields").hidden = !hasDownloadDefaults;
 byId("settingsPresets").hidden = !hasDownloadPresets;
+byId("downloadDestinationSection").hidden = !hasDownloadDestination;
+byId("historyDeleteFilesOption").hidden = !hasHistoryDelete;
 byId("toolboxSection").hidden = !hasDownloadDirectory && !hasEngineInfo;
 byId("fanboxSection").hidden = !hasFanbox;
 const settingsDirectory = byId("settingsDirectory");
@@ -789,13 +933,25 @@ for (const button of document.querySelectorAll(".settings-disclosure")) {
 }
 if (!bridge) document.body.classList.add("preview");
 const qualityButtons = Array.from(document.querySelectorAll("[data-height]"));
-const resolutionPicker = byId("resolutionPicker");
+const qualityPicker = byId("qualityPicker");
+const qualityChoices = byId("qualityChoices");
+const qualityValue = byId("qualityValue");
+const moreOptionsValue = byId("moreOptionsValue");
+const outputModeButtons = new Map(Array.from(document.querySelectorAll("[data-output-mode]"),
+  button => [button.dataset.outputMode, button]));
+const outputModePicker = byId("outputModePicker");
+const audioFormatButtons = new Map(Array.from(document.querySelectorAll("[data-audio-format]"),
+  button => [button.dataset.audioFormat, button]));
+const audioFormatPicker = byId("audioFormatPicker");
+const videoCodecButtons = new Map(Array.from(document.querySelectorAll("[data-video-codec]"),
+  button => [button.dataset.videoCodec, button]));
+const videoCodecPicker = byId("videoCodecPicker");
 const downloadSubtitles = byId("downloadSubtitles");
+const downloadCover = byId("downloadCover");
 const rateLimit = byId("rateLimit");
 const fragmentsInput = byId("fragments");
-const videoContainer = byId("videoContainer");
-const videoCodec = byId("videoCodec");
 const proxyScheme = byId("proxyScheme");
+const downloadClassification = byId("downloadClassification");
 let activeSettingsPicker;
 function closeSettingsPicker() {
   if (!activeSettingsPicker) return;
@@ -819,11 +975,13 @@ function createSettingsPicker(select) {
   value.id = `${select.id}Value`;
   list.id = `${select.id}Options`;
   toggle.setAttribute("aria-labelledby", `${label} ${value.id}`);
-  toggle.setAttribute("aria-describedby", select.getAttribute("aria-describedby"));
+  const description = select.getAttribute("aria-describedby");
+  if (description) toggle.setAttribute("aria-describedby", description);
   toggle.setAttribute("aria-controls", list.id);
   list.setAttribute("aria-labelledby", label);
 
-  const choices = Array.from(select.options, option => {
+  let choices = [];
+  function createChoice(option) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn settings-picker-option";
@@ -839,13 +997,18 @@ function createSettingsPicker(select) {
     });
     list.append(button);
     return {option, button};
-  });
+  }
   function setExpanded(expanded) {
     list.hidden = !expanded;
     toggle.setAttribute("aria-expanded", String(expanded));
-    panel.classList.toggle("settings-picker-open", expanded);
+    panel?.classList.toggle("settings-picker-open", expanded);
   }
   function refresh() {
+    const options = Array.from(select.options);
+    if (options.length !== choices.length || options.some((option, index) => option !== choices[index].option)) {
+      list.replaceChildren();
+      choices = options.map(createChoice);
+    }
     value.textContent = select.options[select.selectedIndex]?.textContent ?? "";
     toggle.disabled = select.disabled;
     for (const {option, button} of choices) {
@@ -867,7 +1030,7 @@ function createSettingsPicker(select) {
   refresh();
   return picker;
 }
-const settingsPickers = new Map([videoContainer, videoCodec, proxyScheme].map(select => [select, createSettingsPicker(select)]));
+const settingsPickers = new Map([proxyScheme, downloadClassification].map(select => [select, createSettingsPicker(select)]));
 document.addEventListener("click", event => {
   if (activeSettingsPicker && !activeSettingsPicker.element.contains(event.target)) closeSettingsPicker();
 }, {capture:true});
@@ -875,13 +1038,20 @@ const maxRateLimitKiB = 102400;
 const rateLimitError = "请输入 0–102400 KiB/s 的整数。";
 const fragmentError = "请输入 1–16 之间的整数作为分片并发数。";
 const fanboxUrl = byId("fanboxUrl");
-const audioOnlyHeight = -3;
 const maxLinks = 20;
 const maxLinkLength = 2048;
+const maxSubtitleTracks = 20;
 const collectionDialog = byId("collectionDialog");
 const collectionList = byId("collectionList");
+const subtitleDialog = byId("subtitleDialog");
+const subtitleList = byId("subtitleList");
 let collectionRequest;
+let subtitleRequest;
 let selectedHeight = 0;
+let selectedOutputMode = "video";
+let selectedAudioFormat = "m4a";
+let selectedVideoCodec = "auto";
+let destinationError = "";
 let linksImportRevision;
 let batchItemsKey;
 let fanboxStatus = "idle";
@@ -893,6 +1063,22 @@ const historyView = byId("historyView");
 const historyHeading = byId("historyHeading");
 const historyList = byId("historyList");
 const historyNote = byId("historyNote");
+const historySearch = byId("historySearch");
+const historyPlatformFilter = byId("historyPlatformFilter");
+const historyAuthorFilter = byId("historyAuthorFilter");
+const historyPlatformPicker = createSettingsPicker(historyPlatformFilter);
+const historyAuthorPicker = createSettingsPicker(historyAuthorFilter);
+const historyBulkToggle = byId("historyBulkToggle");
+const historySelection = byId("historySelection");
+const historySelectionCount = byId("historySelectionCount");
+const historySelectAll = byId("historySelectAll");
+const historyBulkDelete = byId("historyBulkDelete");
+const historyDeleteFiles = byId("historyDeleteFiles");
+const historyDeleteDialog = byId("historyDeleteDialog");
+const historyDeleteConfirm = byId("historyDeleteConfirm");
+const historyDeleteCancel = byId("historyDeleteCancel");
+let historyDeleteRequest;
+let historyDeleteRunning = false;
 const settingsSubpages = [
   {key:"help", view:byId("helpView"), heading:byId("helpHeading"), entry:byId("openHelp")},
   {key:"about", view:byId("aboutView"), heading:byId("aboutHeading"), entry:byId("openAbout")},
@@ -903,94 +1089,327 @@ const historyTime = new Intl.DateTimeFormat("zh-CN", {
 const historyStatuses = new Map([
   ["completed", "已完成"], ["failed", "下载失败"], ["canceled", "已取消"],
 ]);
-const historyActionSelector = "[data-history-play], [data-history-location]";
+const historyActions = new Map([
+  ["data-history-play", "playHistoryVideo"], ["data-history-audio", "playHistoryAudio"],
+  ["data-history-location", "openHistoryVideoLocation"], ["data-history-delete", "deleteDownloadHistory"],
+]);
+const historyActionSelector = Array.from(historyActions.keys(), key => `[${key}]`).join(", ");
+const historySelectSelector = "input[data-history-select]";
+const historyPlatforms = new Map([["bilibili", "B 站"], ["youtube", "YouTube"], ["unknown", "未知平台"]]);
+const historyReadError = "暂时无法读取下载历史。";
+const playbackError = "暂时无法播放此文件。";
 const locationError = "暂时无法打开文件位置。";
 const batchStatuses = new Map([
   ["waiting", "等待中"], ["downloading", "进行中"], ["completed", "已完成"],
   ["failed", "下载失败"], ["skipped", "已跳过"], ["canceled", "已取消"],
 ]);
 let historyPayload;
+let historyItems = new Map();
+let historySelectionMode = false;
+const selectedHistoryIds = new Set();
 
 function showHistoryNote(message, row) {
   if (row) {
     if (historyNote.parentElement !== row) row.append(historyNote);
-  } else if (historyNote.parentElement !== historyView) historyHeading.after(historyNote);
+  } else if (historyNote.parentElement !== historyView) byId("historyHeader").after(historyNote);
   if (historyNote.textContent !== message) historyNote.textContent = message;
+}
+function primaryMediaName({outputMode, audioOnly}) {
+  if (outputMode === "audio" || (!outputMode && audioOnly === true)) return "音频";
+  return outputMode === "silent-video-and-audio" ? "无声视频" : "视频";
+}
+function historyPlatformId(record) {
+  return historyPlatforms.has(record.platform) ? record.platform : "unknown";
+}
+function historyPlatformName(record) {
+  return historyPlatforms.get(historyPlatformId(record));
+}
+function historyAuthorName(record) {
+  return typeof record.authorFolder === "string" && record.authorFolder.trim() || "未知作者";
+}
+function historyFilterOption(label, value) {
+  const option = document.createElement("option");
+  option.textContent = label;
+  option.value = value;
+  return option;
+}
+function refreshHistoryFilterOptions(records) {
+  const selectedPlatform = historyPlatformFilter.value;
+  const selectedAuthor = historyAuthorFilter.value;
+  const presentPlatforms = new Set(records.map(historyPlatformId));
+  const platformIds = Array.from(historyPlatforms.keys()).filter(platform => presentPlatforms.has(platform));
+  historyPlatformFilter.replaceChildren(historyFilterOption("全部平台", ""), ...platformIds.map(platform =>
+    historyFilterOption(historyPlatforms.get(platform), platform)));
+  historyPlatformFilter.value = platformIds.includes(selectedPlatform) ? selectedPlatform : "";
+
+  const platformRecords = historyPlatformFilter.value
+    ? records.filter(record => historyPlatformId(record) === historyPlatformFilter.value)
+    : records;
+  const authors = Array.from(new Set(platformRecords.map(historyAuthorName)))
+    .sort((first, second) => first.localeCompare(second, "zh-CN"));
+  historyAuthorFilter.replaceChildren(historyFilterOption("全部作者", ""), ...authors.map(author => historyFilterOption(author, author)));
+  historyAuthorFilter.value = authors.includes(selectedAuthor) ? selectedAuthor : "";
+  historyPlatformPicker.refresh();
+  historyAuthorPicker.refresh();
+  return platformRecords;
+}
+function filteredHistoryRecords(records) {
+  const platformRecords = refreshHistoryFilterOptions(records);
+  const author = historyAuthorFilter.value;
+  const query = historySearch.value.trim().toLocaleLowerCase("zh-CN");
+  return platformRecords.filter(record => (!author || historyAuthorName(record) === author) &&
+    (!query || historyRecordTitle(record).toLocaleLowerCase("zh-CN").includes(query)));
+}
+function historyRecordTitle(record) {
+  return record.title || "未命名" + primaryMediaName(record);
+}
+function historyHasMainFile(record) {
+  return record.status === "completed" && (record.hasMainFile ?? record.canPlay ?? true) === true;
 }
 function createHistoryEntry(record) {
   const row = byId("historyEntry").content.firstElementChild.cloneNode(true);
   row.dataset.historyId = String(record.id);
   row.dataset.status = record.status;
-  const mediaName = record.audioOnly === true ? "音频" : "视频";
-  const title = record.title || "未命名" + mediaName;
-  row.querySelector(".history-title").textContent = title;
+  const checkbox = row.querySelector(historySelectSelector);
+  checkbox.parentElement.hidden = !historySelectionMode;
+  checkbox.checked = selectedHistoryIds.has(String(record.id));
+  const mediaName = primaryMediaName(record);
+  const title = historyRecordTitle(record);
+  checkbox.setAttribute("aria-label", "选择记录：" + title);
+  const heading = document.createElement("h2");
+  heading.className = "history-title";
+  heading.textContent = title;
+  row.prepend(heading);
   row.querySelector(".history-status").textContent = historyStatuses.get(record.status) ?? "状态未知";
-  row.querySelector(".history-platform").textContent = record.platform === "youtube" ? "YouTube" : "B 站";
+  row.querySelector(".history-platform").textContent = historyPlatformName(record);
+  row.querySelector(".history-author").textContent = historyAuthorName(record);
   const timestamp = new Date(record.finishedAt);
   const time = row.querySelector("time");
   if (Number.isFinite(timestamp.getTime())) {
     time.dateTime = timestamp.toISOString();
     time.textContent = historyTime.format(timestamp);
   }
+  const play = row.querySelector("[data-history-play]");
+  const audio = row.querySelector("[data-history-audio]");
+  const location = row.querySelector("[data-history-location]");
+  const remove = row.querySelector("[data-history-delete]");
   if (record.status === "completed") {
-    const play = row.querySelector("[data-history-play]");
     play.textContent = "播放" + mediaName;
+    play.hidden = !historyHasMainFile(record);
     play.setAttribute("aria-label", play.textContent + "：" + title);
-    const location = row.querySelector("[data-history-location]");
-    location.hidden = !bridge?.openHistoryVideoLocation;
+    audio.hidden = record.hasAudioFile !== true || typeof bridge?.playHistoryAudio !== "function";
+    audio.setAttribute("aria-label", "播放独立音频：" + title);
+    location.hidden = (!record.hasAudioFile && play.hidden) || !bridge?.openHistoryVideoLocation;
     location.setAttribute("aria-label", "打开文件位置：" + title);
-  } else row.querySelector(".video-actions").remove();
+  } else {
+    play.remove();
+    audio.remove();
+    location.remove();
+  }
+  remove.hidden = !hasHistoryDelete;
+  remove.setAttribute("aria-label", "删除记录：" + title);
+  if (record.status !== "completed" && !hasHistoryDelete) row.querySelector(".video-actions").remove();
   return row;
 }
-function refreshHistory() {
+function refreshHistory(force = false) {
   const empty = byId("historyEmpty");
-  let rows;
+  let items;
   let payload;
+  let total;
   try {
     payload = bridge?.downloadHistory?.() ?? "[]";
-    if (payload === historyPayload) return;
+    if (!force && payload === historyPayload) return;
     const records = JSON.parse(payload);
+    total = records.length;
     records.sort((a, b) => b.finishedAt - a.finishedAt);
-    rows = records.map(createHistoryEntry);
+    const filtered = filteredHistoryRecords(records);
+    const matching = new Set(filtered.map(record => String(record.id)));
+    for (const id of selectedHistoryIds) if (!matching.has(id)) selectedHistoryIds.delete(id);
+    items = filtered.map(record => ({record, row:createHistoryEntry(record)}));
   } catch {
     historyPayload = undefined;
     empty.hidden = true;
-    showHistoryNote("暂时无法读取下载历史。");
+    historyItems.clear();
+    selectedHistoryIds.clear();
+    historyList.replaceChildren();
+    historyList.hidden = true;
+    refreshHistorySelection();
+    showHistoryNote(historyReadError);
     return;
   }
-  const focusedAction = document.activeElement?.closest(historyActionSelector);
+  const focusedAction = document.activeElement?.closest(historyActionSelector + ", " + historySelectSelector);
   const focusedId = focusedAction?.closest("[data-history-id]").dataset.historyId;
   const errorId = historyNote.parentElement?.dataset.historyId;
-  historyList.replaceChildren(...rows);
-  historyList.hidden = rows.length === 0;
-  empty.hidden = rows.length !== 0;
-  const errorRow = rows.find(row => row.dataset.historyId === errorId);
-  showHistoryNote(errorRow ? historyNote.textContent : "", errorRow);
+  historyItems = new Map(items.map(item => [item.row.dataset.historyId, item]));
+  historyList.replaceChildren(...items.map(item => item.row));
+  historyList.hidden = items.length === 0;
+  empty.hidden = !historyList.hidden;
+  const hasFilter = historySearch.value.trim() || historyPlatformFilter.value || historyAuthorFilter.value;
+  empty.textContent = hasFilter && total ? "没有符合筛选条件的下载记录。" : "暂无下载记录。";
+  const note = historyNote.textContent;
+  showHistoryNote(note === historyReadError ? "" : note, historyItems.get(errorId)?.row);
   if (focusedId !== undefined) {
-    const focusRow = rows.find(row => row.dataset.historyId === focusedId);
-    const selector = focusedAction.hasAttribute("data-history-play") ? "[data-history-play]" : "[data-history-location]";
-    (focusRow?.querySelector(selector) ?? historyHeading).focus({preventScroll:true});
+    const focusRow = historyItems.get(focusedId)?.row;
+    const key = [...historyActions.keys(), "data-history-select"].find(name => focusedAction.hasAttribute(name));
+    const control = focusRow?.querySelector(`[${key}]:not([hidden])`);
+    if (control && !control.closest("details:not([open]), [hidden]")) control.focus({preventScroll:true});
+    else historyHeading.focus({preventScroll:true});
   }
   historyPayload = payload;
+  historyBulkToggle.hidden = !hasHistoryDelete || (!historySelectionMode && total === 0);
+  historyBulkToggle.textContent = historySelectionMode ? "取消多选" : "批量删除";
+  historyBulkToggle.setAttribute("aria-pressed", String(historySelectionMode));
+  historySelection.hidden = !historySelectionMode;
+  refreshHistorySelection();
 }
+function refreshHistorySelection() {
+  historySelectionCount.textContent = `已选 ${selectedHistoryIds.size} 条`;
+  historyBulkDelete.disabled = selectedHistoryIds.size === 0;
+  historySelectAll.disabled = historyItems.size === 0;
+  historySelectAll.textContent = historyItems.size > 0 && selectedHistoryIds.size === historyItems.size ? "取消全选" : "全选结果";
+}
+historySearch.addEventListener("input", () => refreshHistory(true));
+historyPlatformFilter.addEventListener("change", () => {
+  historyAuthorFilter.value = "";
+  refreshHistory(true);
+});
+historyAuthorFilter.addEventListener("change", () => refreshHistory(true));
+historyBulkToggle.addEventListener("click", () => {
+  historySelectionMode = !historySelectionMode;
+  selectedHistoryIds.clear();
+  refreshHistory(true);
+});
+historySelectAll.addEventListener("click", () => {
+  const allSelected = selectedHistoryIds.size === historyItems.size;
+  selectedHistoryIds.clear();
+  if (!allSelected) for (const id of historyItems.keys()) selectedHistoryIds.add(id);
+  refreshHistory(true);
+});
+historyList.addEventListener("change", event => {
+  const checkbox = event.target.closest(historySelectSelector);
+  if (!checkbox || !historySelectionMode) return;
+  const id = checkbox.closest("[data-history-id]").dataset.historyId;
+  if (checkbox.checked) selectedHistoryIds.add(id);
+  else selectedHistoryIds.delete(id);
+  refreshHistorySelection();
+});
+function confirmHistoryDeleteRecords(records) {
+  if (!records.length || historyDeleteDialog.open || historyDeleteRunning) return;
+  const single = records.length === 1 ? records[0] : null;
+  const deleteFiles = historyDeleteFiles.checked && records.some(record => record.status === "completed");
+  const names = [];
+  for (const record of records) {
+    const title = historyRecordTitle(record);
+    if (!single) names.push(title);
+    if (!deleteFiles || record.status !== "completed") continue;
+    for (const fileNames of [record.mediaNames, record.attachmentNames]) {
+      if (!Array.isArray(fileNames)) continue;
+      for (const name of fileNames) {
+        if (typeof name === "string" && name.trim()) names.push(single ? name : `${title} · ${name}`);
+      }
+    }
+  }
+  const metadata = Array.from(new Set(records.map(historyPlatformName)));
+  const timestamp = new Date(single?.finishedAt);
+  if (Number.isFinite(timestamp.getTime())) metadata.push(historyTime.format(timestamp));
+  byId("historyDeleteTitle").textContent = single ? historyRecordTitle(single) : `删除 ${records.length} 条下载记录`;
+  byId("historyDeleteMetadata").textContent = metadata.join(" · ");
+  byId("historyDeleteEffect").textContent = deleteFiles
+    ? "将删除所选记录及其关联的本地文件。"
+    : "只删除所选下载记录。";
+  const fileList = byId("historyDeleteMediaNames");
+  fileList.replaceChildren(...names.map(name => {
+    const item = document.createElement("li");
+    item.textContent = name;
+    return item;
+  }));
+  fileList.hidden = fileList.children.length === 0;
+  historyDeleteRequest = {ids:records.map(record => String(record.id)), deleteFiles};
+  historyDeleteConfirm.disabled = false;
+  history.pushState({history:true, historyDelete:true}, "", "#history-delete");
+  historyDeleteDialog.showModal();
+  historyDeleteCancel.focus();
+}
+historyBulkDelete.addEventListener("click", () => {
+  confirmHistoryDeleteRecords(Array.from(selectedHistoryIds, id => historyItems.get(id)?.record).filter(Boolean));
+});
 historyList.addEventListener("click", event => {
   const action = event.target.closest(historyActionSelector);
-  if (!action) return;
+  if (!action || action.hidden) return;
   const row = action.closest("[data-history-id]");
   const id = row.dataset.historyId;
-  const play = action.hasAttribute("data-history-play");
-  const fallback = play ? "暂时无法播放此文件。" : locationError;
+  const key = Array.from(historyActions.keys()).find(name => action.hasAttribute(name));
+  if (key === "data-history-delete") {
+    const item = historyItems.get(id);
+    if (item) confirmHistoryDeleteRecords([item.record]);
+    return;
+  }
+  const fallback = key === "data-history-location" ? locationError : playbackError;
   let message = fallback;
-  try { message = (play ? bridge?.playHistoryVideo?.(id) : bridge?.openHistoryVideoLocation?.(id)) ?? fallback; }
+  try { message = bridge?.[historyActions.get(key)]?.(id) ?? fallback; }
   catch {}
   showHistoryNote(message, message ? row : null);
 });
+function dismissHistoryDelete() {
+  if (history.state?.historyDelete === true) history.back();
+}
+historyDeleteCancel.addEventListener("click", dismissHistoryDelete);
+historyDeleteDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  if (!historyDeleteRunning) dismissHistoryDelete();
+});
+historyDeleteConfirm.addEventListener("click", async () => {
+  if (!historyDeleteRequest || historyDeleteConfirm.disabled) return;
+  const request = historyDeleteRequest;
+  const {ids, deleteFiles} = request;
+  historyDeleteConfirm.disabled = true;
+  historyDeleteCancel.disabled = true;
+  historyDeleteRunning = true;
+  const failure = "无法删除这条下载记录。";
+  let message = "";
+  let failed = 0;
+  for (const [index, id] of ids.entries()) {
+    if (ids.length > 1) {
+      historyDeleteConfirm.textContent = `删除中 ${index + 1} / ${ids.length}`;
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    let result = failure;
+    try {
+      result = bridge.deleteDownloadHistory(id, deleteFiles) ?? failure;
+    } catch {}
+    if (result) {
+      failed++;
+      if (!message) message = result;
+    } else {
+      selectedHistoryIds.delete(id);
+    }
+  }
+  historyDeleteRunning = false;
+  historyDeleteCancel.disabled = false;
+  historyDeleteConfirm.textContent = "确认删除";
+  if (!historyView.hidden) {
+    refreshHistory(true);
+    if (ids.length === 1) showHistoryNote(message, message ? historyItems.get(ids[0])?.row : null);
+    else showHistoryNote(`已删除 ${ids.length - failed} 条记录。` + (failed ? ` ${failed} 条未能删除。${message}` : ""));
+  }
+  if (historyDeleteRequest === request) dismissHistoryDelete();
+});
 function renderView(moveFocus = false) {
+  if (subtitleRequest && history.state?.subtitle !== true) closeSubtitle();
   if (collectionRequest && history.state?.collection !== true) closeCollection();
+  if (historyDeleteRunning && history.state?.historyDelete !== true) {
+    history.pushState({history:true, historyDelete:true}, "", "#history-delete");
+    return;
+  }
   const settingsOpen = history.state?.settings === true;
   if (!settingsOpen) closeSettingsPicker();
   const wasHistoryOpen = !historyView.hidden;
   const historyOpen = history.state?.history === true;
+  const closingDelete = history.state?.historyDelete !== true ? historyDeleteRequest : null;
+  if (closingDelete) {
+    historyDeleteRequest = null;
+    historyDeleteDialog.close();
+  }
   const previousSubpage = settingsSubpages.find(({view}) => !view.hidden);
   const subpage = settingsSubpages.find(({key}) => history.state?.[key] === true);
   const downloadOpen = !settingsOpen && !historyOpen && !subpage;
@@ -1003,8 +1422,23 @@ function renderView(moveFocus = false) {
   byId("settingsIcon").setAttribute("href", downloadOpen ? "#i-settings" : "#i-back");
   settingsButton.setAttribute("aria-controls", downloadOpen || subpage ? "settingsView" : "downloadView");
   if (historyOpen) refreshHistory();
-  else if (wasHistoryOpen) showHistoryNote("");
+  else if (wasHistoryOpen) {
+    historyDeleteFiles.checked = false;
+    historySelectionMode = false;
+    selectedHistoryIds.clear();
+    historySearch.value = "";
+    historyPlatformFilter.value = "";
+    historyAuthorFilter.value = "";
+    historyPayload = undefined;
+    showHistoryNote("");
+  }
   if (moveFocus) {
+    if (historyOpen && wasHistoryOpen && closingDelete) {
+      const control = historySelectionMode ? (historyBulkDelete.disabled ? historyBulkToggle : historyBulkDelete)
+        : historyItems.get(closingDelete.ids[0])?.row.querySelector("[data-history-delete]") ?? historyHeading;
+      control.focus({preventScroll:true});
+      return;
+    }
     if (settingsOpen && previousSubpage) {
       previousSubpage.entry.focus();
       return;
@@ -1050,14 +1484,21 @@ function render(state, importingLinks = false) {
   byId("percent").hidden = !determinate;
   byId("percent").textContent = determinate ? Math.floor(value) + "%" : "";
   const speed = byId("speed");
-  const speedText = state.busy && state.phase === "正在下载" ? state.speed ?? "" : "";
+  const transferring = state.busy && ["正在下载", "正在下载字幕"].includes(state.phase);
+  const speedText = transferring ? state.speed ?? "" : "";
   speed.hidden = !speedText;
   if (speed.textContent !== speedText) speed.textContent = speedText;
   const eta = byId("eta");
-  const etaText = state.busy && state.phase === "正在下载" && Number.isInteger(state.etaSeconds) && state.etaSeconds >= 0
+  const etaText = transferring && Number.isInteger(state.etaSeconds) && state.etaSeconds >= 0
     ? formatEta(state.etaSeconds) : "";
   eta.hidden = !etaText;
   if (eta.textContent !== etaText) eta.textContent = etaText;
+  const mediaPosition = byId("mediaPosition");
+  const {mediaStep, mediaStepTotal, mediaStepLabel} = state;
+  const mediaPositionText = state.busy && mediaStepTotal > 1 && mediaStep > 0 && mediaStep <= mediaStepTotal && mediaStepLabel
+    ? `${mediaStep}/${mediaStepTotal} · ${mediaStepLabel}` : "";
+  mediaPosition.hidden = !mediaPositionText;
+  if (mediaPosition.textContent !== mediaPositionText) mediaPosition.textContent = mediaPositionText;
   byId("start").hidden = state.busy;
   const inputBusy = state.busy || importingLinks;
   byId("start").disabled = inputBusy;
@@ -1080,18 +1521,21 @@ function render(state, importingLinks = false) {
   byId("cancel").hidden = !state.busy;
   byId("cancel").disabled = !state.busy || state.phase === "正在取消";
   renderBatch(state);
-  const hasSavedMedia = Boolean(bridge && !state.busy && state.canPlay);
+  const canPlay = Boolean(bridge && !state.busy && state.canPlay);
+  const canPlayAudio = !state.busy && state.hasAudioFile === true && typeof bridge?.playCompanionAudio === "function";
+  const canOpenLocation = Boolean(bridge?.openVideoLocation && !state.busy && (state.canPlay || state.hasAudioFile));
+  const hasSavedMedia = canPlay || canPlayAudio || canOpenLocation;
   byId("taskActions").hidden = !hasSavedMedia;
   const play = byId("playVideo");
-  play.hidden = !hasSavedMedia;
-  const playText = state.audioOnly === true ? "播放音频" : "播放视频";
+  play.hidden = !canPlay;
+  const playText = "播放" + primaryMediaName(state);
   if (play.textContent !== playText) play.textContent = playText;
-  byId("openVideoLocation").hidden = !hasSavedMedia || !bridge?.openVideoLocation;
+  byId("playCompanionAudio").hidden = !canPlayAudio;
+  byId("openVideoLocation").hidden = !canOpenLocation;
   if (!hasSavedMedia) byId("videoLocationNote").textContent = "";
   byId("statusDot").dataset.state = state.busy ? "busy" :
     state.phase === "下载失败" || state.phase === "启动失败" ? "failed" :
     Number(state.percent) === 100 ? "done" : "idle";
-  for (const button of qualityButtons) button.disabled = state.busy;
   rateLimit.disabled = state.busy;
   const presetsButton = byId("openDownloadPresets");
   presetsButton.disabled = state.busy;
@@ -1110,16 +1554,63 @@ function selectDownloadHeight(height) {
   if (!selected) return;
   selectedHeight = height;
   for (const button of qualityButtons) button.setAttribute("aria-pressed", String(button === selected));
-  renderDownloadOptions();
+  qualityValue.textContent = selected.textContent;
+}
+function selectOutputMode(mode) {
+  selectedOutputMode = selectDownloadChoice(outputModeButtons, mode, "video", "outputModeValue");
+}
+function selectAudioFormat(format) {
+  selectedAudioFormat = selectDownloadChoice(audioFormatButtons, format, "m4a", "audioFormatValue");
+}
+function selectVideoCodec(codec) {
+  selectedVideoCodec = selectDownloadChoice(videoCodecButtons, codec, "auto", "videoCodecValue");
+}
+function selectDownloadChoice(buttons, value, fallback, summaryId) {
+  const selected = buttons.has(value) ? value : fallback;
+  for (const [key, button] of buttons) {
+    button.setAttribute("aria-pressed", String(key === selected));
+  }
+  const button = buttons.get(selected);
+  const label = button.dataset.label ?? button.textContent;
+  const summary = byId(summaryId);
+  if (summary.textContent !== label) summary.textContent = label;
+  return selected;
 }
 function renderDownloadOptions() {
-  const audioOnly = selectedHeight === audioOnlyHeight;
+  const audioOnly = selectedOutputMode === "audio";
+  const supportsAudioFormat = selectedOutputMode !== "video";
+  const locked = byId("start").disabled;
+  audioFormatPicker.hidden = !supportsAudioFormat;
+  if (!supportsAudioFormat) audioFormatPicker.open = false;
+  qualityPicker.hidden = audioOnly;
+  byId("downloadPrimaryOptions").classList.toggle("audio-only", audioOnly);
+  if (audioOnly) qualityPicker.open = false;
+  qualityChoices.hidden = audioOnly;
+  videoCodecPicker.hidden = audioOnly;
+  if (audioOnly) videoCodecPicker.open = false;
   byId("subtitleOption").hidden = audioOnly;
-  downloadSubtitles.disabled = audioOnly || byId("start").disabled;
-  const quality = qualityButtons.find(button => Number(button.dataset.height) === selectedHeight).textContent;
-  const text = !audioOnly && downloadSubtitles.checked ? quality + " · 字幕" : quality;
+  byId("subtitleHint").hidden = !hasSubtitleBridge || audioOnly || !downloadSubtitles.checked;
+  for (const button of qualityButtons) button.disabled = audioOnly || locked;
+  for (const button of outputModeButtons.values()) button.disabled = locked;
+  for (const button of audioFormatButtons.values()) button.disabled = !supportsAudioFormat || locked;
+  for (const button of videoCodecButtons.values()) button.disabled = audioOnly || locked;
+  downloadSubtitles.disabled = audioOnly || locked;
+  downloadCover.disabled = locked;
+  const quality = qualityValue.textContent;
+  const mode = outputModeButtons.get(selectedOutputMode).dataset.label;
+  const text = audioOnly ? mode : selectedOutputMode === "video" ? quality : `${mode} · ${quality}`;
   const value = byId("resolutionValue");
   if (value.textContent !== text) value.textContent = text;
+
+  const extraOptions = [];
+  if (supportsAudioFormat && selectedAudioFormat !== "m4a") {
+    extraOptions.push(audioFormatButtons.get(selectedAudioFormat).textContent);
+  }
+  if (!audioOnly && selectedVideoCodec !== "auto") extraOptions.push(videoCodecButtons.get(selectedVideoCodec).textContent);
+  if (!audioOnly && downloadSubtitles.checked) extraOptions.push("字幕");
+  if (downloadCover.checked) extraOptions.push("封面");
+  const extraText = extraOptions.length ? extraOptions.join(" · ") : "默认";
+  if (moreOptionsValue.textContent !== extraText) moreOptionsValue.textContent = extraText;
 }
 function renderBatch(state) {
   const isBatch = state.batchTotal > 1;
@@ -1177,10 +1668,12 @@ function readNative() {
   }
   render(state, linksImport?.busy === true);
   if (linksImport) refreshLinksImport(linksImport);
+  if (canReadDownloadDestination) refreshDownloadDestination(state.busy);
   if (hasCookieBridge) renderCookies(state.busy);
   if (hasFanbox) renderFanbox();
   if (!historyView.hidden) refreshHistory();
   refreshCollection();
+  refreshSubtitleTracks();
 }
 function renderCookies(downloadBusy) {
   const states = cookieControls.map(({platform}) => JSON.parse(bridge.cookieState(platform)));
@@ -1356,6 +1849,13 @@ byId("url").addEventListener("input", () => {
   refreshPlatform();
 });
 byId("playVideo").addEventListener("click", () => bridge?.playVideo());
+byId("playCompanionAudio").addEventListener("click", event => {
+  if (event.currentTarget.hidden) return;
+  let message = playbackError;
+  try { message = bridge?.playCompanionAudio?.() ?? playbackError; }
+  catch {}
+  byId("videoLocationNote").textContent = message;
+});
 byId("openVideoLocation").addEventListener("click", () => {
   let message = locationError;
   try { message = bridge?.openVideoLocation?.() ?? locationError; }
@@ -1385,11 +1885,27 @@ byId("url").addEventListener("keydown", event => {
 for (const button of qualityButtons) {
   button.addEventListener("click", () => {
     selectDownloadHeight(Number(button.dataset.height));
-    resolutionPicker.open = false;
-    byId("resolutionSummary").focus({preventScroll:true});
+    renderDownloadOptions();
+    qualityPicker.open = false;
+    byId("qualitySummary").focus({preventScroll:true});
   });
 }
+for (const [picker, buttons, select] of [
+  [outputModePicker, outputModeButtons, selectOutputMode],
+  [audioFormatPicker, audioFormatButtons, selectAudioFormat],
+  [videoCodecPicker, videoCodecButtons, selectVideoCodec],
+]) {
+  for (const [value, button] of buttons) {
+    button.addEventListener("click", () => {
+      select(value);
+      renderDownloadOptions();
+      picker.open = false;
+      picker.querySelector("summary").focus({preventScroll:true});
+    });
+  }
+}
 downloadSubtitles.addEventListener("change", renderDownloadOptions);
+downloadCover.addEventListener("change", renderDownloadOptions);
 byId("clearUrl").addEventListener("click", event => {
   const input = byId("url");
   input.value = "";
@@ -1436,35 +1952,34 @@ function checkTransferSettings(rateLimitKiB, fragments) {
   jumpToSettingsSection(byId("proxyDisclosure"));
   return false;
 }
-function updateOutputChoices() {
-  const webm = videoContainer.value === "webm";
-  videoCodec.querySelector('option[value="h264"]').disabled = webm;
-  if (webm && videoCodec.value === "h264") videoCodec.value = "auto";
-  settingsPickers.get(videoContainer).refresh();
-  settingsPickers.get(videoCodec).refresh();
+function savedOutputOptions({height, outputMode, subtitles, audioFormat, cover}) {
+  const legacyAudio = height === -3;
+  const mode = legacyAudio ? "audio" : outputModeButtons.has(outputMode) ? outputMode : "video";
+  return {height:legacyAudio ? 0 : height, outputMode:mode, subtitles:subtitles === true && mode !== "audio",
+    audioFormat:audioFormatButtons.has(audioFormat) ? audioFormat : "m4a", cover:cover === true};
 }
-videoContainer.addEventListener("change", updateOutputChoices);
 function applyDownloadOptions(options) {
   if (Number.isInteger(options.rateLimitKiB) && options.rateLimitKiB >= 0 && options.rateLimitKiB <= maxRateLimitKiB) {
     rateLimit.value = String(options.rateLimitKiB);
   }
-  if (Array.from(videoContainer.options).some(option => option.value === options.videoContainer)) {
-    videoContainer.value = options.videoContainer;
-  }
-  if (Array.from(videoCodec.options).some(option => option.value === options.videoCodec)) {
-    videoCodec.value = options.videoCodec;
-  }
   if (validFragments(options.fragments)) fragmentsInput.value = String(options.fragments);
-  updateOutputChoices();
-  downloadSubtitles.checked = options.subtitles === true;
-  selectDownloadHeight(options.height);
+  selectVideoCodec(options.videoCodec);
+  const output = savedOutputOptions(options);
+  downloadSubtitles.checked = output.subtitles;
+  downloadCover.checked = output.cover;
+  selectDownloadHeight(output.height);
+  selectOutputMode(output.outputMode);
+  selectAudioFormat(output.audioFormat);
+  renderDownloadOptions();
 }
 function currentDownloadOptions() {
-  return {height:selectedHeight, subtitles:downloadSubtitles.checked && selectedHeight !== audioOnlyHeight,
-    rateLimitKiB:currentRateLimit(), videoContainer:videoContainer.value, videoCodec:videoCodec.value, fragments:currentFragments()};
+  return {...savedOutputOptions({height:selectedHeight, outputMode:selectedOutputMode, subtitles:downloadSubtitles.checked,
+    audioFormat:selectedAudioFormat, cover:downloadCover.checked}),
+    rateLimitKiB:currentRateLimit(), videoCodec:selectedVideoCodec, fragments:currentFragments()};
 }
-function downloadOptionArgs({height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments}) {
-  return [height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments];
+function downloadOptionArgs(options) {
+  const {height, subtitles, outputMode, audioFormat, cover} = savedOutputOptions(options);
+  return [height, subtitles, options.rateLimitKiB, "mp4", options.videoCodec, options.fragments, outputMode, audioFormat, cover];
 }
 function persistDownloadDefaults(options) {
   const error = "无法加载配置预设。";
@@ -1621,6 +2136,48 @@ if (hasDownloadPresets) {
     else closePresetsWithStatus(`已保存预设「${name}」。`);
   });
 }
+function refreshDownloadDestination(busy) {
+  byId("chooseDownloadDestination").disabled = Boolean(busy);
+  const reset = byId("resetDownloadDestination");
+  try {
+    const {custom, label, classification, message} = JSON.parse(bridge.downloadDestination());
+    if (typeof custom !== "boolean" || typeof label !== "string" || !label) {
+      throw new Error("Invalid download destination");
+    }
+    const location = `${custom ? "自选位置" : "默认位置"} · ${label}`;
+    const destinationLabel = byId("downloadDestinationLabel");
+    if (destinationLabel.textContent !== location) destinationLabel.textContent = location;
+    const summary = byId("downloadDestinationSummary");
+    const summaryText = `保存到「${label}」`;
+    if (summary.textContent !== summaryText) summary.textContent = summaryText;
+    if (downloadClassification.value !== classification) {
+      downloadClassification.value = classification;
+      if (!downloadClassification.value) downloadClassification.value = "platform-author";
+      settingsPickers.get(downloadClassification).refresh();
+    }
+    reset.disabled = Boolean(busy) || !custom;
+    setFeedback("downloadDestinationNote", destinationError || (typeof message === "string" ? message : ""), Boolean(destinationError));
+  } catch {
+    reset.disabled = true;
+    setFeedback("downloadDestinationNote", destinationError || "无法读取下载目录设置。", true);
+  }
+}
+if (hasDownloadDestination) {
+  function changeDestination(action, fallback) {
+    try { destinationError = action() ?? ""; }
+    catch { destinationError = fallback; }
+    readNative();
+  }
+  byId("chooseDownloadDestination").addEventListener("click", () => {
+    changeDestination(() => bridge.chooseDownloadDestination(), "无法打开系统目录选择器。");
+  });
+  byId("resetDownloadDestination").addEventListener("click", () => {
+    changeDestination(() => bridge.resetDownloadDestination(), "无法恢复默认下载目录。");
+  });
+  downloadClassification.addEventListener("change", () => {
+    changeDestination(() => bridge.setDownloadClassification(downloadClassification.value), "无法保存分类方式。");
+  });
+}
 if (hasDownloadDirectory) {
   const button = byId("openDownloadDirectory");
   button.hidden = false;
@@ -1646,12 +2203,6 @@ if (typeof bridge?.openProjectPage === "function") {
   byId("aboutProjectLink").addEventListener("click", event => {
     event.preventDefault();
     bridge.openProjectPage();
-  });
-}
-if (typeof bridge?.openProjectCredits === "function") {
-  byId("aboutCreditsLink").addEventListener("click", event => {
-    event.preventDefault();
-    bridge.openProjectCredits();
   });
 }
 if (typeof bridge?.checkAppUpdate === "function" && typeof bridge.openAppUpdate === "function") {
@@ -1755,10 +2306,13 @@ if (hasFanbox) {
     runFanbox(() => bridge.cancelFanbox(), "无法取消 FANBOX 操作。");
   });
 }
-function startNative(value, options) {
-  const {height, proxy, address, port, subtitles, rateLimitKiB, container, codec, scheme, fragments} = options;
-  byId("formNote").textContent = bridge.start(value, height, proxy, address, port, subtitles && height !== audioOnlyHeight,
-    rateLimitKiB, container, codec, scheme, fragments);
+function startNative(value, options, selectedSubtitles = null) {
+  const {height, proxy, address, port, subtitles, rateLimitKiB, videoCodec, scheme, fragments, outputMode, audioFormat, cover} = options;
+  const args = [value, height, proxy, address, port, subtitles, rateLimitKiB, "mp4",
+    videoCodec, scheme, fragments, outputMode, audioFormat, cover];
+  byId("formNote").textContent = selectedSubtitles === null
+    ? bridge.start(...args)
+    : bridge.startWithSubtitles(...args, JSON.stringify(selectedSubtitles));
   readNative();
 }
 function updateCollectionSelection() {
@@ -1813,18 +2367,16 @@ function showCollection(result) {
   byId("collectionSingle").hidden = !singleUsable;
   updateCollectionSelection();
 }
-function closeCollection() {
+function closeCollection(back = true) {
   if (!collectionRequest) return;
   collectionRequest = null;
   try { bridge.cancelCollection(); }
   catch {}
   collectionDialog.close();
-  if (history.state?.collection) history.back();
+  if (back && history.state?.collection) history.back();
 }
-function submitCollection(value) {
-  const {options} = collectionRequest;
-  closeCollection();
-  startNative(value, options);
+function submitCollection(value, single = true) {
+  submitNative(value, collectionRequest.options, single);
 }
 function refreshCollection() {
   if (!collectionRequest?.pending) return;
@@ -1853,16 +2405,144 @@ collectionDialog.addEventListener("cancel", event => {
   event.preventDefault();
   closeCollection();
 });
-byId("collectionCancel").addEventListener("click", closeCollection);
+byId("collectionCancel").addEventListener("click", () => closeCollection());
 byId("collectionRetry").addEventListener("click", inspectCollection);
 byId("collectionSingle").addEventListener("click", () => submitCollection(collectionRequest.url));
 byId("collectionStart").addEventListener("click", () => {
   const selected = collectionRequest.entries.filter((_, index) => byId(`collectionEntry${index + 1}`).checked);
-  if (selected.length && selected.length <= maxLinks) submitCollection(selected.map(entry => entry.url).join("\n"));
+  if (selected.length && selected.length <= maxLinks) {
+    submitCollection(selected.map(entry => entry.url).join("\n"), selected.length === 1);
+  }
 });
+function updateSubtitleSelection() {
+  const tracks = subtitleRequest.tracks;
+  const count = tracks.filter(({check}) => check.checked).length;
+  byId("subtitleCount").textContent = `已选 ${count} / ${maxSubtitleTracks}`;
+  byId("subtitleCount").hidden = !tracks.length;
+  byId("subtitleStart").disabled = count === 0;
+  for (const {check} of tracks) check.disabled = count >= maxSubtitleTracks && !check.checked;
+}
+function filterSubtitleTracks() {
+  const query = byId("subtitleSearch").value.trim().toLocaleLowerCase();
+  for (const track of subtitleRequest.tracks) track.row.hidden = !track.searchText.includes(query);
+  const manual = byId("subtitleManual");
+  const automatic = byId("subtitleAuto");
+  manual.hidden = !manual.querySelector("label:not([hidden])");
+  automatic.hidden = !automatic.querySelector("label:not([hidden])");
+  byId("subtitleNoMatches").hidden = !manual.hidden || !automatic.hidden;
+  subtitleList.scrollTop = 0;
+}
+function subtitleTrack({language, label, source}) {
+  const row = document.createElement("label");
+  row.className = "collection-row";
+  const check = document.createElement("input");
+  check.type = "checkbox";
+  const name = document.createElement("span");
+  name.textContent = label || language;
+  if (name.textContent !== language) {
+    const code = document.createElement("span");
+    code.className = "subtitle-row-code";
+    code.textContent = language;
+    name.append(code);
+  }
+  row.append(check, name);
+  return {language, source, row, check, searchText:`${label} ${language}`.toLocaleLowerCase()};
+}
+function showSubtitle(result) {
+  const ready = result?.status === "ready" && Array.isArray(result.tracks);
+  const loading = result?.status === "loading";
+  const failed = !ready && !loading;
+  const tracks = ready ? result.tracks.filter(track => typeof track?.language === "string" && track.language &&
+    typeof track.label === "string" && ["manual", "auto"].includes(track.source)).map(subtitleTrack) : [];
+  subtitleRequest.tracks = tracks;
+  byId("subtitleTitle").textContent = ready ? "选择字幕" : loading ? "读取字幕" : "读取失败";
+  const status = byId("subtitleStatus");
+  status.textContent = ready && !tracks.length ? "此视频没有可下载的字幕。" : "";
+  status.hidden = !status.textContent;
+  byId("subtitleProgress").hidden = !loading;
+  byId("subtitleError").textContent = failed ? result?.message || "无法读取字幕，请重试或跳过。" : "";
+  for (const [source, id] of [["manual", "subtitleManual"], ["auto", "subtitleAuto"]]) {
+    const group = byId(id);
+    group.replaceChildren(group.firstElementChild, ...tracks.filter(track => track.source === source).map(track => track.row));
+  }
+  byId("subtitleSearch").value = "";
+  filterSubtitleTracks();
+  subtitleList.hidden = !tracks.length;
+  byId("subtitleSearchRow").hidden = !tracks.length;
+  byId("subtitleRetry").hidden = !failed;
+  byId("subtitleSkip").hidden = loading;
+  byId("subtitleStart").hidden = !tracks.length;
+  updateSubtitleSelection();
+}
+function closeSubtitle() {
+  if (!subtitleRequest) return;
+  const loading = subtitleRequest.pending;
+  subtitleRequest = null;
+  if (loading) {
+    try { bridge.cancelSubtitles(); } catch {}
+  }
+  subtitleDialog.close();
+  if (history.state?.subtitle) history.back();
+}
+function inspectSubtitleTracks() {
+  if (!subtitleRequest) return;
+  const {url, options} = subtitleRequest;
+  let message = "无法读取字幕，请重试。";
+  try { message = bridge.inspectSubtitles(url, options.proxy, options.address, options.port, options.scheme) ?? message; }
+  catch {}
+  subtitleRequest.pending = !message;
+  showSubtitle({status:message ? "error" : "loading", message});
+  if (subtitleRequest.pending) readNative();
+}
+function refreshSubtitleTracks() {
+  if (!subtitleRequest?.pending) return;
+  let result;
+  try { result = JSON.parse(bridge.subtitleState()); } catch { result = {status:"error"}; }
+  if (result?.status === "loading" || result?.status === "idle") return;
+  subtitleRequest.pending = false;
+  showSubtitle(result ?? {status:"error"});
+}
+function submitSubtitle(skip) {
+  if (!subtitleRequest || subtitleRequest.pending) return;
+  const {url, options, tracks} = subtitleRequest;
+  if (skip) {
+    closeSubtitle();
+    startNative(url, {...options, subtitles:false});
+    return;
+  }
+  const selected = tracks.filter(({check}) => check.checked).map(({language, source}) => ({language, source}));
+  if (!selected.length || selected.length > maxSubtitleTracks) return;
+  closeSubtitle();
+  startNative(url, options, selected);
+}
+subtitleList.addEventListener("change", updateSubtitleSelection);
+byId("subtitleSearch").addEventListener("input", filterSubtitleTracks);
+subtitleDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeSubtitle();
+});
+byId("subtitleCancel").addEventListener("click", closeSubtitle);
+byId("subtitleRetry").addEventListener("click", inspectSubtitleTracks);
+byId("subtitleSkip").addEventListener("click", () => submitSubtitle(true));
+byId("subtitleStart").addEventListener("click", () => submitSubtitle(false));
+function submitNative(value, options, single) {
+  const pickSubtitles = hasSubtitleBridge && single && options.subtitles;
+  const replacingCollection = Boolean(collectionRequest);
+  if (replacingCollection) closeCollection(!pickSubtitles);
+  if (pickSubtitles) {
+    if (replacingCollection) history.replaceState({subtitle:true}, "", "#subtitle");
+    else history.pushState({subtitle:true}, "", "#subtitle");
+    subtitleRequest = {url:value, options, tracks:[], pending:false};
+    subtitleDialog.showModal();
+    inspectSubtitleTracks();
+    byId("subtitleTitle").focus();
+    return;
+  }
+  startNative(value, options);
+}
 byId("downloadForm").addEventListener("submit", event => {
   event.preventDefault();
-  if (byId("start").disabled || collectionRequest) return;
+  if (byId("start").disabled || collectionRequest || subtitleRequest) return;
   const input = byId("url").value;
   const links = videoLinks(input);
   const message = validateLinks(links);
@@ -1878,14 +2558,12 @@ byId("downloadForm").addEventListener("submit", event => {
     jumpToSettingsSection(byId("proxyDisclosure"));
     return;
   }
-  const rateLimitKiB = currentRateLimit();
-  const fragments = currentFragments();
-  if (!checkTransferSettings(rateLimitKiB, fragments)) return;
+  const settings = currentDownloadOptions();
+  if (!checkTransferSettings(settings.rateLimitKiB, settings.fragments)) return;
   if (bridge) {
     const value = links.length === 1 ? links[0].url : input;
     byId("url").blur();
-    const options = {height:selectedHeight, proxy, address, port, subtitles:downloadSubtitles.checked, rateLimitKiB,
-      container:videoContainer.value, codec:videoCodec.value, scheme, fragments};
+    const options = {...settings, proxy, address, port, scheme};
     const kind = hasCollectionBridge && links.length === 1 && collectionKind(new URL(value));
     if (kind) {
       collectionRequest = {url:value, kind, options};
@@ -1893,14 +2571,14 @@ byId("downloadForm").addEventListener("submit", event => {
       collectionDialog.showModal();
       byId("collectionTitle").focus();
       inspectCollection();
-    } else startNative(value, options);
+    } else submitNative(value, options, links.length === 1);
     return;
   }
   simulateDownloads(links.length);
 });
 function simulateDownloads(total) {
   const batch = {batchTotal:total, batchIndex:1, batchCompleted:0, batchFailed:0};
-  const mediaName = selectedHeight === audioOnlyHeight ? "音频" : "视频";
+  const mediaName = primaryMediaName({outputMode:selectedOutputMode});
   let value = 0;
   const resolveNext = () => render({...batch, phase:"正在解析（模拟）", detail:"等待示例任务返回元数据。", percent:-1, busy:true});
   resolveNext();
