@@ -1,0 +1,130 @@
+--- a/libavformat/tls_openssl.c
++++ b/libavformat/tls_openssl.c
+@@ -28,6 +28,7 @@
+ #include <openssl/bio.h>
+ #include <openssl/ssl.h>
+ #include <openssl/err.h>
++#include <openssl/x509v3.h>
+ 
+ typedef struct TLSContext {
+     const AVClass *class;
+@@ -276,9 +277,17 @@
+         goto fail;
+     }
+     SSL_CTX_set_options(p->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+-    if (c->ca_file) {
+-        if (!SSL_CTX_load_verify_locations(p->ctx, c->ca_file, NULL))
+-            av_log(h, AV_LOG_ERROR, "SSL_CTX_load_verify_locations %s\n", ERR_error_string(ERR_get_error(), NULL));
++    if (c->verify) {
++        int trust_loaded = c->ca_file
++            ? SSL_CTX_load_verify_locations(p->ctx, c->ca_file, NULL)
++            : SSL_CTX_set_default_verify_paths(p->ctx);
++        if (!trust_loaded) {
++            av_log(h, AV_LOG_ERROR, "Failed to load TLS trust store: %s\n",
++                   ERR_error_string(ERR_get_error(), NULL));
++            ret = AVERROR(EIO);
++            goto fail;
++        }
++        SSL_CTX_set_verify(p->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+     }
+     if (c->cert_file && !SSL_CTX_use_certificate_chain_file(p->ctx, c->cert_file)) {
+         av_log(h, AV_LOG_ERROR, "Unable to load cert file %s: %s\n",
+@@ -292,15 +301,19 @@
+         ret = AVERROR(EIO);
+         goto fail;
+     }
+-    // Note, this doesn't check that the peer certificate actually matches
+-    // the requested hostname.
+-    if (c->verify)
+-        SSL_CTX_set_verify(p->ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+     p->ssl = SSL_new(p->ctx);
+     if (!p->ssl) {
+         av_log(h, AV_LOG_ERROR, "%s\n", ERR_error_string(ERR_get_error(), NULL));
+         ret = AVERROR(EIO);
+         goto fail;
++    }
++    if (c->verify && !c->listen) {
++        SSL_set_hostflags(p->ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
++        if (!c->host || !*c->host || !SSL_set1_host(p->ssl, c->host)) {
++            av_log(h, AV_LOG_ERROR, "Failed to set TLS peer name for verification\n");
++            ret = AVERROR(EIO);
++            goto fail;
++        }
+     }
+ #if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+     p->url_bio_method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "urlprotocol bio");
+--- a/libavformat/http.c
++++ b/libavformat/http.c
+@@ -207,6 +207,25 @@
+            sizeof(HTTPAuthState));
+ }
+ 
++int ff_http_copy_tls_verification_options(const URLContext *h, AVDictionary **options)
++{
++    const HTTPContext *s = h->priv_data;
++    const AVDictionaryEntry *entry = NULL;
++    int ret;
++
++    while ((entry = av_dict_iterate(s->chained_options, entry))) {
++        if (strcmp(entry->key, "tls_verify") &&
++            strcmp(entry->key, "ca_file") &&
++            strcmp(entry->key, "cafile"))
++            continue;
++        ret = av_dict_set(options, entry->key, entry->value, 0);
++        if (ret < 0)
++            return ret;
++    }
++
++    return 0;
++}
++
+ static int http_open_cnx_internal(URLContext *h, AVDictionary **options)
+ {
+     const char *path, *proxy_path, *lower_proto = "tcp", *local_path;
+--- a/libavformat/http.h
++++ b/libavformat/http.h
+@@ -60,6 +60,12 @@
+  */
+ int ff_http_do_new_request2(URLContext *h, const char *uri, AVDictionary **options);
+ 
++/**
++ * Copy the TLS verification policy for another connection. Hostname overrides
++ * are local to the original connection.
++ */
++int ff_http_copy_tls_verification_options(const URLContext *h, AVDictionary **options);
++
+ int ff_http_averror(int status_code, int default_averror);
+ 
+ #endif /* AVFORMAT_HTTP_H */
+--- a/libavformat/aviobuf.c
++++ b/libavformat/aviobuf.c
+@@ -19,6 +19,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
++#include "config_components.h"
+ #include "libavutil/bprint.h"
+ #include "libavutil/crc.h"
+ #include "libavutil/dict.h"
+@@ -30,6 +31,7 @@
+ #include "libavcodec/defs.h"
+ #include "avio.h"
+ #include "avio_internal.h"
++#include "http.h"
+ #include "internal.h"
+ #include <stdarg.h>
+ 
+@@ -1009,6 +1011,13 @@
+         opt++;
+     }
+ 
++#if CONFIG_HTTP_PROTOCOL || CONFIG_HTTPS_PROTOCOL
++    URLContext *h = ffio_geturlcontext(pb);
++    if (h && h->prot &&
++        (!strcmp(h->prot->name, "http") || !strcmp(h->prot->name, "https")))
++        return ff_http_copy_tls_verification_options(h, avio_opts);
++#endif
++
+     return ret;
+ }
+ 

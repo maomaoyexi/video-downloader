@@ -1,0 +1,1986 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>多平台下载 · 安卓端</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg:#F7F7F5; --surface:#FFF; --surface2:#F1F1EE; --surface3:#E8E8E3;
+  --line:#E4E4DF; --line2:#D2D2CB;
+  --fg:#16161A; --fg2:#55555C; --fg3:#72727A;
+  --ok:#2E7D5B; --err:#B33730; --live:#2F6FED;
+  --radius:8px;
+  --mono:"IBM Plex Mono",Consolas,ui-monospace,monospace;
+  --sans:"IBM Plex Sans","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  font-family:var(--sans);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-size:14px;line-height:1.55}
+button,textarea,input,select{font:inherit}
+button,summary,.switch-row{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible,.batch-list:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+button,.quality summary{transition:transform 110ms ease-out,filter 110ms ease-out}
+button:not(.settings-disclosure):not(:disabled):is(:active,[data-pressed]),.quality summary:is(:active,[data-pressed]){transform:scale(var(--press-scale,.99));filter:brightness(.92)}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+.ico{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.top{border-bottom:1px solid var(--line)}
+.top-inner,main{width:100%;max-width:560px;margin:auto;padding-right:16px;padding-left:16px}
+.top-inner{display:flex;align-items:center;gap:8px;min-height:60px}
+.top-actions{display:flex;align-items:center;flex:none;gap:6px;margin-left:auto}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650}
+.mark{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+main{padding-top:24px;padding-bottom:32px;display:grid;gap:16px}
+h1{font-size:24px;font-weight:650;line-height:1.3}
+.card{min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.hint{color:var(--fg3);font-size:13px}
+.link-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-6px 0 6px;font-weight:600}
+.link-heading label{flex:none}
+.link-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+.link-actions .btn{padding:0 8px}
+textarea{display:block;width:100%;min-height:86px;padding:11px 12px;border:1px solid var(--line2);border-radius:var(--radius);resize:none;background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+textarea::placeholder,.text-input::placeholder{color:var(--fg3);font-family:var(--sans)}
+textarea:disabled{color:var(--fg3)}
+.platforms{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:8px}
+.platforms .hint{margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:999px;color:var(--fg2);font-size:13px;white-space:nowrap}
+.chip[aria-current=true]{border-color:var(--fg);background:var(--fg);color:var(--surface)}
+.chip .youtube{background:#e00000}
+.chip .bili{background:#00a1d6}
+#platformHint{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.quality{min-width:0;margin-top:18px}
+.quality summary{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border:1px solid var(--line2);border-radius:13px;background:var(--bg);font-weight:600;list-style:none;cursor:pointer}
+.quality summary::-webkit-details-marker{display:none}
+.quality summary::after{content:"";width:7px;height:7px;flex:none;border-right:1.5px solid var(--fg2);border-bottom:1.5px solid var(--fg2);transform:translateY(-2px) rotate(45deg);transition:transform 200ms ease}
+.quality[open] summary::after{transform:translateY(2px) rotate(225deg)}
+#resolutionValue{margin-left:auto;color:var(--fg2)}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin-top:8px;padding:4px;background:var(--surface2);border-radius:16px}
+.output-options{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;margin-top:8px}
+.proxy-fields label{min-width:0;font-size:13px;color:var(--fg2)}
+.text-input{width:100%;min-width:0;min-height:44px;padding:0 9px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--surface);color:var(--fg);font-size:14px;font-weight:550;white-space:nowrap;cursor:pointer}
+.btn:disabled{background:var(--surface2);color:var(--fg3);border-color:var(--line);cursor:default}
+.nav-action{--press-scale:.97;gap:6px;flex:none;border-radius:999px;font-weight:650}
+.nav-action .ico{width:16px;height:16px}
+#openHistory{gap:4px;padding:0 10px}
+.primary:not(:disabled){border-color:var(--fg);background:var(--fg);color:var(--surface)}
+.choice,.choice:disabled{min-width:0;padding:0 2px;border-color:transparent;border-radius:12px;background:transparent;font-size:13px}
+.choice{color:var(--fg2)}
+.choice[aria-pressed=true]{border-color:var(--line2);background:var(--surface);font-weight:650}
+.audio-choice[aria-pressed=true]:not(:disabled){border-color:var(--fg);background:var(--fg);color:var(--surface)}
+.download-action{display:flex;width:100%;min-height:48px;margin-top:16px}
+#cancel:not(:disabled){border-color:var(--err);color:var(--err)}
+.note{margin-top:8px;color:var(--err);font-size:13px;overflow-wrap:anywhere}
+.note:empty{display:none}
+h2{font-size:16px;font-weight:650}
+.settings-heading{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.settings-heading .settings-picker-toggle{padding-inline:9px}
+.settings-directory{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.settings-directory .btn{min-width:0;padding:0 6px;border-color:transparent;background:transparent;color:var(--fg2);white-space:normal}
+.settings-directory .btn[aria-current=location]{border-color:var(--line2);background:var(--surface2);color:var(--fg);font-weight:650}
+.settings-directory .btn:focus-visible{outline-offset:-2px}
+@media(min-width:500px){.settings-directory{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-height:360px){.settings-directory{position:static}}
+.settings-card{padding-top:8px;padding-bottom:8px}
+.settings-row{display:flex;align-items:center;gap:8px}
+.settings-row h2{flex:1;min-width:0}
+.settings-disclosure{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0;border:0;border-radius:12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:opacity 110ms ease-out}
+.settings-disclosure:is(:active,[data-pressed]){opacity:.76}
+.quality summary:focus-visible,.choice:focus-visible,.settings-disclosure:focus-visible{outline-color:transparent;box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--fg)}
+@media(forced-colors:active){.quality summary:focus-visible,.choice:focus-visible,.settings-disclosure:focus-visible{outline-color:Highlight}}
+.settings-disclosure::after{content:"";flex:none;width:7px;height:7px;border-right:1.5px solid var(--fg2);border-bottom:1.5px solid var(--fg2);transform:translateY(-2px) rotate(45deg);transition:transform 200ms ease}
+.settings-disclosure[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+.settings-panel{display:grid;grid-template-rows:1fr;transition:grid-template-rows 200ms ease,visibility 0s}
+.settings-panel[inert]{grid-template-rows:0fr;visibility:hidden;transition-delay:0s,200ms}
+.settings-panel > div{min-height:0;overflow:hidden}
+.settings-panel.settings-picker-open:not([inert]) > div{overflow:visible}
+.settings-panel :focus-visible{outline-offset:-2px}
+.settings-content{padding:4px 3px 8px}
+.settings-description{margin:4px 3px 8px}
+.settings-field{display:block;color:var(--fg2);font-size:13px}
+.settings-field .text-input{margin-top:5px}
+.settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.settings-picker{position:relative;margin-top:5px}
+.settings-picker-toggle{display:flex;justify-content:space-between;gap:8px;width:100%;min-width:0;padding:0 10px;background:var(--bg);font-weight:500;text-align:left}
+.settings-picker-toggle::after{content:"";flex:none;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform 160ms ease}
+.settings-picker-toggle[aria-expanded=true]::after{transform:translateY(2px) rotate(225deg)}
+.settings-picker-options{position:absolute;z-index:1;top:calc(100% + 4px);left:0;right:0;display:grid;gap:2px;padding:3px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface2);box-shadow:0 4px 12px #16161a1a}
+.settings-picker-option{justify-content:flex-start;min-width:0;padding:0 7px;border-color:transparent;border-radius:8px;background:transparent;text-align:left}
+.settings-picker-option[aria-pressed=true]{border-color:var(--line2);background:var(--surface);font-weight:650}
+.settings-presets-menu{left:auto;z-index:3;width:min(260px,100%);max-height:min(60vh,420px);overflow-y:auto;gap:8px;padding:8px}
+.settings-presets-menu .hint{padding-inline:4px}
+.settings-presets-menu :focus-visible{outline-offset:-2px}
+.preset-list{display:grid;gap:4px}
+.preset-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px}
+.preset-name{padding-inline:4px;overflow-wrap:anywhere}
+.preset-row-actions{display:flex;gap:4px}
+.preset-row-actions .btn{padding-inline:8px}
+.preset-name-field{display:grid;gap:4px;color:var(--fg2);font-size:13px}
+.preset-form-actions{display:flex;gap:6px;margin-top:8px}
+.rate-field{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.rate-field .text-input{width:112px;margin:0}
+.transfer-fields{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.fragment-field{margin-top:14px}
+.tool-versions{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.tool-versions dd{margin:0;font-family:var(--mono);overflow-wrap:anywhere}
+.settings-links{display:flex;flex-wrap:wrap;gap:8px}
+.guide-card{padding:4px 16px}
+.guide-topic + .guide-topic{border-top:1px solid var(--line)}
+.guide-topic summary{min-height:44px;padding:11px 0;font-size:15px;font-weight:600;cursor:pointer}
+.guide-copy{padding:0 0 12px;color:var(--fg2)}
+.guide-copy > * + *{margin-top:8px}
+.guide-copy ol,.about-list{margin:8px 0 0;padding-inline-start:1.4em}
+.guide-copy li + li,.about-list li + li{margin-top:5px}
+.about-name{display:flex;align-items:center;gap:10px}
+.about-credits{margin:8px 0 0;overflow-wrap:anywhere}
+.about-credits > div + div{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.about-credits dt{font-weight:650}
+.about-credits dd{margin:4px 0 0;color:var(--fg2)}
+.about-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.about-links .btn{text-decoration:none}
+.app-update{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.app-update-notes{white-space:pre-wrap}
+.feedback{margin-top:8px;overflow-wrap:anywhere}
+.feedback:empty{display:none}
+.feedback[data-error=true]{color:var(--err)}
+.archive-preview{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.archive-excerpt{max-height:160px;overflow:auto;white-space:pre-wrap}
+.switch-row{display:grid;place-items:center;flex:none;width:44px;min-height:44px;margin-right:-4px;border-radius:var(--radius);cursor:pointer}
+.switch-row input{display:flex;align-items:center;appearance:none;flex:none;width:36px;height:22px;margin:0;padding:2px;border:1px solid var(--line2);border-radius:999px;background:var(--surface2);cursor:pointer;transition:transform 110ms ease-out,background-color 180ms ease,border-color 180ms ease}
+.switch-row input::before{content:"";flex:none;width:16px;height:16px;border-radius:50%;background:var(--fg3);transform:translateX(0);transition:transform 180ms ease,background-color 180ms ease}
+.switch-row input:checked{border-color:var(--fg);background:var(--fg)}
+.switch-row input:checked::before{background:var(--surface);transform:translateX(14px)}
+.switch-row:is(:active,[data-pressed]) input:not(:disabled){transform:scale(.985)}
+.switch-row input:disabled{opacity:.6;cursor:default}
+.switch-row.labeled-switch{display:flex;gap:8px;width:auto;margin-right:0;padding:0 4px 0 6px;color:var(--fg2);font-size:13px}
+.labeled-switch:has(input:disabled){color:var(--fg3);cursor:default}
+.proxy-fields{display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.proxy-fields input.text-input{margin-top:5px}
+.proxy-mode{grid-column:1/-1;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.proxy-mode .labeled-switch{margin-top:calc(1.55em + 5px)}
+.proxy-type{flex:1;max-width:155px}
+.proxy-fields .hint{grid-column:1/-1}
+.cookie-head{display:flex;align-items:center;gap:8px}
+.cookie-head .hint{margin-left:auto}
+.cookie-entry{padding-top:4px;border-top:1px solid var(--line)}
+.cookie-entry + .cookie-entry{margin-top:12px}
+.cookie-entry h3{font-size:14px;font-weight:600}
+.cookie-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.cookie-feedback{margin-top:8px}
+.cookie-feedback:empty{display:none}
+.history-list{margin:0;padding:0 16px;list-style:none}
+.history-entry{padding:14px 0}
+.history-entry + .history-entry{border-top:1px solid var(--line)}
+.history-title{font-size:15px;overflow-wrap:anywhere}
+.history-details{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px}
+.history-meta{flex:1 0 120px;min-width:0}
+.history-meta p{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px}
+.history-meta time{display:block;margin-top:3px}
+.history-status{font-weight:600;color:var(--fg2)}
+.history-entry[data-status=completed] .history-status{color:var(--ok)}
+.history-entry[data-status=failed] .history-status{color:var(--err)}
+#historyView > .note{margin-top:0}
+.demo{display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;color:var(--fg2);font-size:13px}
+body.preview .demo{display:flex}
+.taskhead{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fg3)}
+.dot[data-state=busy]{background:var(--live)}
+.dot[data-state=done]{background:var(--ok)}
+.dot[data-state=failed]{background:var(--err)}
+.task-metrics{display:flex;align-items:baseline;justify-content:flex-end;flex-wrap:wrap;gap:2px 12px;margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums}
+#speed{color:var(--fg2);font-size:13px;white-space:nowrap}
+#batchPosition{margin-top:4px}
+#eta{margin-top:6px;text-align:right;font-variant-numeric:tabular-nums}
+.batch-details{margin-top:12px;border-top:1px solid var(--line)}
+.batch-details summary{line-height:44px;color:var(--fg2);cursor:pointer}
+.batch-list{max-height:207px;margin:0;padding:0 4px 0 24px;overflow-y:auto;overscroll-behavior:contain}
+.batch-list li{padding:7px 0}
+.batch-list li+li{border-top:1px solid var(--line)}
+.batch-status{color:var(--fg2);font-size:13px;font-weight:650}
+.batch-status[data-status=downloading]{color:var(--live)}
+.batch-status[data-status=completed]{color:var(--ok)}
+.batch-status[data-status=failed]{color:var(--err)}
+.batch-url{display:block;color:var(--fg3);font-size:12px;overflow-wrap:anywhere}
+.detail{margin-top:6px;color:var(--fg2);font-size:13px;overflow-wrap:anywhere}
+.video-actions{display:flex;flex-wrap:wrap;gap:8px}
+#taskActions{margin-top:12px}
+#skipCurrent{margin-top:12px}
+.collection-dialog,.agreement-dialog{width:min(480px,calc(100% - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:auto;padding:0;color:var(--fg)}
+.collection-dialog[open],.agreement-dialog[open]{display:flex;flex-direction:column}
+.collection-dialog::backdrop,.agreement-dialog::backdrop{background:#16161a66}
+.agreement-dialog{width:min(420px,calc(100% - 24px))}
+.agreement-header,.agreement-footer{flex:none;padding:12px 16px}
+.agreement-text{min-height:0;max-height:188px;overflow-y:auto;overscroll-behavior:contain;padding:12px 16px;border-block:1px solid var(--line)}
+.agreement-text:focus-visible{outline:2px solid var(--fg);outline-offset:-2px}
+.agreement-copy{color:var(--fg2);overflow-wrap:anywhere}
+.agreement-copy p + p{margin-top:8px}
+.agreement-scroll-hint{display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px;text-align:center}
+.agreement-scroll-hint::before{content:"";flex:none;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+.agreement-scroll-hint[data-at-end=true]::before{display:none}
+.agreement-footer .btn{width:100%}
+.collection-header,.collection-footer{flex:none;padding:14px 16px}
+.collection-header .hint{margin-top:4px;overflow-wrap:anywhere}
+#collectionStatus{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.collection-list{min-height:0;margin:0;padding:0 16px;overflow-y:auto;overscroll-behavior:contain;list-style:none;border-top:1px solid var(--line)}
+.collection-list li + li{border-top:1px solid var(--line)}
+.collection-row{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 0;cursor:pointer}
+.collection-row input{flex:none;width:18px;height:18px;margin:0 2px;accent-color:var(--fg)}
+.collection-row:has(input:disabled){color:var(--fg3);cursor:default}
+.collection-row span{min-width:0;overflow-wrap:anywhere}
+.collection-number{display:block;color:var(--fg2);font-size:12px}
+.collection-footer{border-top:1px solid var(--line)}
+.collection-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+#collectionCount{margin-bottom:8px}
+progress{display:block;width:100%;height:4px;margin-top:12px;appearance:none;overflow:hidden;border:0;border-radius:2px;background:var(--surface3)}
+progress::-webkit-progress-bar{background:var(--surface3);border-radius:2px}
+progress::-webkit-progress-value{background:var(--live);border-radius:2px}
+progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--live),var(--surface3));background-size:200%;animation:slide 1.3s linear infinite}
+@keyframes slide{from{background-position:100% 0}to{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){
+  progress:indeterminate{animation:none}
+  button,.settings-disclosure,.quality summary,.quality summary::after,.switch-row input,.switch-row input::before,
+  .settings-panel,.settings-panel[inert],.settings-disclosure::after,.settings-picker-toggle::after{transition:none}
+  button:not(.settings-disclosure):not(:disabled):is(:active,[data-pressed]),.quality summary:is(:active,[data-pressed]),
+  .switch-row:is(:active,[data-pressed]) input:not(:disabled){transform:none}
+}
+@media(min-width:560px){main,.top-inner{padding-left:24px;padding-right:24px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h7m4 0h5M4 17h3m4 0h9"/><circle cx="13" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 7v5h5m4-4v5l3 2"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <span class="brand"><span class="mark" aria-hidden="true"><svg class="ico"><use href="#i-download"/></svg></span>视频下载工具</span>
+    <div class="top-actions">
+      <button type="button" class="btn nav-action" id="openHistory" aria-controls="historyView">
+        <svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>历史
+      </button>
+      <button type="button" class="btn nav-action" id="openSettings" aria-controls="settingsView">
+        <svg class="ico" aria-hidden="true"><use id="settingsIcon" href="#i-settings"/></svg><span id="settingsAction">设置</span>
+      </button>
+    </div>
+  </div>
+</header>
+<main id="downloadView" aria-label="下载视频">
+  <form id="downloadForm" novalidate>
+    <div class="card">
+      <div class="link-heading">
+        <label for="url">视频链接</label>
+        <div class="link-actions">
+          <button class="btn" type="button" id="importLinks" hidden>导入 TXT</button>
+          <button class="btn" type="button" id="clearUrl" aria-label="清除视频链接" disabled>清除</button>
+          <button class="btn" type="button" id="paste">粘贴</button>
+        </div>
+      </div>
+      <textarea id="url" rows="3" inputmode="url" enterkeyhint="enter" placeholder="每行一个视频链接，最多 20 条" autocomplete="off" spellcheck="false" aria-describedby="platformHint formNote"></textarea>
+      <div class="platforms">
+        <span class="chip" id="youtubeChip" aria-current="false"><span class="dot youtube" aria-hidden="true"></span>YouTube</span>
+        <span class="chip" id="biliChip" aria-current="false"><span class="dot bili" aria-hidden="true"></span>Bilibili</span>
+        <span class="hint" aria-hidden="true">自动识别</span>
+      </div>
+      <p id="platformHint" aria-live="polite">自动识别 YouTube 和哔哩哔哩链接</p>
+      <p class="hint feedback" id="linksImportNote" role="status"></p>
+      <p class="note" id="formNote" role="status"></p>
+      <button class="btn primary download-action" type="submit" id="start">开始下载</button>
+      <button class="btn download-action" type="button" id="cancel" hidden disabled>停止下载</button>
+      <details class="quality" id="resolutionPicker">
+        <summary id="resolutionSummary"><span>下载选项</span><span id="resolutionValue">自动</span></summary>
+        <div class="choices" role="group" aria-label="分辨率上限">
+          <button class="btn choice" type="button" data-height="0" aria-pressed="true">自动</button>
+          <button class="btn choice" type="button" data-height="-1" aria-pressed="false">最高</button>
+          <button class="btn choice" type="button" data-height="4320" aria-pressed="false">8K</button>
+          <button class="btn choice" type="button" data-height="2160" aria-pressed="false">4K</button>
+          <button class="btn choice" type="button" data-height="1440" aria-pressed="false">2K</button>
+          <button class="btn choice" type="button" data-height="-2" aria-pressed="false">1080p60</button>
+          <button class="btn choice" type="button" data-height="1080" aria-pressed="false">1080p</button>
+          <button class="btn choice" type="button" data-height="720" aria-pressed="false">720p</button>
+          <button class="btn choice" type="button" data-height="480" aria-pressed="false">480p</button>
+        </div>
+        <div class="output-options">
+          <button class="btn audio-choice" type="button" id="audioOnlyChoice" data-height="-3" aria-pressed="false">仅音频</button>
+          <label class="switch-row labeled-switch" id="subtitleOption">同时下载字幕<input type="checkbox" role="switch" id="downloadSubtitles"></label>
+        </div>
+      </details>
+    </div>
+  </form>
+  <section class="card" id="task" aria-labelledby="phase" hidden>
+    <div class="taskhead">
+      <span class="dot" id="statusDot" aria-hidden="true"></span><h2 id="phase"></h2>
+      <div class="task-metrics"><span id="speed" hidden></span><span id="percent"></span></div>
+    </div>
+    <p class="hint" id="batchPosition" hidden></p>
+    <p class="detail" id="detail" aria-live="polite"></p>
+    <p class="detail" id="batchSummary" role="status" hidden></p>
+    <progress id="progress" aria-label="下载进度" max="100" value="0" hidden></progress>
+    <p class="hint" id="eta" hidden></p>
+    <button type="button" class="btn" id="skipCurrent" hidden>跳过当前条</button>
+    <details class="batch-details" id="batchDetails" hidden>
+      <summary id="batchDetailsSummary">队列详情</summary>
+      <ol class="batch-list" id="batchList" tabindex="0" aria-label="队列链接和状态"></ol>
+    </details>
+    <div class="video-actions" id="taskActions" hidden>
+      <button type="button" class="btn" id="playVideo" hidden>播放视频</button>
+      <button type="button" class="btn" id="openVideoLocation" hidden>打开文件位置</button>
+    </div>
+    <p class="note" id="videoLocationNote" role="status"></p>
+  </section>
+  <p class="hint">保存到「下载 / 多平台下载」</p>
+  <div class="demo"><span>浏览器预览使用模拟下载</span><button type="button" class="btn" id="example">使用示例链接</button></div>
+</main>
+<main id="settingsView" hidden>
+  <div class="settings-heading">
+    <h1 id="settingsHeading" tabindex="-1">设置</h1>
+    <div id="settingsPresets" hidden>
+      <button type="button" class="btn settings-picker-toggle" id="openDownloadPresets" aria-controls="downloadPresetsPanel" aria-expanded="false">配置预设</button>
+      <div class="settings-picker-options settings-presets-menu" id="downloadPresetsPanel" role="group" aria-label="配置预设" hidden>
+        <div class="preset-list" id="downloadPresetList"></div>
+        <button type="button" class="btn" id="newDownloadPreset">另存为</button>
+        <form id="downloadPresetForm" hidden>
+          <label class="preset-name-field" for="downloadPresetName">预设名称<input type="text" class="text-input" id="downloadPresetName" maxlength="40" autocomplete="off" required></label>
+          <div class="preset-form-actions">
+            <button type="submit" class="btn primary" id="saveDownloadPreset">保存预设</button>
+            <button type="button" class="btn" id="cancelDownloadPreset">取消</button>
+          </div>
+        </form>
+        <p class="hint feedback" id="downloadPresetNote" role="status"></p>
+      </div>
+    </div>
+  </div>
+  <p class="hint feedback" id="defaultsNote" role="status"></p>
+  <nav class="settings-directory" id="settingsDirectory" aria-label="设置目录">
+    <button type="button" class="btn" data-settings-target="outputDisclosure" aria-controls="outputPanel" aria-expanded="false" hidden>输出与画质</button>
+    <button type="button" class="btn" data-settings-target="proxyDisclosure" aria-controls="networkPanel" aria-expanded="false">网络与代理</button>
+    <button type="button" class="btn" data-settings-target="cookieDisclosure" aria-controls="cookieList" aria-expanded="false">平台 Cookie</button>
+    <button type="button" class="btn" data-settings-target="toolboxDisclosure" aria-controls="toolboxPanel" aria-expanded="false" hidden>工具箱</button>
+    <button type="button" class="btn" data-settings-target="fanboxDisclosure" aria-controls="fanboxPanel" aria-expanded="false" hidden>专项归档</button>
+  </nav>
+  <section class="card settings-card" id="outputSection" aria-labelledby="outputHeading" hidden>
+    <div class="settings-row">
+      <h2 id="outputHeading"><button type="button" class="settings-disclosure" id="outputDisclosure" aria-controls="outputPanel" aria-expanded="false">输出与画质</button></h2>
+    </div>
+    <div class="settings-panel" id="outputPanel" inert>
+      <div>
+        <div class="settings-content">
+          <div class="settings-fields">
+            <div class="settings-field">
+              <span id="videoContainerLabel">视频封装</span>
+              <select id="videoContainer" aria-labelledby="videoContainerLabel" aria-describedby="outputHint" hidden>
+                <option value="mp4">MP4</option><option value="mkv">MKV</option><option value="webm">WebM</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <span id="videoCodecLabel">编码偏好</span>
+              <select id="videoCodec" aria-labelledby="videoCodecLabel" aria-describedby="outputHint" hidden>
+                <option value="auto">自动</option><option value="h264">H.264</option><option value="av1">AV1</option><option value="vp9">VP9</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint feedback" id="outputHint">WebM 需要平台提供兼容音视频轨道。仅音频保存为 M4A。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="card settings-card" aria-labelledby="networkHeading">
+    <div class="settings-row">
+      <h2 id="networkHeading"><button type="button" class="settings-disclosure" id="proxyDisclosure" aria-controls="networkPanel" aria-expanded="false">网络与代理</button></h2>
+    </div>
+    <p class="hint settings-description" id="vpnHint">支持 HTTP 和 SOCKS5 代理。使用手机 VPN 时，通常保持手动代理关闭。</p>
+    <div class="settings-panel" id="networkPanel" inert>
+      <div>
+        <div class="settings-content">
+          <div class="proxy-fields" id="proxyFields">
+            <div class="proxy-mode">
+              <div class="settings-field proxy-type">
+                <span id="proxySchemeLabel">代理类型</span>
+                <select id="proxyScheme" aria-labelledby="proxySchemeLabel" aria-describedby="proxyHint" hidden>
+                  <option value="http">HTTP</option><option value="socks5">SOCKS5</option>
+                </select>
+              </div>
+              <label class="switch-row labeled-switch">启用代理<input type="checkbox" role="switch" id="proxyEnabled" aria-describedby="vpnHint"></label>
+            </div>
+            <label for="proxyAddress">代理地址<input class="text-input" id="proxyAddress" type="text" inputmode="url" maxlength="253" placeholder="IP 或主机名" autocomplete="off" spellcheck="false" aria-describedby="proxyHint"></label>
+            <label for="proxyPort">端口<input class="text-input" id="proxyPort" type="text" inputmode="numeric" maxlength="5" autocomplete="off" aria-describedby="proxyHint"></label>
+            <p class="hint" id="proxyHint">填写手机能访问的代理地址和端口。</p>
+          </div>
+          <p class="note" id="proxyNote" role="alert"></p>
+          <div class="transfer-fields" id="transferFields" hidden>
+            <label class="settings-field rate-field" for="rateLimit">下载限速（KiB/s）<input class="text-input" id="rateLimit" type="text" inputmode="numeric" maxlength="6" value="0" autocomplete="off" aria-describedby="rateLimitHint transferNote"></label>
+            <p class="hint feedback" id="rateLimitHint">0 表示不限速。修改后对下一批任务生效。</p>
+            <label class="settings-field rate-field fragment-field" for="fragments">分片并发数（1–16）<input class="text-input" id="fragments" type="text" inputmode="numeric" maxlength="2" value="1" autocomplete="off" aria-describedby="fragmentHint transferNote"></label>
+            <p class="hint feedback" id="fragmentHint">每条音视频流同时下载的分片数，仅在支持分片下载时生效。</p>
+            <p class="note" id="transferNote" role="alert"></p>
+          </div>
+          <p class="detail" id="proxyBusy" hidden>当前任务结束后可修改网络设置。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="card settings-card" id="cookieSection" aria-labelledby="cookieHeading">
+    <div class="settings-row">
+      <h2 id="cookieHeading"><button type="button" class="settings-disclosure" id="cookieDisclosure" aria-controls="cookieList" aria-expanded="false">平台 Cookie</button></h2>
+    </div>
+    <p class="hint settings-description" id="cookieHint">各平台独立设置。关闭后保留已导入的 Cookie。</p>
+    <div class="settings-panel" id="cookieList" inert>
+      <div>
+        <div class="settings-content">
+          <div class="cookie-entry" data-cookie-platform="bilibili">
+            <div class="cookie-head">
+              <h3>B 站</h3>
+              <span class="hint" id="biliCookieStatus" data-cookie-status>未配置</span>
+              <label class="switch-row"><input type="checkbox" role="switch" id="biliCookieEnabled" data-cookie-enabled aria-label="使用 B 站 Cookie" aria-describedby="cookieHint" disabled></label>
+            </div>
+            <div class="cookie-actions">
+              <button type="button" class="btn" id="biliCookieImport" data-cookie-import aria-label="为 B 站导入 cookies.txt" disabled>导入 cookies.txt</button>
+              <button type="button" class="btn" id="biliCookieRemove" data-cookie-remove aria-label="移除 B 站 Cookie" hidden disabled>移除</button>
+            </div>
+            <p class="hint cookie-feedback" id="biliCookieNote" data-cookie-note role="status"></p>
+            <p class="note" data-cookie-toggle-note role="alert"></p>
+          </div>
+          <div class="cookie-entry" data-cookie-platform="youtube">
+            <div class="cookie-head">
+              <h3>YouTube</h3>
+              <span class="hint" id="youtubeCookieStatus" data-cookie-status>未配置</span>
+              <label class="switch-row"><input type="checkbox" role="switch" id="youtubeCookieEnabled" data-cookie-enabled aria-label="使用 YouTube Cookie" aria-describedby="cookieHint" disabled></label>
+            </div>
+            <div class="cookie-actions">
+              <button type="button" class="btn" id="youtubeCookieImport" data-cookie-import aria-label="为 YouTube 导入 cookies.txt" disabled>导入 cookies.txt</button>
+              <button type="button" class="btn" id="youtubeCookieRemove" data-cookie-remove aria-label="移除 YouTube Cookie" hidden disabled>移除</button>
+            </div>
+            <p class="hint cookie-feedback" id="youtubeCookieNote" data-cookie-note role="status"></p>
+            <p class="note" data-cookie-toggle-note role="alert"></p>
+          </div>
+          <p class="hint cookie-feedback" id="cookieBusy" role="status">请在安卓应用内导入。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="card settings-card" id="toolboxSection" aria-labelledby="toolboxHeading" hidden>
+    <div class="settings-row">
+      <h2 id="toolboxHeading"><button type="button" class="settings-disclosure" id="toolboxDisclosure" aria-controls="toolboxPanel" aria-expanded="false">工具箱</button></h2>
+    </div>
+    <div class="settings-panel" id="toolboxPanel" inert>
+      <div>
+        <div class="settings-content">
+          <button type="button" class="btn" id="openDownloadDirectory" hidden>打开下载目录</button>
+          <p class="hint feedback" id="toolNote" role="status"></p>
+          <dl class="hint tool-versions" id="toolVersions" hidden>
+            <dt>应用版本</dt><dd id="appVersion"></dd>
+            <dt>yt-dlp 版本</dt><dd id="engineVersion"></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="card settings-card" id="fanboxSection" aria-labelledby="fanboxHeading" hidden>
+    <div class="settings-row">
+      <h2 id="fanboxHeading"><button type="button" class="settings-disclosure" id="fanboxDisclosure" aria-controls="fanboxPanel" aria-expanded="false">专项归档</button></h2>
+    </div>
+    <div class="settings-panel" id="fanboxPanel" inert>
+      <div>
+        <div class="settings-content">
+          <label class="settings-field" for="fanboxUrl">FANBOX 帖子链接<input class="text-input" id="fanboxUrl" type="url" inputmode="url" maxlength="2048" autocomplete="off" spellcheck="false" aria-describedby="fanboxHint"></label>
+          <p class="hint feedback" id="fanboxHint">支持公开单帖。正文和可下载的图片、附件保存为 ZIP。</p>
+          <div class="cookie-actions">
+            <button type="button" class="btn" id="inspectFanbox">预览帖子</button>
+            <button type="button" class="btn primary" id="archiveFanbox" hidden>保存 ZIP</button>
+            <button type="button" class="btn" id="cancelFanbox" hidden>取消</button>
+          </div>
+          <progress id="fanboxProgress" aria-label="正在处理 FANBOX 帖子" hidden></progress>
+          <p class="hint feedback" id="fanboxNote" role="status"></p>
+          <div class="archive-preview" id="fanboxPreview" hidden>
+            <h3 id="fanboxTitle"></h3>
+            <p class="hint feedback" id="fanboxFileCount"></p>
+            <p class="detail archive-excerpt" id="fanboxExcerpt" tabindex="0" hidden></p>
+          </div>
+          <p class="hint feedback" id="fanboxFilename" hidden></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <nav class="settings-links" aria-label="帮助与关于">
+    <button type="button" class="btn" id="openHelp" aria-controls="helpView">使用帮助</button>
+    <button type="button" class="btn" id="openAbout" aria-controls="aboutView">关于软件</button>
+  </nav>
+</main>
+<main id="historyView" hidden>
+  <h1 id="historyHeading" tabindex="-1">下载历史</h1>
+  <p class="note" id="historyNote" role="status"></p>
+  <p class="card hint" id="historyEmpty">暂无下载记录。</p>
+  <ol class="card history-list" id="historyList" role="list" aria-label="下载记录" hidden></ol>
+</main>
+<main id="helpView" aria-labelledby="helpHeading" hidden>
+  <h1 id="helpHeading" tabindex="-1">使用帮助</h1>
+  <section class="card guide-card" aria-label="操作指南">
+    <details class="guide-topic" open>
+      <summary>快速开始</summary>
+      <div class="guide-copy">
+        <ol>
+          <li>粘贴 YouTube 或 B 站点播链接。</li>
+          <li>打开「下载选项」选择画质、仅音频或字幕，再点「开始下载」。</li>
+          <li>下载完成后，可在任务卡或「历史」播放和打开文件位置。文件保存在「下载 / 多平台下载」。</li>
+        </ol>
+      </div>
+    </details>
+    <details class="guide-topic">
+      <summary>批量下载与分集</summary>
+      <div class="guide-copy">
+        <p>一行一个链接，每批最多 20 条。可以点「导入 TXT」填入链接，再检查后提交。</p>
+        <p>单独提交 B 站多 P 或 YouTube 播放列表链接，可以先勾选分集。「队列详情」会显示每条的状态。点「跳过当前条」会继续下一条，也可以停止整个队列。</p>
+      </div>
+    </details>
+    <details class="guide-topic">
+      <summary>Cookie 与网络</summary>
+      <div class="guide-copy">
+        <p>遇到登录验证时，先在浏览器确认账号能播放该视频，再到「设置 → 平台 Cookie」为对应平台导入 Netscape 格式的 cookies.txt，并打开该平台的开关。「已配置」表示文件已导入。</p>
+        <p>手机 VPN 能正常访问平台时，通常关闭手动代理。需要代理时，在「网络与代理」填写手机能访问的 HTTP 或 SOCKS5 地址和端口。下载限速和分片并发可独立设置。</p>
+      </div>
+    </details>
+    <details class="guide-topic">
+      <summary>专项归档</summary>
+      <div class="guide-copy">
+        <p>在「设置 → 专项归档」输入 FANBOX 公开单帖链接，先点「预览帖子」，再点「保存 ZIP」。归档保存在「下载 / 多平台下载 / FANBOX」。</p>
+      </div>
+    </details>
+  </section>
+  <h2>常见问题</h2>
+  <section class="card guide-card" aria-label="常见问题">
+    <details class="guide-topic">
+      <summary>下载超时或息屏后停住</summary>
+      <div class="guide-copy">
+        <p>超时先确认手机能访问该平台，再核对代理地址、端口或 VPN。首次下载会准备运行组件，可能需要多等一会儿。</p>
+        <p>息屏后进度停住时，可检查系统应用详情里的电池使用和后台运行设置。</p>
+      </div>
+    </details>
+    <details class="guide-topic">
+      <summary>画质、封装或字幕不可用</summary>
+      <div class="guide-copy">
+        <p>画质不可用时可试「自动」或较低画质。WebM 需要平台提供兼容的音视频流，可在「输出与画质」改选 MP4 或 MKV。</p>
+        <p>「同时下载字幕」保存平台提供的人工字幕为 SRT。缺少字幕时，已保存的视频仍可播放。</p>
+      </div>
+    </details>
+    <details class="guide-topic">
+      <summary>找不到下载的文件</summary>
+      <div class="guide-copy">
+        <p>在「历史」找到对应记录，点「打开文件位置」。也可以在「设置 → 工具箱」打开总下载目录。文件移动或删除后，原记录仍会保留。</p>
+      </div>
+    </details>
+  </section>
+</main>
+<main id="aboutView" aria-labelledby="aboutHeading" hidden>
+  <h1 id="aboutHeading" tabindex="-1">关于软件</h1>
+  <section class="card" aria-labelledby="aboutName">
+    <div class="about-name"><span class="mark" aria-hidden="true"><svg class="ico"><use href="#i-download"/></svg></span><h2 id="aboutName">多平台视频下载工具</h2></div>
+    <dl class="hint tool-versions">
+      <dt>应用版本</dt><dd id="aboutAppVersion">未读取</dd>
+      <dt>内置 yt-dlp</dt><dd id="aboutEngineVersion">未读取</dd>
+      <dt>支持系统</dt><dd>Android 10 及以上</dd>
+      <dt>安卓端移植</dt><dd>猫猫葉汐A_spy<wbr>（@maomaoyexi）</dd>
+    </dl>
+    <div class="app-update" id="appUpdate" hidden>
+      <div class="settings-links">
+        <button type="button" class="btn" id="checkAppUpdate">检查更新</button>
+        <button type="button" class="btn primary" id="downloadAppUpdate" hidden>下载更新</button>
+      </div>
+      <p class="hint feedback" id="appUpdateNote" role="status"></p>
+      <p class="hint feedback app-update-notes" id="appUpdateNotes" hidden></p>
+    </div>
+  </section>
+  <section class="card" aria-labelledby="aboutFeatures">
+    <h2 id="aboutFeatures">安卓端功能</h2>
+    <ul class="about-list">
+      <li>B 站和 YouTube 点播、分集选择与批量队列。</li>
+      <li>视频封装、M4A 音频和随视频保存的 SRT 字幕。</li>
+      <li>下载历史、文件定位和 FANBOX 公开单帖 ZIP 归档。</li>
+    </ul>
+    <details class="guide-topic">
+      <summary>近期更新</summary>
+      <div class="guide-copy">
+        <p>设置页加入使用帮助和关于软件。B 站和 YouTube 各有独立的 Cookie 开关。手动代理开关移到代理类型旁。</p>
+      </div>
+    </details>
+  </section>
+  <section class="card" aria-labelledby="aboutCredits">
+    <h2 id="aboutCredits">原项目作者与贡献者</h2>
+    <dl class="about-credits">
+      <div>
+        <dt>猫猫葉汐A_spy（@maomaoyexi）</dt>
+        <dd>原版开发与维护，Withny 存档和直播监控，多平台直播录制。</dd>
+      </div>
+      <div>
+        <dt>DarkKandaoMaster（强壮的砍刀）</dt>
+        <dd>重构 WebUI 视觉与交互，改进明暗主题、响应式布局和设置面板。</dd>
+      </div>
+      <div>
+        <dt>ErgouTree（@ergou10086）</dt>
+        <dd>接入 B 站多 P、NicoChannel、Twitter/X、TwitCasting、Rplay 和 FANBOX。开发批量 CLI 和音频工具，完善下载设置，重构直播框架并加入追播校验、弹幕和多任务。</dd>
+      </div>
+      <div>
+        <dt>ZheYi101</dt>
+        <dd>加入随视频下载字幕设置与独立字幕下载工具。</dd>
+      </div>
+    </dl>
+    <p class="hint feedback">源码采用 MIT 许可证。yt-dlp、youtubedl-android 和 FFmpeg 遵循各自的许可证。</p>
+    <div class="about-links">
+      <a class="btn" id="aboutCreditsLink" href="https://github.com/maomaoyexi/video-downloader/blob/main/CREDITS.txt" target="_blank" rel="noopener noreferrer">完整贡献记录</a>
+      <a class="btn" id="aboutProjectLink" href="https://github.com/maomaoyexi/video-downloader" target="_blank" rel="noopener noreferrer">打开项目主页</a>
+    </div>
+  </section>
+  <section class="card guide-card">
+    <details class="guide-topic" id="aboutAgreement">
+      <summary>使用与免责协议</summary>
+      <div class="guide-copy agreement-copy" id="aboutAgreementText"></div>
+    </details>
+  </section>
+</main>
+<dialog class="card agreement-dialog" id="agreementDialog" aria-labelledby="agreementTitle" aria-describedby="agreementHint">
+  <div class="agreement-header">
+    <h2 id="agreementTitle" tabindex="-1">使用与免责协议</h2>
+  </div>
+  <div class="agreement-text agreement-copy" id="agreementText" tabindex="0" role="region" aria-label="协议正文"></div>
+  <div class="agreement-footer">
+    <p class="hint agreement-scroll-hint" id="agreementHint" role="status">下滑阅读完整协议</p>
+    <button class="btn primary" type="button" id="agreementConfirm" disabled>我已阅读并确认</button>
+    <p class="hint feedback" id="agreementNote" role="status" data-error="true"></p>
+  </div>
+</dialog>
+<template id="agreementContents">
+  <p>本协议适用于多平台视频下载工具安卓端。点击「我已阅读并确认」即表示你同意本协议。</p>
+  <p>请仅下载、保存或归档你拥有相应权利或已获授权的内容，遵守适用法律、平台规则及权利人的要求。未经授权，请勿转载或分享获取的内容。</p>
+  <p>请妥善保管 Cookie 和账号凭据。使用平台服务时，账号可能受到限流或平台采取的其他限制。</p>
+  <p>本软件按现状提供。平台、网络或依赖变动可能导致下载失败或功能受限。使用者对自己的下载、保存和传播行为负责。依法不得免除的责任依照适用法律处理。</p>
+</template>
+<dialog class="card collection-dialog" id="collectionDialog" aria-labelledby="collectionTitle">
+  <div class="collection-header">
+    <h2 id="collectionTitle" tabindex="-1">读取分集</h2>
+    <p class="hint" id="collectionStatus" hidden></p>
+    <p class="hint" id="collectionLimit" hidden>列表较长，仅显示前 100 条。</p>
+    <p class="note" id="collectionError" role="alert"></p>
+    <progress id="collectionProgress" aria-label="读取分集进度" hidden></progress>
+  </div>
+  <ul class="collection-list" id="collectionList" aria-label="可选分集" hidden></ul>
+  <div class="collection-footer">
+    <p class="hint" id="collectionCount" aria-live="polite" hidden></p>
+    <div class="collection-actions">
+      <button type="button" class="btn" id="collectionCancel">取消</button>
+      <button type="button" class="btn" id="collectionSingle" hidden>仅下载当前视频</button>
+      <button type="button" class="btn primary" id="collectionRetry" hidden>重试</button>
+      <button type="button" class="btn primary" id="collectionStart" disabled hidden>下载所选</button>
+    </div>
+  </div>
+</dialog>
+<template id="settingsPicker">
+  <div class="settings-picker">
+    <button type="button" class="btn settings-picker-toggle" aria-expanded="false"><span></span></button>
+    <div class="settings-picker-options" role="group" hidden></div>
+  </div>
+</template>
+<template id="historyEntry">
+  <li class="history-entry">
+    <h2 class="history-title"></h2>
+    <div class="history-details">
+      <div class="hint history-meta">
+        <p><span class="history-status"></span><span class="history-platform"></span></p>
+        <time></time>
+      </div>
+      <div class="video-actions">
+        <button type="button" class="btn" data-history-play>播放视频</button>
+        <button type="button" class="btn" data-history-location>打开文件位置</button>
+      </div>
+    </div>
+  </li>
+</template>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+let pressedControl;
+let releasePress;
+function clearPress() {
+  pressedControl?.removeAttribute("data-pressed");
+  pressedControl = null;
+}
+document.addEventListener("pointerdown", event => {
+  if (event.pointerType !== "touch" || !event.isPrimary) return;
+  clearTimeout(releasePress);
+  clearPress();
+  pressedControl = event.target.closest("button:not(:disabled), .quality summary, .switch-row");
+  pressedControl?.setAttribute("data-pressed", "");
+});
+document.addEventListener("pointerup", event => {
+  if (event.pointerType === "touch" && event.isPrimary && pressedControl) {
+    // Keep feedback visible for a tap that ends before the next paint.
+    releasePress = setTimeout(clearPress, 75);
+  }
+});
+document.addEventListener("pointercancel", event => {
+  if (event.pointerType === "touch" && event.isPrimary) clearPress();
+});
+const bridge = window.Downloader || null;
+const hasCookieBridge = typeof bridge?.setPlatformCookiesEnabled === "function";
+const hasCollectionBridge = typeof bridge?.inspectCollection === "function" &&
+  typeof bridge.collectionState === "function" && typeof bridge.cancelCollection === "function";
+const hasLinksImport = typeof bridge?.importLinks === "function" && typeof bridge.linksImportState === "function";
+const hasDownloadDefaults = typeof bridge?.downloadDefaults === "function" && typeof bridge.saveDownloadDefaults === "function";
+const hasDownloadPresets = hasDownloadDefaults && typeof bridge.downloadPresets === "function" &&
+  typeof bridge.saveDownloadPreset === "function" && typeof bridge.deleteDownloadPreset === "function";
+const hasFanbox = typeof bridge?.inspectFanbox === "function" && typeof bridge.archiveFanbox === "function" &&
+  typeof bridge.cancelFanbox === "function" && typeof bridge.fanboxState === "function";
+const hasDownloadDirectory = typeof bridge?.openDownloadDirectory === "function";
+const hasEngineInfo = typeof bridge?.engineInfo === "function";
+const cookieList = byId("cookieList");
+const cookieControls = Array.from(cookieList.querySelectorAll("[data-cookie-platform]"), row => ({
+  platform: row.dataset.cookiePlatform,
+  enabled: row.querySelector("[data-cookie-enabled]"),
+  toggleNote: row.querySelector("[data-cookie-toggle-note]"),
+  status: row.querySelector("[data-cookie-status]"),
+  importButton: row.querySelector("[data-cookie-import]"),
+  removeButton: row.querySelector("[data-cookie-remove]"),
+  note: row.querySelector("[data-cookie-note]"),
+}));
+byId("outputSection").hidden = !hasDownloadDefaults;
+byId("transferFields").hidden = !hasDownloadDefaults;
+byId("settingsPresets").hidden = !hasDownloadPresets;
+byId("toolboxSection").hidden = !hasDownloadDirectory && !hasEngineInfo;
+byId("fanboxSection").hidden = !hasFanbox;
+const settingsDirectory = byId("settingsDirectory");
+const settingsItems = new Map(Array.from(settingsDirectory.querySelectorAll("[data-settings-target]"),
+  item => [item.dataset.settingsTarget, item]));
+let currentSettingsSection;
+
+function setSettingsExpanded(button, expanded) {
+  button.setAttribute("aria-expanded", String(expanded));
+  byId(button.getAttribute("aria-controls")).toggleAttribute("inert", !expanded);
+  settingsItems.get(button.id)?.setAttribute("aria-expanded", String(expanded));
+}
+function selectSettingsSection(button) {
+  settingsItems.get(currentSettingsSection)?.removeAttribute("aria-current");
+  currentSettingsSection = button.id;
+  settingsItems.get(button.id)?.setAttribute("aria-current", "location");
+}
+function jumpToSettingsSection(button, toggle = false) {
+  const section = button.closest(".settings-card");
+  if (section.hidden) return;
+  const collapse = toggle && currentSettingsSection === button.id && button.getAttribute("aria-expanded") === "true";
+  selectSettingsSection(button);
+  setSettingsExpanded(button, !collapse);
+  const sticky = getComputedStyle(settingsDirectory).position === "sticky";
+  const offset = sticky ? Math.ceil(settingsDirectory.getBoundingClientRect().height) + 12 : 12;
+  section.style.scrollMarginTop = `${offset}px`;
+  const instant = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  section.scrollIntoView({block:"start", behavior:instant ? "instant" : "smooth"});
+}
+for (const [id, item] of settingsItems) {
+  const button = byId(id);
+  item.hidden = button.closest(".settings-card").hidden;
+  item.addEventListener("click", () => jumpToSettingsSection(button, true));
+}
+for (const button of document.querySelectorAll(".settings-disclosure")) {
+  button.addEventListener("click", () => {
+    selectSettingsSection(button);
+    setSettingsExpanded(button, button.getAttribute("aria-expanded") !== "true");
+  });
+}
+if (!bridge) document.body.classList.add("preview");
+const qualityButtons = Array.from(document.querySelectorAll("[data-height]"));
+const resolutionPicker = byId("resolutionPicker");
+const downloadSubtitles = byId("downloadSubtitles");
+const rateLimit = byId("rateLimit");
+const fragmentsInput = byId("fragments");
+const videoContainer = byId("videoContainer");
+const videoCodec = byId("videoCodec");
+const proxyScheme = byId("proxyScheme");
+let activeSettingsPicker;
+function closeSettingsPicker() {
+  if (!activeSettingsPicker) return;
+  activeSettingsPicker.setExpanded(false);
+  activeSettingsPicker = undefined;
+}
+function toggleSettingsPicker(picker, expand) {
+  closeSettingsPicker();
+  if (!expand) return;
+  activeSettingsPicker = picker;
+  picker.setExpanded(true);
+}
+function createSettingsPicker(select) {
+  const panel = select.closest(".settings-panel");
+  const element = byId("settingsPicker").content.firstElementChild.cloneNode(true);
+  const toggle = element.firstElementChild;
+  const value = toggle.firstElementChild;
+  const list = toggle.nextElementSibling;
+  const label = select.getAttribute("aria-labelledby");
+  toggle.id = `${select.id}Picker`;
+  value.id = `${select.id}Value`;
+  list.id = `${select.id}Options`;
+  toggle.setAttribute("aria-labelledby", `${label} ${value.id}`);
+  toggle.setAttribute("aria-describedby", select.getAttribute("aria-describedby"));
+  toggle.setAttribute("aria-controls", list.id);
+  list.setAttribute("aria-labelledby", label);
+
+  const choices = Array.from(select.options, option => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn settings-picker-option";
+    button.value = option.value;
+    button.textContent = option.textContent;
+    button.addEventListener("click", () => {
+      if (select.value !== option.value) {
+        select.value = option.value;
+        select.dispatchEvent(new Event("change", {bubbles:true}));
+      }
+      closeSettingsPicker();
+      toggle.focus({preventScroll:true});
+    });
+    list.append(button);
+    return {option, button};
+  });
+  function setExpanded(expanded) {
+    list.hidden = !expanded;
+    toggle.setAttribute("aria-expanded", String(expanded));
+    panel.classList.toggle("settings-picker-open", expanded);
+  }
+  function refresh() {
+    value.textContent = select.options[select.selectedIndex]?.textContent ?? "";
+    toggle.disabled = select.disabled;
+    for (const {option, button} of choices) {
+      button.disabled = select.disabled || option.disabled;
+      button.setAttribute("aria-pressed", String(option.selected));
+    }
+    if (select.disabled && activeSettingsPicker === picker) closeSettingsPicker();
+  }
+  const picker = {element, setExpanded, refresh};
+  toggle.addEventListener("click", () => toggleSettingsPicker(picker, list.hidden));
+  element.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || list.hidden) return;
+    event.preventDefault();
+    closeSettingsPicker();
+    toggle.focus({preventScroll:true});
+  });
+  select.addEventListener("change", refresh);
+  select.after(element);
+  refresh();
+  return picker;
+}
+const settingsPickers = new Map([videoContainer, videoCodec, proxyScheme].map(select => [select, createSettingsPicker(select)]));
+document.addEventListener("click", event => {
+  if (activeSettingsPicker && !activeSettingsPicker.element.contains(event.target)) closeSettingsPicker();
+}, {capture:true});
+const maxRateLimitKiB = 102400;
+const rateLimitError = "请输入 0–102400 KiB/s 的整数。";
+const fragmentError = "请输入 1–16 之间的整数作为分片并发数。";
+const fanboxUrl = byId("fanboxUrl");
+const audioOnlyHeight = -3;
+const maxLinks = 20;
+const maxLinkLength = 2048;
+const collectionDialog = byId("collectionDialog");
+const collectionList = byId("collectionList");
+let collectionRequest;
+let selectedHeight = 0;
+let linksImportRevision;
+let batchItemsKey;
+let fanboxStatus = "idle";
+let fanboxError = "";
+let simulation;
+const settingsButton = byId("openSettings");
+const historyButton = byId("openHistory");
+const historyView = byId("historyView");
+const historyHeading = byId("historyHeading");
+const historyList = byId("historyList");
+const historyNote = byId("historyNote");
+const settingsSubpages = [
+  {key:"help", view:byId("helpView"), heading:byId("helpHeading"), entry:byId("openHelp")},
+  {key:"about", view:byId("aboutView"), heading:byId("aboutHeading"), entry:byId("openAbout")},
+];
+const historyTime = new Intl.DateTimeFormat("zh-CN", {
+  year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23",
+});
+const historyStatuses = new Map([
+  ["completed", "已完成"], ["failed", "下载失败"], ["canceled", "已取消"],
+]);
+const historyActionSelector = "[data-history-play], [data-history-location]";
+const locationError = "暂时无法打开文件位置。";
+const batchStatuses = new Map([
+  ["waiting", "等待中"], ["downloading", "进行中"], ["completed", "已完成"],
+  ["failed", "下载失败"], ["skipped", "已跳过"], ["canceled", "已取消"],
+]);
+let historyPayload;
+
+function showHistoryNote(message, row) {
+  if (row) {
+    if (historyNote.parentElement !== row) row.append(historyNote);
+  } else if (historyNote.parentElement !== historyView) historyHeading.after(historyNote);
+  if (historyNote.textContent !== message) historyNote.textContent = message;
+}
+function createHistoryEntry(record) {
+  const row = byId("historyEntry").content.firstElementChild.cloneNode(true);
+  row.dataset.historyId = String(record.id);
+  row.dataset.status = record.status;
+  const mediaName = record.audioOnly === true ? "音频" : "视频";
+  const title = record.title || "未命名" + mediaName;
+  row.querySelector(".history-title").textContent = title;
+  row.querySelector(".history-status").textContent = historyStatuses.get(record.status) ?? "状态未知";
+  row.querySelector(".history-platform").textContent = record.platform === "youtube" ? "YouTube" : "B 站";
+  const timestamp = new Date(record.finishedAt);
+  const time = row.querySelector("time");
+  if (Number.isFinite(timestamp.getTime())) {
+    time.dateTime = timestamp.toISOString();
+    time.textContent = historyTime.format(timestamp);
+  }
+  if (record.status === "completed") {
+    const play = row.querySelector("[data-history-play]");
+    play.textContent = "播放" + mediaName;
+    play.setAttribute("aria-label", play.textContent + "：" + title);
+    const location = row.querySelector("[data-history-location]");
+    location.hidden = !bridge?.openHistoryVideoLocation;
+    location.setAttribute("aria-label", "打开文件位置：" + title);
+  } else row.querySelector(".video-actions").remove();
+  return row;
+}
+function refreshHistory() {
+  const empty = byId("historyEmpty");
+  let rows;
+  let payload;
+  try {
+    payload = bridge?.downloadHistory?.() ?? "[]";
+    if (payload === historyPayload) return;
+    const records = JSON.parse(payload);
+    records.sort((a, b) => b.finishedAt - a.finishedAt);
+    rows = records.map(createHistoryEntry);
+  } catch {
+    historyPayload = undefined;
+    empty.hidden = true;
+    showHistoryNote("暂时无法读取下载历史。");
+    return;
+  }
+  const focusedAction = document.activeElement?.closest(historyActionSelector);
+  const focusedId = focusedAction?.closest("[data-history-id]").dataset.historyId;
+  const errorId = historyNote.parentElement?.dataset.historyId;
+  historyList.replaceChildren(...rows);
+  historyList.hidden = rows.length === 0;
+  empty.hidden = rows.length !== 0;
+  const errorRow = rows.find(row => row.dataset.historyId === errorId);
+  showHistoryNote(errorRow ? historyNote.textContent : "", errorRow);
+  if (focusedId !== undefined) {
+    const focusRow = rows.find(row => row.dataset.historyId === focusedId);
+    const selector = focusedAction.hasAttribute("data-history-play") ? "[data-history-play]" : "[data-history-location]";
+    (focusRow?.querySelector(selector) ?? historyHeading).focus({preventScroll:true});
+  }
+  historyPayload = payload;
+}
+historyList.addEventListener("click", event => {
+  const action = event.target.closest(historyActionSelector);
+  if (!action) return;
+  const row = action.closest("[data-history-id]");
+  const id = row.dataset.historyId;
+  const play = action.hasAttribute("data-history-play");
+  const fallback = play ? "暂时无法播放此文件。" : locationError;
+  let message = fallback;
+  try { message = (play ? bridge?.playHistoryVideo?.(id) : bridge?.openHistoryVideoLocation?.(id)) ?? fallback; }
+  catch {}
+  showHistoryNote(message, message ? row : null);
+});
+function renderView(moveFocus = false) {
+  if (collectionRequest && history.state?.collection !== true) closeCollection();
+  const settingsOpen = history.state?.settings === true;
+  if (!settingsOpen) closeSettingsPicker();
+  const wasHistoryOpen = !historyView.hidden;
+  const historyOpen = history.state?.history === true;
+  const previousSubpage = settingsSubpages.find(({view}) => !view.hidden);
+  const subpage = settingsSubpages.find(({key}) => history.state?.[key] === true);
+  const downloadOpen = !settingsOpen && !historyOpen && !subpage;
+  byId("downloadView").hidden = !downloadOpen;
+  byId("settingsView").hidden = !settingsOpen;
+  historyView.hidden = !historyOpen;
+  for (const item of settingsSubpages) item.view.hidden = item !== subpage;
+  historyButton.hidden = !downloadOpen;
+  byId("settingsAction").textContent = subpage ? "返回设置" : downloadOpen ? "设置" : "返回下载";
+  byId("settingsIcon").setAttribute("href", downloadOpen ? "#i-settings" : "#i-back");
+  settingsButton.setAttribute("aria-controls", downloadOpen || subpage ? "settingsView" : "downloadView");
+  if (historyOpen) refreshHistory();
+  else if (wasHistoryOpen) showHistoryNote("");
+  if (moveFocus) {
+    if (settingsOpen && previousSubpage) {
+      previousSubpage.entry.focus();
+      return;
+    }
+    window.scrollTo(0, 0);
+    const focusTarget = subpage?.heading ?? (settingsOpen ? byId("settingsHeading") :
+      historyOpen ? historyHeading : wasHistoryOpen ? historyButton : settingsButton);
+    focusTarget.focus({preventScroll:true});
+  }
+}
+function openView(view) {
+  if (history.state?.[view] === true) return;
+  history.pushState({[view]:true}, "", "#" + view);
+  renderView(true);
+}
+function openSettings() {
+  openView("settings");
+}
+historyButton.addEventListener("click", () => openView("history"));
+for (const {key, entry} of settingsSubpages) entry.addEventListener("click", () => openView(key));
+settingsButton.addEventListener("click", () => {
+  if (history.state?.settings === true || history.state?.history === true ||
+      settingsSubpages.some(({key}) => history.state?.[key] === true)) history.back();
+  else openSettings();
+});
+window.addEventListener("popstate", () => renderView(true));
+renderView();
+
+function render(state, importingLinks = false) {
+  byId("task").hidden = !state.busy && state.phase === "等待添加任务";
+  let phase = state.phase;
+  if (bridge && !state.busy && state.batchTotal > 1 && phase !== "启动失败") {
+    if (state.batchStopped) phase = "队列已停止";
+    else if (state.batchCompleted + state.batchFailed + (state.batchSkipped ?? 0) === state.batchTotal) phase = "队列已结束";
+  }
+  byId("phase").textContent = phase;
+  if (byId("detail").textContent !== state.detail) byId("detail").textContent = state.detail;
+  const value = Number(state.percent);
+  const determinate = Boolean(state.busy) && value >= 0;
+  byId("progress").hidden = !state.busy;
+  if (determinate) byId("progress").value = value;
+  else byId("progress").removeAttribute("value");
+  byId("percent").hidden = !determinate;
+  byId("percent").textContent = determinate ? Math.floor(value) + "%" : "";
+  const speed = byId("speed");
+  const speedText = state.busy && state.phase === "正在下载" ? state.speed ?? "" : "";
+  speed.hidden = !speedText;
+  if (speed.textContent !== speedText) speed.textContent = speedText;
+  const eta = byId("eta");
+  const etaText = state.busy && state.phase === "正在下载" && Number.isInteger(state.etaSeconds) && state.etaSeconds >= 0
+    ? formatEta(state.etaSeconds) : "";
+  eta.hidden = !etaText;
+  if (eta.textContent !== etaText) eta.textContent = etaText;
+  byId("start").hidden = state.busy;
+  const inputBusy = state.busy || importingLinks;
+  byId("start").disabled = inputBusy;
+  byId("url").disabled = inputBusy;
+  refreshClearButton();
+  byId("paste").disabled = inputBusy;
+  byId("importLinks").disabled = inputBusy;
+  byId("proxyEnabled").disabled = state.busy;
+  byId("proxyAddress").disabled = state.busy;
+  byId("proxyPort").disabled = state.busy;
+  fragmentsInput.disabled = state.busy;
+  for (const [select, picker] of settingsPickers) {
+    const disabled = Boolean(state.busy);
+    if (select.disabled === disabled) continue;
+    select.disabled = disabled;
+    picker.refresh();
+  }
+  byId("proxyBusy").hidden = !state.busy;
+  byId("example").disabled = state.busy;
+  byId("cancel").hidden = !state.busy;
+  byId("cancel").disabled = !state.busy || state.phase === "正在取消";
+  renderBatch(state);
+  const hasSavedMedia = Boolean(bridge && !state.busy && state.canPlay);
+  byId("taskActions").hidden = !hasSavedMedia;
+  const play = byId("playVideo");
+  play.hidden = !hasSavedMedia;
+  const playText = state.audioOnly === true ? "播放音频" : "播放视频";
+  if (play.textContent !== playText) play.textContent = playText;
+  byId("openVideoLocation").hidden = !hasSavedMedia || !bridge?.openVideoLocation;
+  if (!hasSavedMedia) byId("videoLocationNote").textContent = "";
+  byId("statusDot").dataset.state = state.busy ? "busy" :
+    state.phase === "下载失败" || state.phase === "启动失败" ? "failed" :
+    Number(state.percent) === 100 ? "done" : "idle";
+  for (const button of qualityButtons) button.disabled = state.busy;
+  rateLimit.disabled = state.busy;
+  const presetsButton = byId("openDownloadPresets");
+  presetsButton.disabled = state.busy;
+  if (state.busy && presetsButton.getAttribute("aria-expanded") === "true") closeSettingsPicker();
+  renderDownloadOptions();
+}
+function formatEta(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor(seconds / 60) % 60;
+  if (hours) return `预计剩余 ${hours} 小时 ${minutes} 分`;
+  const remaining = seconds % 60;
+  return minutes ? `预计剩余 ${minutes} 分 ${remaining} 秒` : `预计剩余 ${remaining} 秒`;
+}
+function selectDownloadHeight(height) {
+  const selected = qualityButtons.find(button => Number(button.dataset.height) === height);
+  if (!selected) return;
+  selectedHeight = height;
+  for (const button of qualityButtons) button.setAttribute("aria-pressed", String(button === selected));
+  renderDownloadOptions();
+}
+function renderDownloadOptions() {
+  const audioOnly = selectedHeight === audioOnlyHeight;
+  byId("subtitleOption").hidden = audioOnly;
+  downloadSubtitles.disabled = audioOnly || byId("start").disabled;
+  const quality = qualityButtons.find(button => Number(button.dataset.height) === selectedHeight).textContent;
+  const text = !audioOnly && downloadSubtitles.checked ? quality + " · 字幕" : quality;
+  const value = byId("resolutionValue");
+  if (value.textContent !== text) value.textContent = text;
+}
+function renderBatch(state) {
+  const isBatch = state.batchTotal > 1;
+  const skip = byId("skipCurrent");
+  skip.hidden = !isBatch || !state.busy || state.canSkip !== true || typeof bridge?.skipCurrent !== "function";
+  const cancel = byId("cancel");
+  const cancelText = isBatch ? "停止队列" : "停止下载";
+  if (cancel.textContent !== cancelText) cancel.textContent = cancelText;
+  const position = byId("batchPosition");
+  position.hidden = !isBatch || !state.busy || !(state.batchIndex > 0);
+  if (!position.hidden) {
+    const text = `第 ${state.batchIndex} / ${state.batchTotal} 条`;
+    if (position.textContent !== text) position.textContent = text;
+  }
+  const summary = byId("batchSummary");
+  summary.hidden = !isBatch || state.busy;
+  if (!summary.hidden) {
+    const completed = state.batchCompleted ?? 0;
+    const failed = state.batchFailed ?? 0;
+    const skipped = state.batchSkipped ?? 0;
+    const stopped = state.batchTotal - completed - failed - skipped;
+    const skippedText = skipped > 0 ? ` · 跳过 ${skipped}` : "";
+    const remaining = state.batchStopped && stopped > 0 ? ` · 未完成 ${stopped} 条` : "";
+    const text = `成功 ${completed} · 失败 ${failed}` + skippedText + remaining;
+    if (summary.textContent !== text) summary.textContent = text;
+  }
+  renderBatchItems(isBatch && Array.isArray(state.batchItems) ? state.batchItems.slice(0, maxLinks) : []);
+}
+function renderBatchItems(items) {
+  const details = byId("batchDetails");
+  details.hidden = items.length < 2;
+  const key = JSON.stringify(items);
+  if (key === batchItemsKey) return;
+  batchItemsKey = key;
+  if (details.hidden) details.open = false;
+  byId("batchList").replaceChildren(...items.map(({url, status}) => {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    label.className = "batch-status";
+    label.dataset.status = status;
+    label.textContent = batchStatuses.get(status) ?? "状态未知";
+    const link = document.createElement("span");
+    link.className = "batch-url";
+    link.textContent = url;
+    item.append(label, link);
+    return item;
+  }));
+}
+function readNative() {
+  const state = JSON.parse(bridge.snapshot());
+  let linksImport;
+  if (hasLinksImport) {
+    try { linksImport = JSON.parse(bridge.linksImportState()); }
+    catch {}
+  }
+  render(state, linksImport?.busy === true);
+  if (linksImport) refreshLinksImport(linksImport);
+  if (hasCookieBridge) renderCookies(state.busy);
+  if (hasFanbox) renderFanbox();
+  if (!historyView.hidden) refreshHistory();
+  refreshCollection();
+}
+function renderCookies(downloadBusy) {
+  const states = cookieControls.map(({platform}) => JSON.parse(bridge.cookieState(platform)));
+  const cookieBusy = states.some(state => state.busy);
+  const busy = downloadBusy || cookieBusy;
+  for (const [i, {enabled, status, importButton, removeButton, note}] of cookieControls.entries()) {
+    const state = states[i];
+    enabled.checked = state.enabled === true;
+    enabled.disabled = busy;
+    status.textContent = state.configured ? "已配置" : "未配置";
+    importButton.disabled = busy;
+    removeButton.hidden = !state.configured;
+    removeButton.disabled = busy || !state.configured;
+    if (note.textContent !== state.message) note.textContent = state.message;
+  }
+  const busyNote = byId("cookieBusy");
+  const message = downloadBusy ? "当前任务结束后可更改 Cookie。" : cookieBusy ? "正在处理 Cookie…" : "";
+  if (busyNote.textContent !== message) busyNote.textContent = message;
+}
+if (hasCookieBridge) {
+  for (const {platform, enabled, toggleNote, importButton, removeButton} of cookieControls) {
+    enabled.addEventListener("change", () => {
+      toggleNote.textContent = bridge.setPlatformCookiesEnabled(platform, enabled.checked);
+      readNative();
+    });
+    importButton.addEventListener("click", () => {
+      toggleNote.textContent = "";
+      bridge.importCookies(platform);
+      readNative();
+    });
+    removeButton.addEventListener("click", () => {
+      toggleNote.textContent = "";
+      bridge.removeCookies(platform);
+      readNative();
+    });
+  }
+}
+const youtubeHosts = ["youtube.com", "www.youtube.com", "m.youtube.com"];
+const bilibiliHosts = ["bilibili.com", "www.bilibili.com", "m.bilibili.com"];
+function collectionKind(target) {
+  const host = target.hostname;
+  if (host === "b23.tv" || bilibiliHosts.includes(host)) {
+    return target.searchParams.has("p") ? "" : "bilibili";
+  }
+  if (!/^[A-Za-z0-9_-]{2,128}$/.test(target.searchParams.get("list") ?? "")) return "";
+  if (youtubeHosts.includes(host)) {
+    if (/^\/playlist\/?$/.test(target.pathname)) return "playlist";
+    if (target.pathname === "/watch") return "watch-list";
+  }
+  if (host === "youtu.be" && /^\/[\w-]{11}\/?$/.test(target.pathname)) return "watch-list";
+  return "";
+}
+function validate(value) {
+  if (/\s/.test(value)) return "请输入完整的视频链接。";
+  let target;
+  try { target = new URL(value); }
+  catch { return "请输入完整的视频链接。"; }
+  if (!["https:", "http:"].includes(target.protocol) || target.username || target.password || target.port) {
+    return "请使用正常的 YouTube 或哔哩哔哩观看链接。";
+  }
+  const host = target.hostname;
+  if (host === "youtu.be" || host === "b23.tv") {
+    return /^\/[\w-]+\/?$/.test(target.pathname) ? "" : "短链接不完整。";
+  }
+  if (youtubeHosts.includes(host)) {
+    if (hasCollectionBridge && collectionKind(target) === "playlist") return "";
+    const videoId = target.pathname === "/watch" ? target.searchParams.get("v") :
+      target.pathname.match(/^\/(?:live|shorts)\/([\w-]+)\/?$/)?.[1];
+    return /^[\w-]{11}$/.test(videoId || "") ? "" : hasCollectionBridge ?
+      "请输入 YouTube 视频、回放或播放列表链接。" : "请输入单个 YouTube 视频或回放链接。";
+  }
+  if (bilibiliHosts.includes(host)) {
+    return /^\/video\/(?:BV[\w]+|av\d+)\/?$/i.test(target.pathname) ? "" :
+      "请输入单个哔哩哔哩点播视频链接。";
+  }
+  return "安卓端支持 YouTube 和哔哩哔哩点播。";
+}
+function videoLinks(text) {
+  return text.split(/\r\n?|\n/).map((line, index) => ({url:line.trim(), line:index + 1}))
+    .filter(link => link.url);
+}
+function validateLinks(links) {
+  if (!links.length) return "请输入完整的视频链接。";
+  if (links.length > maxLinks) return `一次最多下载 ${maxLinks} 条视频。`;
+  for (const {url, line} of links) {
+    let message = url.length > maxLinkLength ? `链接不能超过 ${maxLinkLength} 个字符。` : validate(url);
+    if (!message && links.length > 1 && collectionKind(new URL(url)) === "playlist") {
+      message = "请单独提交播放列表链接，展开后选择要下载的视频。";
+    }
+    if (message) return links.length === 1 && line === 1 ? message : `第 ${line} 行：${message}`;
+  }
+  return "";
+}
+function setFeedback(id, message, error = false) {
+  const note = byId(id);
+  if (note.textContent !== message) note.textContent = message;
+  note.dataset.error = String(error);
+}
+function refreshLinksImport({revision, busy, text, message}) {
+  const previous = linksImportRevision;
+  if (previous === undefined) linksImportRevision = revision;
+  if (busy) {
+    setFeedback("linksImportNote", "正在读取 TXT…");
+    return;
+  }
+  if (revision === undefined || previous === undefined || previous === revision) return;
+  linksImportRevision = revision;
+  if (message || !text) {
+    setFeedback("linksImportNote", message ?? "", Boolean(message));
+    return;
+  }
+
+  const imported = videoLinks(text).filter(({url}) => !url.startsWith("#"));
+  const invalid = validateLinks(imported);
+  if (invalid) {
+    setFeedback("linksImportNote", "TXT 导入失败。" + invalid, true);
+    return;
+  }
+  const input = byId("url");
+  const appended = [input.value.trimEnd(), ...imported.map(({url}) => url)].filter(Boolean).join("\n");
+  const conflict = validateLinks(videoLinks(appended));
+  if (conflict) {
+    setFeedback("linksImportNote", "无法追加链接。" + conflict, true);
+    return;
+  }
+  input.value = appended;
+  byId("formNote").textContent = "";
+  refreshPlatform();
+  setFeedback("linksImportNote", `已导入 ${imported.length} 条链接，请检查后开始下载。`);
+}
+if (hasLinksImport) {
+  const importButton = byId("importLinks");
+  importButton.hidden = false;
+  importButton.addEventListener("click", () => {
+    setFeedback("linksImportNote", "");
+    try {
+      const message = bridge.importLinks();
+      readNative();
+      if (message) setFeedback("linksImportNote", message, true);
+    } catch {
+      setFeedback("linksImportNote", "无法打开 TXT 文件选择器。", true);
+    }
+  });
+}
+function refreshClearButton() {
+  const input = byId("url");
+  byId("clearUrl").disabled = input.disabled || !input.value;
+}
+function refreshPlatform() {
+  refreshClearButton();
+  let youtube = false;
+  let bilibili = false;
+  for (const {url} of videoLinks(byId("url").value).slice(0, maxLinks)) {
+    if (url.length > maxLinkLength || validate(url)) continue;
+    const host = new URL(url).hostname;
+    if (host === "youtu.be" || /(^|\.)youtube\.com$/.test(host)) youtube = true;
+    else bilibili = true;
+    if (youtube && bilibili) break;
+  }
+  byId("youtubeChip").setAttribute("aria-current", String(youtube));
+  byId("biliChip").setAttribute("aria-current", String(bilibili));
+  const hint = byId("platformHint");
+  let text = "自动识别 YouTube 和哔哩哔哩链接";
+  if (youtube && bilibili) text = "已识别 YouTube 和哔哩哔哩链接";
+  else if (youtube) text = "已识别为 YouTube";
+  else if (bilibili) text = "已识别为哔哩哔哩";
+  if (hint.textContent !== text) hint.textContent = text;
+}
+byId("url").addEventListener("input", () => {
+  byId("formNote").textContent = "";
+  setFeedback("linksImportNote", "");
+  refreshPlatform();
+});
+byId("playVideo").addEventListener("click", () => bridge?.playVideo());
+byId("openVideoLocation").addEventListener("click", () => {
+  let message = locationError;
+  try { message = bridge?.openVideoLocation?.() ?? locationError; }
+  catch {}
+  byId("videoLocationNote").textContent = message;
+});
+function clearProxyNote() {
+  byId("proxyNote").textContent = "";
+}
+byId("proxyEnabled").addEventListener("change", clearProxyNote);
+proxyScheme.addEventListener("change", clearProxyNote);
+byId("proxyAddress").addEventListener("input", clearProxyNote);
+byId("proxyPort").addEventListener("input", clearProxyNote);
+function validProxy(scheme, address, port) {
+  if (!["http", "socks5"].includes(scheme)) return false;
+  if (!/^(?:[a-z0-9][a-z0-9.-]*|\[[0-9a-f:]+\])$/i.test(address)
+      || !/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535) return false;
+  try { return Boolean(new URL(`${scheme}://${address}:${port}`).hostname); }
+  catch { return false; }
+}
+byId("url").addEventListener("keydown", event => {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing) {
+    event.preventDefault();
+    byId("start").click();
+  }
+});
+for (const button of qualityButtons) {
+  button.addEventListener("click", () => {
+    selectDownloadHeight(Number(button.dataset.height));
+    resolutionPicker.open = false;
+    byId("resolutionSummary").focus({preventScroll:true});
+  });
+}
+downloadSubtitles.addEventListener("change", renderDownloadOptions);
+byId("clearUrl").addEventListener("click", event => {
+  const input = byId("url");
+  input.value = "";
+  byId("formNote").textContent = "";
+  setFeedback("linksImportNote", "");
+  refreshPlatform();
+  if (event.detail === 0) input.focus({preventScroll:true});
+});
+byId("paste").addEventListener("click", async () => {
+  byId("formNote").textContent = "";
+  setFeedback("linksImportNote", "");
+  try {
+    const copied = bridge ? bridge.clipboardText() : await navigator.clipboard.readText();
+    if (!copied) throw Error();
+    byId("url").value = copied.includes("\n") || copied.includes("\r") ? copied : copied.trim();
+    refreshPlatform();
+  } catch {
+    byId("url").focus();
+    byId("formNote").textContent = "请长按输入框粘贴链接。";
+  }
+});
+byId("example").addEventListener("click", () => {
+  byId("url").value = "https://www.youtube.com/watch?v=UpYrR2rLdRg";
+  refreshPlatform();
+  byId("formNote").textContent = "";
+});
+function currentRateLimit() {
+  const number = rateLimit.value.trim();
+  return /^\d{1,6}$/.test(number) && Number(number) <= maxRateLimitKiB ? Number(number) : NaN;
+}
+function validFragments(value) {
+  return Number.isInteger(value) && value >= 1 && value <= 16;
+}
+function currentFragments() {
+  const value = fragmentsInput.value.trim();
+  const count = Number(value);
+  return /^\d{1,2}$/.test(value) && validFragments(count) ? count : NaN;
+}
+function checkTransferSettings(rateLimitKiB, fragments) {
+  const message = Number.isNaN(rateLimitKiB) ? rateLimitError : Number.isNaN(fragments) ? fragmentError : "";
+  if (!message) return true;
+  openSettings();
+  byId("transferNote").textContent = message;
+  jumpToSettingsSection(byId("proxyDisclosure"));
+  return false;
+}
+function updateOutputChoices() {
+  const webm = videoContainer.value === "webm";
+  videoCodec.querySelector('option[value="h264"]').disabled = webm;
+  if (webm && videoCodec.value === "h264") videoCodec.value = "auto";
+  settingsPickers.get(videoContainer).refresh();
+  settingsPickers.get(videoCodec).refresh();
+}
+videoContainer.addEventListener("change", updateOutputChoices);
+function applyDownloadOptions(options) {
+  if (Number.isInteger(options.rateLimitKiB) && options.rateLimitKiB >= 0 && options.rateLimitKiB <= maxRateLimitKiB) {
+    rateLimit.value = String(options.rateLimitKiB);
+  }
+  if (Array.from(videoContainer.options).some(option => option.value === options.videoContainer)) {
+    videoContainer.value = options.videoContainer;
+  }
+  if (Array.from(videoCodec.options).some(option => option.value === options.videoCodec)) {
+    videoCodec.value = options.videoCodec;
+  }
+  if (validFragments(options.fragments)) fragmentsInput.value = String(options.fragments);
+  updateOutputChoices();
+  downloadSubtitles.checked = options.subtitles === true;
+  selectDownloadHeight(options.height);
+}
+function currentDownloadOptions() {
+  return {height:selectedHeight, subtitles:downloadSubtitles.checked && selectedHeight !== audioOnlyHeight,
+    rateLimitKiB:currentRateLimit(), videoContainer:videoContainer.value, videoCodec:videoCodec.value, fragments:currentFragments()};
+}
+function downloadOptionArgs({height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments}) {
+  return [height, subtitles, rateLimitKiB, videoContainer, videoCodec, fragments];
+}
+function persistDownloadDefaults(options) {
+  const error = "无法加载配置预设。";
+  try { return bridge.saveDownloadDefaults(...downloadOptionArgs(options)) ?? error; }
+  catch { return error; }
+}
+const defaultDownloadPreset = {name:"默认配置", ...currentDownloadOptions()};
+if (hasDownloadDefaults) {
+  try {
+    applyDownloadOptions(JSON.parse(bridge.downloadDefaults()));
+  } catch {
+    setFeedback("defaultsNote", "无法读取默认下载选项。", true);
+  }
+  for (const input of [rateLimit, fragmentsInput]) {
+    input.addEventListener("input", () => {
+      byId("transferNote").textContent = "";
+      setFeedback("defaultsNote", "");
+    });
+  }
+}
+if (hasDownloadPresets) {
+  const toggle = byId("openDownloadPresets");
+  const panel = byId("downloadPresetsPanel");
+  const list = byId("downloadPresetList");
+  const form = byId("downloadPresetForm");
+  const nameInput = byId("downloadPresetName");
+  const newButton = byId("newDownloadPreset");
+  const saveButton = byId("saveDownloadPreset");
+  let presets = [];
+
+  function closePresetsWithStatus(message) {
+    closeSettingsPicker();
+    setFeedback("defaultsNote", message);
+    toggle.focus({preventScroll:true});
+  }
+  function presetRow(preset, builtIn = false) {
+    const row = document.createElement("div");
+    row.className = "preset-row";
+    const title = !builtIn && preset.name === defaultDownloadPreset.name ? `${preset.name}（自定义）` : preset.name;
+    const name = document.createElement("span");
+    name.className = "preset-name";
+    name.textContent = title;
+    const actions = document.createElement("div");
+    actions.className = "preset-row-actions";
+    const load = document.createElement("button");
+    load.type = "button";
+    load.className = "btn preset-load";
+    load.textContent = "加载";
+    load.setAttribute("aria-label", `加载「${title}」`);
+    load.addEventListener("click", () => {
+      const message = persistDownloadDefaults(preset);
+      if (message) {
+        setFeedback("downloadPresetNote", message, true);
+        return;
+      }
+      applyDownloadOptions(preset);
+      byId("transferNote").textContent = "";
+      closePresetsWithStatus(`已加载「${title}」。`);
+    });
+    actions.append(load);
+    row.append(name, actions);
+    if (builtIn) return row;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn preset-delete";
+    remove.textContent = "删除";
+    remove.setAttribute("aria-label", `删除「${title}」`);
+    let confirmDelete = false;
+    remove.addEventListener("click", () => {
+      if (!confirmDelete) {
+        confirmDelete = true;
+        remove.textContent = "确认删除";
+        remove.setAttribute("aria-label", `确认删除「${title}」`);
+        return;
+      }
+      let message = "无法删除预设。";
+      try { message = bridge.deleteDownloadPreset(preset.name) ?? message; } catch {}
+      if (message) {
+        setFeedback("downloadPresetNote", message, true);
+        return;
+      }
+      if (refreshPresets()) {
+        updatePresetName();
+        setFeedback("downloadPresetNote", `已删除预设「${preset.name}」。`);
+      }
+      newButton.focus({preventScroll:true});
+    });
+    actions.append(remove);
+    return row;
+  }
+  function refreshPresets() {
+    list.replaceChildren(presetRow(defaultDownloadPreset, true));
+    try {
+      presets = JSON.parse(bridge.downloadPresets());
+      if (!Array.isArray(presets)) throw new Error("Invalid download presets");
+      list.append(...presets.map(preset => presetRow(preset)));
+      newButton.disabled = false;
+      return true;
+    } catch {
+      presets = [];
+      newButton.disabled = true;
+      setFeedback("downloadPresetNote", "无法读取配置预设。", true);
+      return false;
+    }
+  }
+  function updatePresetName() {
+    const name = nameInput.value.trim();
+    saveButton.disabled = !name;
+    saveButton.textContent = presets.some(preset => preset.name === name) ? "覆盖" : "保存预设";
+  }
+  const picker = {
+    element:byId("settingsPresets"),
+    setExpanded(expanded) {
+      panel.hidden = !expanded;
+      toggle.setAttribute("aria-expanded", String(expanded));
+      if (!expanded) return;
+      form.hidden = true;
+      setFeedback("downloadPresetNote", "");
+      refreshPresets();
+    },
+  };
+  toggle.addEventListener("click", () => toggleSettingsPicker(picker, panel.hidden));
+  picker.element.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || panel.hidden) return;
+    event.preventDefault();
+    closeSettingsPicker();
+    toggle.focus({preventScroll:true});
+  });
+  newButton.addEventListener("click", () => {
+    form.hidden = false;
+    nameInput.value = "";
+    updatePresetName();
+    setFeedback("downloadPresetNote", "");
+    nameInput.focus();
+  });
+  byId("cancelDownloadPreset").addEventListener("click", () => {
+    form.hidden = true;
+    setFeedback("downloadPresetNote", "");
+    newButton.focus();
+  });
+  nameInput.addEventListener("input", updatePresetName);
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name || form.hidden || panel.hidden) return;
+    const options = currentDownloadOptions();
+    if (!checkTransferSettings(options.rateLimitKiB, options.fragments)) {
+      closeSettingsPicker();
+      return;
+    }
+    let message = "无法保存配置预设。";
+    try { message = bridge.saveDownloadPreset(name, ...downloadOptionArgs(options)) ?? message; } catch {}
+    if (message) setFeedback("downloadPresetNote", message, true);
+    else closePresetsWithStatus(`已保存预设「${name}」。`);
+  });
+}
+if (hasDownloadDirectory) {
+  const button = byId("openDownloadDirectory");
+  button.hidden = false;
+  button.addEventListener("click", () => {
+    setFeedback("toolNote", "");
+    try { bridge.openDownloadDirectory(); }
+    catch { setFeedback("toolNote", "暂时无法打开下载目录。", true); }
+  });
+}
+if (hasEngineInfo) {
+  try {
+    const {appVersion, engineVersion} = JSON.parse(bridge.engineInfo());
+    byId("toolVersions").hidden = !appVersion && !engineVersion;
+    byId("appVersion").textContent = appVersion || "未知";
+    byId("engineVersion").textContent = engineVersion || "未知";
+    byId("aboutAppVersion").textContent = appVersion || "未读取";
+    byId("aboutEngineVersion").textContent = engineVersion || "未读取";
+  } catch {}
+} else if (!bridge) {
+  byId("aboutAppVersion").textContent = "浏览器预览";
+}
+if (typeof bridge?.openProjectPage === "function") {
+  byId("aboutProjectLink").addEventListener("click", event => {
+    event.preventDefault();
+    bridge.openProjectPage();
+  });
+}
+if (typeof bridge?.openProjectCredits === "function") {
+  byId("aboutCreditsLink").addEventListener("click", event => {
+    event.preventDefault();
+    bridge.openProjectCredits();
+  });
+}
+if (typeof bridge?.checkAppUpdate === "function" && typeof bridge.openAppUpdate === "function") {
+  const checkButton = byId("checkAppUpdate");
+  const downloadButton = byId("downloadAppUpdate");
+  const notes = byId("appUpdateNotes");
+  const checkError = "检查更新失败，请稍后重试。";
+  byId("appUpdate").hidden = false;
+
+  function showUpdateResult({status, version, notes: releaseNotes, message} = {}) {
+    checkButton.disabled = false;
+    const available = status === "available";
+    const validVersion = typeof version === "string" && version.trim();
+    notes.textContent = available && typeof releaseNotes === "string" ? releaseNotes.trim() : "";
+    notes.hidden = !notes.textContent;
+    downloadButton.hidden = !available;
+    const notice = typeof message === "string" ? message.trim() : "";
+    switch (status) {
+      case "available":
+        setFeedback("appUpdateNote", validVersion ? `发现新版本 ${validVersion}` : "发现新版本");
+        break;
+      case "current":
+        setFeedback("appUpdateNote", "已是最新版。");
+        break;
+      case "unpublished":
+        setFeedback("appUpdateNote", "暂无可下载的安卓发布版本。");
+        break;
+      default:
+        setFeedback("appUpdateNote", notice || checkError, true);
+    }
+  }
+
+  checkButton.addEventListener("click", () => {
+    if (checkButton.disabled) return;
+    checkButton.disabled = true;
+    downloadButton.hidden = true;
+    notes.hidden = true;
+    setFeedback("appUpdateNote", "正在检查更新…");
+    try { bridge.checkAppUpdate(); }
+    catch { showUpdateResult(); }
+  });
+  window.addEventListener("app-update-result", event => {
+    if (checkButton.disabled) showUpdateResult(event.detail ?? undefined);
+  });
+  downloadButton.addEventListener("click", () => {
+    if (downloadButton.hidden) return;
+    try { bridge.openAppUpdate(); }
+    catch { setFeedback("appUpdateNote", "暂时无法打开下载页面，请重试。", true); }
+  });
+}
+function renderFanbox() {
+  let state;
+  try { state = JSON.parse(bridge.fanboxState()); }
+  catch {}
+  const {status, title, detail, files, preview, filename} = state ?? {status:"error", detail:"无法读取归档状态。"};
+  fanboxStatus = status;
+  const busy = status === "loading" || status === "saving";
+  const ready = status === "ready";
+  const showPreview = ready || status === "saving";
+  fanboxUrl.disabled = busy;
+  byId("inspectFanbox").disabled = busy || !fanboxUrl.value.trim();
+  byId("archiveFanbox").hidden = !ready;
+  byId("cancelFanbox").hidden = !busy && !ready;
+  byId("fanboxProgress").hidden = !busy;
+  byId("fanboxPreview").hidden = !showPreview;
+  const heading = byId("fanboxTitle");
+  const titleText = showPreview ? title || "未命名帖子" : "";
+  if (heading.textContent !== titleText) heading.textContent = titleText;
+  const count = byId("fanboxFileCount");
+  const countText = showPreview && Number.isInteger(files) && files >= 0 ? `图片和附件共 ${files} 项。` : "";
+  if (count.textContent !== countText) count.textContent = countText;
+  const excerpt = byId("fanboxExcerpt");
+  const previewText = showPreview && typeof preview === "string" ? preview : "";
+  if (excerpt.textContent !== previewText) excerpt.textContent = previewText;
+  excerpt.hidden = !previewText;
+  const output = byId("fanboxFilename");
+  const outputText = status === "saved" ? filename ?? "" : "";
+  if (output.textContent !== outputText) output.textContent = outputText;
+  output.hidden = !outputText;
+  setFeedback("fanboxNote", fanboxError || detail || "", Boolean(fanboxError) || status === "error");
+}
+function runFanbox(action, fallback) {
+  fanboxError = fallback;
+  try { fanboxError = action() ?? ""; }
+  catch {}
+  renderFanbox();
+}
+if (hasFanbox) {
+  fanboxUrl.addEventListener("input", () => {
+    fanboxError = "";
+    if (fanboxStatus !== "idle") runFanbox(() => bridge.cancelFanbox(), "无法清除旧的帖子预览。");
+    else renderFanbox();
+  });
+  byId("inspectFanbox").addEventListener("click", () => {
+    runFanbox(() => bridge.inspectFanbox(fanboxUrl.value.trim()), "无法读取 FANBOX 帖子。");
+  });
+  byId("archiveFanbox").addEventListener("click", () => {
+    runFanbox(() => bridge.archiveFanbox(), "无法保存 FANBOX 帖子。");
+  });
+  byId("cancelFanbox").addEventListener("click", () => {
+    runFanbox(() => bridge.cancelFanbox(), "无法取消 FANBOX 操作。");
+  });
+}
+function startNative(value, options) {
+  const {height, proxy, address, port, subtitles, rateLimitKiB, container, codec, scheme, fragments} = options;
+  byId("formNote").textContent = bridge.start(value, height, proxy, address, port, subtitles && height !== audioOnlyHeight,
+    rateLimitKiB, container, codec, scheme, fragments);
+  readNative();
+}
+function updateCollectionSelection() {
+  const choices = Array.from(collectionList.querySelectorAll("input"));
+  const count = choices.filter(choice => choice.checked).length;
+  byId("collectionCount").textContent = `已选 ${count} / ${maxLinks}`;
+  byId("collectionStart").disabled = count === 0 || count > maxLinks;
+  for (const choice of choices) choice.disabled = count >= maxLinks && !choice.checked;
+}
+function collectionRow(entry, index, kind) {
+  const item = document.createElement("li");
+  const label = document.createElement("label");
+  label.className = "collection-row";
+  const check = document.createElement("input");
+  check.type = "checkbox";
+  check.id = `collectionEntry${index + 1}`;
+  const text = document.createElement("span");
+  const number = document.createElement("span");
+  number.className = "collection-number";
+  number.textContent = kind === "bilibili" ? `P${entry.ordinal}` : `第 ${entry.ordinal} 条`;
+  text.append(number);
+  if (entry.title && ![number.textContent, `第 ${entry.ordinal} P`].includes(entry.title)) {
+    text.append(document.createTextNode(" " + entry.title));
+  }
+  label.append(check, text);
+  item.append(label);
+  return item;
+}
+function showCollection(result) {
+  const request = collectionRequest;
+  const entries = result.status === "ready" && Array.isArray(result.entries) ? result.entries : [];
+  request.entries = entries.filter(entry => Number.isInteger(entry?.ordinal) && entry.ordinal > 0 &&
+    typeof entry.url === "string" && entry.url.length <= maxLinkLength && !validate(entry.url) &&
+    collectionKind(new URL(entry.url)) !== "playlist")
+    .sort((first, second) => first.ordinal - second.ordinal).slice(0, 100);
+  const ready = request.entries.length > 0;
+  const loading = result.status === "loading";
+  const failed = !ready && !loading;
+  byId("collectionTitle").textContent = ready ? "选择分集" : loading ? "读取分集" : "读取失败";
+  const status = byId("collectionStatus");
+  status.textContent = ready ? result.title ?? "" : "";
+  status.hidden = !status.textContent;
+  byId("collectionLimit").hidden = !ready || (!result.truncated && entries.length <= 100);
+  byId("collectionProgress").hidden = !loading;
+  byId("collectionError").textContent = failed ? result.message || "无法读取分集，请重试。" : "";
+  collectionList.replaceChildren(...request.entries.map((entry, index) => collectionRow(entry, index, request.kind)));
+  collectionList.hidden = !ready;
+  byId("collectionCount").hidden = !ready;
+  byId("collectionStart").hidden = !ready;
+  byId("collectionRetry").hidden = !failed;
+  const singleUsable = request.kind !== "playlist" && (failed || (ready && request.kind === "watch-list"));
+  byId("collectionSingle").hidden = !singleUsable;
+  updateCollectionSelection();
+}
+function closeCollection() {
+  if (!collectionRequest) return;
+  collectionRequest = null;
+  try { bridge.cancelCollection(); }
+  catch {}
+  collectionDialog.close();
+  if (history.state?.collection) history.back();
+}
+function submitCollection(value) {
+  const {options} = collectionRequest;
+  closeCollection();
+  startNative(value, options);
+}
+function refreshCollection() {
+  if (!collectionRequest?.pending) return;
+  let result;
+  try { result = JSON.parse(bridge.collectionState()); }
+  catch { result = {status:"error"}; }
+  if (result?.status === "loading" || result?.status === "idle") return;
+  collectionRequest.pending = false;
+  if (result?.status === "single" && collectionRequest.kind === "bilibili") {
+    submitCollection(collectionRequest.url);
+    return;
+  }
+  showCollection(result ?? {status:"error"});
+}
+function inspectCollection() {
+  const {url, options} = collectionRequest;
+  let message = "无法读取分集，请重试。";
+  try { message = bridge.inspectCollection(url, options.proxy, options.address, options.port, options.scheme) ?? message; }
+  catch {}
+  collectionRequest.pending = !message;
+  showCollection({status:message ? "error" : "loading", message});
+  if (collectionRequest.pending) readNative();
+}
+collectionList.addEventListener("change", updateCollectionSelection);
+collectionDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeCollection();
+});
+byId("collectionCancel").addEventListener("click", closeCollection);
+byId("collectionRetry").addEventListener("click", inspectCollection);
+byId("collectionSingle").addEventListener("click", () => submitCollection(collectionRequest.url));
+byId("collectionStart").addEventListener("click", () => {
+  const selected = collectionRequest.entries.filter((_, index) => byId(`collectionEntry${index + 1}`).checked);
+  if (selected.length && selected.length <= maxLinks) submitCollection(selected.map(entry => entry.url).join("\n"));
+});
+byId("downloadForm").addEventListener("submit", event => {
+  event.preventDefault();
+  if (byId("start").disabled || collectionRequest) return;
+  const input = byId("url").value;
+  const links = videoLinks(input);
+  const message = validateLinks(links);
+  byId("formNote").textContent = message;
+  if (message) return;
+  const proxy = byId("proxyEnabled").checked;
+  const scheme = proxyScheme.value;
+  const address = byId("proxyAddress").value.trim();
+  const port = byId("proxyPort").value.trim();
+  if (proxy && !validProxy(scheme, address, port)) {
+    openSettings();
+    byId("proxyNote").textContent = "请输入有效的代理地址和端口（1–65535）。";
+    jumpToSettingsSection(byId("proxyDisclosure"));
+    return;
+  }
+  const rateLimitKiB = currentRateLimit();
+  const fragments = currentFragments();
+  if (!checkTransferSettings(rateLimitKiB, fragments)) return;
+  if (bridge) {
+    const value = links.length === 1 ? links[0].url : input;
+    byId("url").blur();
+    const options = {height:selectedHeight, proxy, address, port, subtitles:downloadSubtitles.checked, rateLimitKiB,
+      container:videoContainer.value, codec:videoCodec.value, scheme, fragments};
+    const kind = hasCollectionBridge && links.length === 1 && collectionKind(new URL(value));
+    if (kind) {
+      collectionRequest = {url:value, kind, options};
+      history.pushState({collection:true}, "", "#collection");
+      collectionDialog.showModal();
+      byId("collectionTitle").focus();
+      inspectCollection();
+    } else startNative(value, options);
+    return;
+  }
+  simulateDownloads(links.length);
+});
+function simulateDownloads(total) {
+  const batch = {batchTotal:total, batchIndex:1, batchCompleted:0, batchFailed:0};
+  const mediaName = selectedHeight === audioOnlyHeight ? "音频" : "视频";
+  let value = 0;
+  const resolveNext = () => render({...batch, phase:"正在解析（模拟）", detail:"等待示例任务返回元数据。", percent:-1, busy:true});
+  resolveNext();
+  const timer = setInterval(() => {
+    value = Math.min(value + 8, 100);
+    if (value === 100) {
+      batch.batchCompleted++;
+      if (batch.batchIndex === total) {
+        clearInterval(timer);
+        simulation = null;
+        render({...batch, phase:total > 1 ? "模拟队列完成" : "模拟完成",
+          detail:"此预览未生成文件。", percent:100, busy:false});
+      } else {
+        batch.batchIndex++;
+        value = 0;
+        resolveNext();
+      }
+    } else render({...batch, phase:"正在下载（模拟）", detail:`正在接收示例${mediaName}数据。`, percent:value, busy:true});
+  }, 450);
+  simulation = {batch, timer};
+}
+byId("cancel").addEventListener("click", () => {
+  if (bridge) {
+    bridge.cancel();
+    readNative();
+    return;
+  }
+  if (!simulation) return;
+  const {batch, timer} = simulation;
+  clearInterval(timer);
+  simulation = null;
+  render({...batch, batchStopped:true, phase:batch.batchTotal > 1 ? "模拟队列已停止" : "已取消",
+    detail:"模拟任务已停止。", percent:-1, busy:false});
+});
+byId("skipCurrent").addEventListener("click", () => {
+  bridge?.skipCurrent?.();
+  if (bridge) readNative();
+});
+const agreementContents = byId("agreementContents").content;
+byId("aboutAgreementText").append(agreementContents.cloneNode(true));
+
+function requireAgreement() {
+  if (typeof bridge?.isAgreementAccepted !== "function" || typeof bridge.acceptAgreement !== "function") return;
+  try {
+    if (bridge.isAgreementAccepted()) return;
+  } catch {}
+
+  const dialog = byId("agreementDialog");
+  const text = byId("agreementText");
+  const hint = byId("agreementHint");
+  const confirm = byId("agreementConfirm");
+  text.append(agreementContents.cloneNode(true));
+  const unlockAtEnd = () => {
+    if (confirm.disabled && text.clientHeight > 0 && text.scrollTop + text.clientHeight >= text.scrollHeight - 1) {
+      confirm.disabled = false;
+      hint.dataset.atEnd = "true";
+      hint.textContent = "已滑到底部";
+    }
+  };
+  text.addEventListener("scroll", unlockAtEnd);
+  dialog.addEventListener("cancel", event => event.preventDefault());
+  const sizeObserver = new ResizeObserver(unlockAtEnd);
+  dialog.addEventListener("close", () => sizeObserver.disconnect(), {once:true});
+  confirm.addEventListener("click", () => {
+    if (confirm.disabled) return;
+    let saved = false;
+    try { saved = bridge.acceptAgreement() === true; } catch {}
+    if (saved) dialog.close();
+    else byId("agreementNote").textContent = "未能保存确认状态，请重试。";
+  });
+  dialog.showModal();
+  byId("agreementTitle").focus({preventScroll:true});
+  sizeObserver.observe(text);
+  unlockAtEnd();
+}
+
+requireAgreement();
+if (bridge) {
+  readNative();
+  setInterval(readNative, 500);
+}
+</script>
+</body>
+</html>

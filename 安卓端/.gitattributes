@@ -1,0 +1,12 @@
+**/native-runtime/*.sh text eol=lf
+**/native-runtime/*.patch text eol=lf
+**/native-runtime/*.sha256 text eol=lf
+native-runtime/*.sh text eol=lf
+native-runtime/*.patch text eol=lf
+native-runtime/*.sha256 text eol=lf
+
+/LICENSE -text
+/THIRD_PARTY_NOTICES.md -text
+/app/src/main/assets/index.html -text
+/native-runtime/licenses/** -text
+/tests/settings.test.mjs -text

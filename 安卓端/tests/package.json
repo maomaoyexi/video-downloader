@@ -1,0 +1,10 @@
+{
+  "name": "video-downloader-android-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "happy-dom": "20.8.4"
+  }
+}

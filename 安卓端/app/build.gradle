@@ -1,0 +1,118 @@
+plugins {
+    id 'com.android.application' version '9.0.1'
+}
+
+def engineVersion = new groovy.json.JsonSlurper().parse(rootProject.file('core-lock.json')).version
+def runtimeDirectory = rootProject.file('.build/native-runtime')
+def libraryAar = new File(runtimeDirectory, 'library-0.18.1-arm64-rebuilt.aar')
+def ffmpegAar = new File(runtimeDirectory, 'ffmpeg-0.18.1-arm64-rebuilt.aar')
+def runtimeManifests = new File(runtimeDirectory, 'runtime-manifest.json')
+def thirdPartyLicenses = rootProject.file('native-runtime/licenses')
+
+def releaseVersionName = providers.gradleProperty('androidReleaseVersion').getOrElse('1.0.0')
+def releaseVersionCode = providers.gradleProperty('androidReleaseVersionCode').map { it.toInteger() }.getOrElse(5)
+
+android {
+    namespace = 'io.github.maomaoyexi.videodownloader.prototype'
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = 'io.github.maomaoyexi.videodownloader'
+        minSdk = 29
+        targetSdk = 34
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
+        resValue 'string', 'bundled_engine_version', engineVersion
+        ndk {
+            abiFilters.add('arm64-v8a')
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = '.prototype'
+            resValue 'string', 'app_label', '多平台下载试用版'
+        }
+        release {
+            resValue 'string', 'app_label', '多平台视频下载工具'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    buildFeatures {
+        resValues = true
+    }
+
+    packaging {
+        jniLibs.useLegacyPackaging = true
+    }
+
+    sourceSets.main.res.srcDir(rootProject.layout.projectDirectory.dir('.build/override-res'))
+}
+
+def licenseAssetsDir = layout.buildDirectory.dir('generated/licenseAssets').get().asFile
+def licenseAssets = tasks.register('prepareLicenseAssets', Sync) {
+    from rootProject.file('LICENSE'), rootProject.file('THIRD_PARTY_NOTICES.md')
+    from(thirdPartyLicenses) {
+        into 'third-party-licenses'
+    }
+    into licenseAssetsDir
+}
+android.sourceSets.main.assets.srcDir(licenseAssetsDir)
+
+androidComponents {
+    onVariants(selector().withBuildType('debug')) { variant ->
+        variant.outputs.each { output ->
+            output.versionCode.set(4)
+            output.versionName.set('0.1.3')
+        }
+    }
+}
+
+dependencies {
+    implementation files(libraryAar, ffmpegAar)
+    // The rebuilt AARs retain the original Java classes. Match the dependencies in the 0.18.1 library module.
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.22'
+    runtimeOnly 'io.github.junkfood02.youtubedl-android:common:0.18.1'
+    runtimeOnly 'androidx.appcompat:appcompat:1.4.2'
+    runtimeOnly 'androidx.core:core-ktx:1.8.0'
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.11.1'
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.11.1'
+    runtimeOnly 'commons-io:commons-io:2.5'
+}
+
+tasks.named('preBuild') {
+    dependsOn licenseAssets
+    doFirst {
+        if (!rootProject.file('.build/override-res/raw/ytdlp').isFile()) {
+            throw new GradleException('请先运行 node prepare-core.cjs')
+        }
+        if (!libraryAar.isFile() || !ffmpegAar.isFile() || !runtimeManifests.isFile()) {
+            throw new GradleException('请按 native-runtime/README.md 准备 ARM64 运行库')
+        }
+        if (!thirdPartyLicenses.listFiles()?.any { it.isFile() }) {
+            throw new GradleException('native-runtime/licenses 缺少第三方许可')
+        }
+        def manifest = new groovy.json.JsonSlurper().parse(runtimeManifests)
+        [libraryAar, ffmpegAar].each { aar ->
+            def expected = manifest.aars[aar.name]?.rebuilt_aar
+            if (manifest.abi != 'arm64-v8a' || !expected || expected.bytes != aar.length()) {
+                throw new GradleException("ARM64 运行库清单不匹配：${aar.name}")
+            }
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            aar.withInputStream { stream ->
+                byte[] buffer = new byte[65536]
+                for (int count = stream.read(buffer); count != -1; count = stream.read(buffer)) {
+                    digest.update(buffer, 0, count)
+                }
+            }
+            if (digest.digest().encodeHex().toString() != expected.sha256) {
+                throw new GradleException("ARM64 运行库 SHA-256 不匹配：${aar.name}")
+            }
+        }
+    }
+}
