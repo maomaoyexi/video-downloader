@@ -1,11 +1,11 @@
-# 多平台下载 · 安卓试用版
+# 多平台视频下载工具 · 安卓正式版
 
-这是安卓点播下载工具的开发目录，面向搭载 Android 10 或更新版本的 ARM64 实体设备。安卓端由猫猫葉汐A_spy（@maomaoyexi）移植。界面与下载服务都在手机上运行，下载时需要设备能访问视频平台。
+安卓正式版面向搭载 Android 10 或更新版本的 ARM64 实体设备。安卓端由猫猫葉汐A_spy（@maomaoyexi）移植。界面与下载服务都在手机上运行，下载时需要设备能访问视频平台。
 
-## 安装与试用
+## 安装与使用
 
-1. 在 Android 10 或更新版本的 ARM64 实体设备上安装 [ARM64 试用包](.build/video-downloader-android-arm64-test.apk)。
-2. 打开「多平台下载试用版」，粘贴 YouTube 或哔哩哔哩点播链接。在「下载选项」中选择画质、仅音频或字幕，选好后点「开始下载」。已结束且可播放的 YouTube 直播回放可使用同一视频的 `/live/` 链接。
+1. 在 Android 10 或更新版本的 ARM64 实体设备上下载并安装正式 APK。[下载安卓 1.0.0 ARM64 APK](https://github.com/maomaoyexi/video-downloader/releases/download/android-v1.0.0/video-downloader-android-1.0.0-arm64-v8a.apk) · [发布说明与校验文件](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.0)
+2. 打开「多平台视频下载工具」，粘贴 YouTube 或哔哩哔哩点播链接。在「下载选项」中选择画质、仅音频或字幕，选好后点「开始下载」。已结束且可播放的 YouTube 直播回放可使用同一视频的 `/live/` 链接。
 3. 下载进度卡会显示当前音视频流的速度，下载引擎提供预计时间时也会显示。视频默认以 MP4 保存，音频以 M4A 保存，目录为「下载 / 多平台下载」。完成后可以播放文件。点「打开文件位置」可在「打开方式」中选择支持目录跳转的文件管理器，已安装的兼容版本 MT 管理器会使用其「定位所在位置」入口。如果没有可选的应用，会尝试用系统文件选择器显示该目录。下载时可以从页面或通知中取消。第一次下载需要在手机上解包运行依赖，准备阶段可能较长。
 
 第一次打开应用时，将「使用与免责协议」的正文滑到底部，点「我已阅读并确认」即可继续。确认状态保存在本机，之后可在「设置 → 关于软件」查看协议。
@@ -24,7 +24,7 @@
 
 「自动」优先选择兼容的编码。「最高」优先选择可用的最高分辨率。8K、4K、2K 分别以 4320p、2160p、1440p 为上限，在上限内优先选择高分辨率。「1080p60」以 1080p 和 60 帧每秒为上限，先比较分辨率，再比较帧率。平台没有 1080p60 时，会从满足上限的可用格式中选择。
 
-若息屏后进度停住、解锁后恢复，可在系统的应用详情中检查「多平台下载试用版」的省电策略。本次小米 Android 16 真机测试采用「无限制」。
+若息屏后进度停住、解锁后恢复，可在系统的应用详情中检查「多平台视频下载工具」的省电策略。小米真机测试采用「无限制」。
 
 「设置」顶部提供输出与画质、网络与代理、平台 Cookie、专项归档和工具箱的目录。点一个分类会定位并展开，重复点当前分类可收起或展开。
 
@@ -54,15 +54,13 @@
 
 在本目录使用 Node.js 24、Python 3、JDK 17、Gradle 9.3 和 Android SDK Platform 35、Build Tools 36.0.0。将 `JAVA_HOME` 指向 JDK 17，配置 `ANDROID_HOME` 后，运行 `node prepare-core.cjs` 准备并核验锁定的 yt-dlp。按原生运行库说明准备 `.build/native-runtime/` 下的两个 AAR 和校验清单，再运行 `gradle :app:assembleDebug` 构建 `arm64-v8a` 试用包。生成的 APK 位于 `app/build/outputs/apk/debug/`。[ARM64 运行库构建说明](native-runtime/README.md)
 
-交付试用版时，验签后覆盖 `.build/video-downloader-android-arm64-test.apk`，沿用同一安装入口。
-
-本机离线构建可将 `GRADLE_USER_HOME` 指向 [已有 Gradle 缓存](../debug/样板/安卓点播下载/.build/gradle/)，并为 Gradle 添加 `--offline`。历史测试 APK、截图和日志见 [安卓点播下载记录](../debug/样板/安卓点播下载/)。
+本机离线构建可将 `GRADLE_USER_HOME` 指向已准备好的 Gradle 缓存，并为 Gradle 添加 `--offline`。
 
 安卓封装沿用 youtubedl-android 0.18.1 的 Java 接口。ARM64 的 FFmpeg、FFprobe、QuickJS 和 CPython 从固定源码重建，解析核心使用 yt-dlp 2026.11.23。[原生库源码与许可](THIRD_PARTY_NOTICES.md) · [yt-dlp 2026.11.23](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.11.23)
 
 ### 构建与签名正式包
 
-`release` 变体使用应用 ID `io.github.maomaoyexi.videodownloader`，首个候选版本为 `1.0.0`（`versionCode 5`）。`debug` 变体保留试用应用 ID `io.github.maomaoyexi.videodownloader.prototype` 和 `0.1.3`。安装正式包时可以保留试用包。已下载的公共文件仍在原目录，两个应用各自保存 Cookie、预设、历史和协议确认。正式包需要重新导入 Cookie。
+`release` 变体使用应用 ID `io.github.maomaoyexi.videodownloader`，首个正式版本为 `1.0.0`（`versionCode 5`）。用于开发测试的 `debug` 变体使用应用 ID `io.github.maomaoyexi.videodownloader.prototype`，版本为 `0.1.3`，可与正式版同时安装。已下载的公共文件仍在原目录，两个应用各自保存 Cookie、预设、历史和协议确认。从试用版切换到正式版时，需要在正式版重新导入 Cookie。
 
 准备运行库后，运行 `gradle :app:assembleRelease` 构建 ARM64 正式包。未签名 APK 位于 `app/build/outputs/apk/release/app-release-unsigned.apk`。
 
@@ -82,4 +80,4 @@ Get-FileHash -Algorithm SHA256 -LiteralPath '签名后.apk'
 
 在本目录运行 `npm --prefix tests ci` 安装锁定的测试依赖，再运行 `npm --prefix tests test`。覆盖首启协议、工具箱、TXT 导入、队列控制和详情、配置预设、专项归档界面、音视频选项、分集选择、历史和设置。
 
-ARM64 APK 保留对 16 KiB 内存页的兼容。构建验收检查 APK 和原生库 ELF 加载段的 16 KiB 对齐，当前试用包已通过。运行验收在使用 4 KiB 内存页的 ARM64 实体设备上进行，已验证正式候选包的哔哩哔哩下载和开启 VPN 后的 YouTube 仅音频下载。
+安卓 1.0.0 的 APK 和原生库 ELF 加载段已通过 16 KiB 静态对齐检查。运行验收使用 4 KiB 内存页的 ARM64 实体设备，已验证安装、启动和检查更新。同版运行库已验证哔哩哔哩 MP4 下载和 YouTube 仅音频 M4A 下载。
