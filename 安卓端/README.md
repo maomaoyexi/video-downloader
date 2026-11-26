@@ -4,8 +4,8 @@
 
 ## 安装与使用
 
-1. 在 Android 10 或更新版本的 ARM64 实体设备上下载并安装正式 APK。[下载安卓 1.0.0 ARM64 APK](https://github.com/maomaoyexi/video-downloader/releases/download/android-v1.0.0/video-downloader-android-1.0.0-arm64-v8a.apk) · [发布说明与校验文件](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.0)
-2. 打开「多平台视频下载工具」，粘贴 YouTube 或哔哩哔哩点播链接。在「下载选项」中选择画质、仅音频或字幕，选好后点「开始下载」。已结束且可播放的 YouTube 直播回放可使用同一视频的 `/live/` 链接。
+1. 在 Android 10 或更新版本的 ARM64 实体设备上下载并安装正式 APK。[下载安卓 1.0.1 ARM64 APK](https://github.com/maomaoyexi/video-downloader/releases/download/android-v1.0.1/video-downloader-android-1.0.1-arm64-v8a.apk) · [发布说明与校验文件](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.1)
+2. 打开「多平台视频下载工具」，粘贴 YouTube 或哔哩哔哩点播链接。B 站可使用 `b23.tv` 和 `bili2233.cn` 的分享短链。在「下载选项」中选择画质、仅音频或字幕，选好后点「开始下载」。已结束且可播放的 YouTube 直播回放可使用同一视频的 `/live/` 链接。
 3. 下载进度卡会显示当前音视频流的速度，下载引擎提供预计时间时也会显示。视频默认以 MP4 保存，音频以 M4A 保存，目录为「下载 / 多平台下载」。完成后可以播放文件。点「打开文件位置」可在「打开方式」中选择支持目录跳转的文件管理器，已安装的兼容版本 MT 管理器会使用其「定位所在位置」入口。如果没有可选的应用，会尝试用系统文件选择器显示该目录。下载时可以从页面或通知中取消。第一次下载需要在手机上解包运行依赖，准备阶段可能较长。
 
 第一次打开应用时，将「使用与免责协议」的正文滑到底部，点「我已阅读并确认」即可继续。确认状态保存在本机，之后可在「设置 → 关于软件」查看协议。
@@ -60,7 +60,7 @@
 
 ### 构建与签名正式包
 
-`release` 变体使用应用 ID `io.github.maomaoyexi.videodownloader`，首个正式版本为 `1.0.0`（`versionCode 5`）。用于开发测试的 `debug` 变体使用应用 ID `io.github.maomaoyexi.videodownloader.prototype`，版本为 `0.1.3`，可与正式版同时安装。已下载的公共文件仍在原目录，两个应用各自保存 Cookie、预设、历史和协议确认。从试用版切换到正式版时，需要在正式版重新导入 Cookie。
+`release` 变体使用应用 ID `io.github.maomaoyexi.videodownloader`，当前正式版本为 `1.0.1`（`versionCode 6`）。用于开发测试的 `debug` 变体使用应用 ID `io.github.maomaoyexi.videodownloader.prototype`，版本为 `0.1.3`，可与正式版同时安装。已下载的公共文件仍在原目录，两个应用各自保存 Cookie、预设、历史和协议确认。从试用版切换到正式版时，需要在正式版重新导入 Cookie。
 
 准备运行库后，运行 `gradle :app:assembleRelease` 构建 ARM64 正式包。未签名 APK 位于 `app/build/outputs/apk/release/app-release-unsigned.apk`。
 

@@ -558,3 +558,28 @@ test("返回键关闭分集列表并丢弃已取消的解析结果", async conte
     page.submit("https://youtu.be/jNQXAC9IVRw");
     assert.equal(page.downloads.length, 1);
 });
+
+test("B 站 bili2233.cn 短链可从分集解析和批量下载入口提交", context => {
+    const page = openCollectionPage(context);
+    const url = "https://bili2233.cn/HnN7afH";
+    const input = page.element("url");
+    input.value = url;
+    input.dispatchEvent(new page.window.Event("input"));
+    assert.equal(page.element("biliChip").getAttribute("aria-current"), "true");
+    page.submit(url);
+    assert.equal(page.element("formNote").textContent, "");
+    assert.equal(page.inspections[0]?.[0], url);
+    page.result({ status: "single" });
+    assert.equal(page.downloads[0]?.[0], url);
+
+    const batch = url + "\nhttps://youtu.be/jNQXAC9IVRw";
+    page.submit(batch);
+    assert.equal(page.downloads[1]?.[0], batch);
+
+    page.submit("https://bili2233.cn/");
+    assert.match(page.element("formNote").textContent, /短链接不完整/);
+    page.submit("https://bili2233.cn.example/HnN7afH");
+    assert.match(page.element("formNote").textContent, /安卓端支持/);
+    assert.equal(page.inspections.length, 1);
+    assert.equal(page.downloads.length, 2);
+});

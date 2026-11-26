@@ -69,6 +69,7 @@ public final class DownloadService extends Service {
     private static final Object LOCK = new Object();
     private static final List<String> YOUTUBE = Arrays.asList("youtube.com", "www.youtube.com", "m.youtube.com");
     private static final List<String> BILIBILI = Arrays.asList("bilibili.com", "www.bilibili.com", "m.bilibili.com");
+    private static final List<String> BILIBILI_SHORT_HOSTS = Arrays.asList("b23.tv", "bili2233.cn");
     private static final String COLLECTION_IDLE = DownloadCollections.status("idle", "");
     private static final ScheduledExecutorService REQUEST_DEADLINE =
             Executors.newSingleThreadScheduledExecutor(task -> new Thread(task, "request-deadline"));
@@ -476,7 +477,7 @@ public final class DownloadService extends Service {
                 return "https://www.youtube.com/watch?v=" + id;
             }
         } else {
-            boolean shortLink = ("b23.tv".equals(host) || "youtu.be".equals(host))
+            boolean shortLink = (BILIBILI_SHORT_HOSTS.contains(host) || "youtu.be".equals(host))
                     && path.matches("/[A-Za-z0-9_-]+/?");
             boolean biliVideo = BILIBILI.contains(host) && path.matches("(?i)/video/(BV[A-Za-z0-9]+|av[0-9]+)/?");
             if (shortLink || biliVideo) return url.buildUpon().scheme("https").fragment(null).build().toString();
@@ -509,8 +510,8 @@ public final class DownloadService extends Service {
             if (BILIBILI.contains(host) && path.matches("(?i)/video/(BV[A-Za-z0-9]+|av[0-9]+)/?")) {
                 return "https://www.bilibili.com" + path;
             }
-            if ("b23.tv".equals(host) && path.matches("/[A-Za-z0-9_-]+/?")) {
-                return "https://b23.tv" + path;
+            if (BILIBILI_SHORT_HOSTS.contains(host) && path.matches("/[A-Za-z0-9_-]+/?")) {
+                return "https://" + host + path;
             }
         }
         throw new IllegalArgumentException();
@@ -699,7 +700,7 @@ public final class DownloadService extends Service {
     private static Platform platformForUrl(String url) {
         String host = Uri.parse(url).getHost().toLowerCase(Locale.ROOT);
         if (YOUTUBE.contains(host) || "youtu.be".equals(host)) return Platform.YOUTUBE;
-        if (BILIBILI.contains(host) || "b23.tv".equals(host)) return Platform.BILIBILI;
+        if (BILIBILI.contains(host) || BILIBILI_SHORT_HOSTS.contains(host)) return Platform.BILIBILI;
         return null;
     }
 

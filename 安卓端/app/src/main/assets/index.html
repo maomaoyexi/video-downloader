@@ -603,7 +603,7 @@ progress:indeterminate{background:linear-gradient(90deg,var(--surface3),var(--li
     <details class="guide-topic">
       <summary>近期更新</summary>
       <div class="guide-copy">
-        <p>设置页加入使用帮助和关于软件。B 站和 YouTube 各有独立的 Cookie 开关。手动代理开关移到代理类型旁。</p>
+        <p>1.0.1 修复 B 站 bili2233.cn 分享短链无法识别的问题，支持直接下载、分集解析和批量队列。</p>
       </div>
     </details>
   </section>
@@ -1220,9 +1220,10 @@ if (hasCookieBridge) {
 }
 const youtubeHosts = ["youtube.com", "www.youtube.com", "m.youtube.com"];
 const bilibiliHosts = ["bilibili.com", "www.bilibili.com", "m.bilibili.com"];
+const bilibiliShortHosts = ["b23.tv", "bili2233.cn"];
 function collectionKind(target) {
   const host = target.hostname;
-  if (host === "b23.tv" || bilibiliHosts.includes(host)) {
+  if (bilibiliShortHosts.includes(host) || bilibiliHosts.includes(host)) {
     return target.searchParams.has("p") ? "" : "bilibili";
   }
   if (!/^[A-Za-z0-9_-]{2,128}$/.test(target.searchParams.get("list") ?? "")) return "";
@@ -1242,7 +1243,7 @@ function validate(value) {
     return "请使用正常的 YouTube 或哔哩哔哩观看链接。";
   }
   const host = target.hostname;
-  if (host === "youtu.be" || host === "b23.tv") {
+  if (host === "youtu.be" || bilibiliShortHosts.includes(host)) {
     return /^\/[\w-]+\/?$/.test(target.pathname) ? "" : "短链接不完整。";
   }
   if (youtubeHosts.includes(host)) {

@@ -4,7 +4,7 @@
 
 面向 Windows 的多平台视频下载与直播录制工具，使用浏览器 WebUI 操作，提供任务队列、批量下载、字幕与音频工具，并支持 FANBOX 内容归档及 Withny 授权存档。
 
-**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases/latest)** · **[下载安卓版](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.0)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
+**[下载 Windows 版](https://github.com/maomaoyexi/video-downloader/releases/latest)** · **[下载安卓版](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.1)** · **[完整使用教程](docs/使用教程.txt)** · **[更新日志](RELEASE_NOTES.md)**
 
 > 本页对应 v2.8.3 正式版源码。安装包版本、文件和 SHA-256 请以 Releases 页面实际发布的内容为准。
 
@@ -14,7 +14,7 @@
 
 ### 安卓版
 
-在 Android 10 及以上的 ARM64 设备上，从 [安卓 1.0.0 发布页](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.0) 下载并安装 APK。安卓端支持哔哩哔哩和 YouTube 点播下载。安卓端由猫猫葉汐A_spy（@maomaoyexi）移植。[安卓文档](安卓端/README.md)
+在 Android 10 及以上的 ARM64 设备上，从 [安卓 1.0.1 发布页](https://github.com/maomaoyexi/video-downloader/releases/tag/android-v1.0.1) 下载并安装 APK。安卓端支持哔哩哔哩和 YouTube 点播下载。安卓端由猫猫葉汐A_spy（@maomaoyexi）移植。[安卓文档](安卓端/README.md)
 
 ### Windows 绿色版
 
